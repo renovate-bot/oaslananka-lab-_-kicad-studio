@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2] - 2026-04-13
+
+### Changed
+
+- VSIX packaging scripts now use plain `vsce package`/`vsce publish` without Azure URL overrides so Marketplace README screenshots resolve from GitHub.
+- `package:ls` now uses `vsce ls --tree` for compatibility with current vsce CLI.
+
 ## [1.0.1] - 2026-04-13
 
 ### Changed
