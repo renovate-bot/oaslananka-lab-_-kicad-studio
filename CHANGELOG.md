@@ -24,6 +24,19 @@
 - `kicad-cli` runner now de-duplicates identical in-flight commands.
 - Viewer payloads now cache base64 content by file mtime and refresh more predictably.
 
+## [2.0.1] - 2026-04-14
+
+### Changed
+
+- Updated the default OpenAI model to `gpt-5.4`.
+
+### Fixed
+
+- Repaired the npm lockfile metadata so VSIX packaging installs cleanly.
+- Hardened BOM, netlist, and chat webview rendering against raw HTML injection.
+- Restricted datasheet links to HTTP(S) URLs before opening externally.
+- Added timeouts for Octopart and LCSC component search requests.
+
 ## [1.0.2] - 2026-04-13
 
 ### Changed
