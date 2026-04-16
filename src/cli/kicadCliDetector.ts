@@ -17,11 +17,11 @@ export function getCliCandidates(platform = process.platform, configuredPath = '
     const programFilesX86 = process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)';
     const localAppData = process.env['LOCALAPPDATA'] ?? '';
     for (const version of ['10.0', '10', '9.0', '9', '8.0', '8', '7.0', '7', '6.0', '6']) {
-      candidates.push(path.join(programFiles, 'KiCad', version, 'bin', 'kicad-cli.exe'));
-      candidates.push(path.join(programFilesX86, 'KiCad', version, 'bin', 'kicad-cli.exe'));
+      candidates.push(path.win32.join(programFiles, 'KiCad', version, 'bin', 'kicad-cli.exe'));
+      candidates.push(path.win32.join(programFilesX86, 'KiCad', version, 'bin', 'kicad-cli.exe'));
       if (localAppData) {
         candidates.push(
-          path.join(localAppData, 'Programs', 'KiCad', version, 'bin', 'kicad-cli.exe')
+          path.win32.join(localAppData, 'Programs', 'KiCad', version, 'bin', 'kicad-cli.exe')
         );
       }
     }
