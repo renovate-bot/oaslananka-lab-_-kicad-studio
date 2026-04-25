@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.3] - 2026-04-26
+
+### Fixed
+
+- Disabled automatic setup-node package-manager cache probing so GitHub Actions upgrades npm before `devEngines` validation runs.
+- Aligned local and CI quality gates around the pinned Node.js 24.14.1 and npm 11.13.0 toolchain.
+
 ## [2.4.2] - 2026-04-18
 
 ### Fixed
