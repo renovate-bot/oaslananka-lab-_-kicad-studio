@@ -1,0 +1,8 @@
+'type:bug':
+  - 'bug_report.yml'
+'type:feature':
+  - 'feature_request.yml'
+'type:docs':
+  - 'documentation.yml'
+'regression':
+  - 'regression.yml'

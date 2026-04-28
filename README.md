@@ -225,3 +225,7 @@ Contribution guidance lives in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 ## License
 
 MIT
+
+## Operations
+
+See [docs/repository-operations.md](docs/repository-operations.md) for CI/CD and release guidance.

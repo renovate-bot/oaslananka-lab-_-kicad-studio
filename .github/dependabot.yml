@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 3
+    labels: [dependencies, type:chore]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 10
+    groups:
+      js-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: [dependencies, area:js]

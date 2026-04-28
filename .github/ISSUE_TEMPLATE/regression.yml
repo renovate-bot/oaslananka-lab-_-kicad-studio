@@ -1,0 +1,23 @@
+name: Regression
+description: Report a bug that worked in a previous version
+title: '[Regression]: '
+labels: ['type:bug', 'regression', 'priority:p0']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a regression!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the regression?
+    validations:
+      required: true
+  - type: input
+    id: previous_version
+    attributes:
+      label: Previous working version
+      description: Which version did this work in?
+    validations:
+      required: true

@@ -13,7 +13,7 @@ on:
 jobs:
   lint-build-test:
     name: Lint, Build, Test, Package
-    if: github.repository_owner == 'oaslananka-lab' || github.event_name == 'workflow_dispatch'
+    if: github.repository == 'oaslananka-lab/kicad-studio'
     permissions:
       contents: read
     runs-on: ${{ matrix.os }}
@@ -25,46 +25,63 @@ jobs:
           - windows-latest
           - macos-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 24.14.1
-          package-manager-cache: false
-      - name: CI routing notice
-        shell: bash
-        run: |
-          if [ "${{ github.repository_owner }}" = "oaslananka-lab" ]; then
-            echo "Running primary GitHub Actions CI from the oaslananka-lab organization repository."
-          else
-            echo "Running manual fallback CI from the personal mirror. Automatic CI/CD is owned by oaslananka-lab."
-          fi
+          node-version-file: package.json
       - run: npm install -g npm@11.13.0
       - run: npm ci
-      - run: npm run check:ci
+      - name: Run checks (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run check:ci
+      - name: Run checks (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: npm run check:ci
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}
           path: coverage/
+      - name: Publish test results
+        if: always() && hashFiles('**/junit.xml', '**/test-results.xml') != ''
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            **/junit.xml
+            **/test-results.xml
+      - name: Test summary
+        if: always() && hashFiles('**/junit.xml') != ''
+        uses: test-summary/action@v2
+        with:
+          paths: '**/junit.xml'
 
   integration-real-server:
     name: Real kicad-mcp-pro integration
-    if: >-
-      (github.repository_owner == 'oaslananka-lab' || github.event_name == 'workflow_dispatch') &&
-      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+    if: github.repository == 'oaslananka-lab/kicad-studio'
     permissions:
       contents: read
     runs-on: ubuntu-latest
     env:
       SKIP_REAL_SERVER: ${{ secrets.SKIP_REAL_SERVER }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 24.14.1
-          package-manager-cache: false
+          node-version-file: package.json
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v5
       - run: npm install -g npm@11.13.0
       - run: npm ci
-      - run: npm run test:integration:real
+      - run: xvfb-run -a npm run test:integration:real
+      - name: Publish test results
+        if: always() && hashFiles('**/junit.xml', '**/test-results.xml') != ''
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            **/junit.xml
+            **/test-results.xml
+      - name: Test summary
+        if: always() && hashFiles('**/junit.xml') != ''
+        uses: test-summary/action@v2
+        with:
+          paths: '**/junit.xml'
