@@ -66,7 +66,7 @@ describe('diff viewer assets', () => {
       expect(html).not.toContain('unsafe-inline');
       expect(html).not.toContain('unsafe-eval');
       expect(html).toContain("script-src 'nonce-{{scriptNonce}}'");
-      for (const scriptTag of html.match(/<script[^>]*>/g) ?? []) {
+      for (const scriptTag of findOpeningTags(html, 'script')) {
         expect(scriptTag).toContain('nonce="{{scriptNonce}}"');
       }
     }
@@ -99,3 +99,23 @@ describe('diff viewer assets', () => {
     expect(markdownScript).not.toContain('replace(/<script');
   });
 });
+
+function findOpeningTags(html: string, tagName: string): string[] {
+  const tags: string[] = [];
+  const lowerHtml = html.toLowerCase();
+  const lowerTag = `<${tagName.toLowerCase()}`;
+  let searchFrom = 0;
+  while (searchFrom < html.length) {
+    const start = lowerHtml.indexOf(lowerTag, searchFrom);
+    if (start === -1) {
+      break;
+    }
+    const end = html.indexOf('>', start);
+    if (end === -1) {
+      break;
+    }
+    tags.push(html.slice(start, end + 1));
+    searchFrom = end + 1;
+  }
+  return tags;
+}

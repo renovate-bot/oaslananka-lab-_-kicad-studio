@@ -16,9 +16,7 @@ on:
         required: false
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 concurrency:
   group: release
@@ -30,8 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: release
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
 
@@ -41,12 +43,12 @@ jobs:
             echo "Set approval=APPROVE_RELEASE to publish" >&2; exit 1
           fi
 
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .node-version
 
@@ -61,12 +63,12 @@ jobs:
 
       - name: Build provenance attestation
         if: hashFiles('*.vsix') != ''
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
         with:
           subject-path: '*.vsix'
 
       - name: Install Doppler CLI
-        uses: dopplerhq/cli-action@v4
+        uses: dopplerhq/cli-action@4819d808ab99e5cde19a0637a16536a4038fad73
 
       - name: Verify required Doppler secrets
         env:

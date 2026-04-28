@@ -1,3 +1,5 @@
+/* global acquireVsCodeApi, atob, customElements, document, window */
+
 (function () {
   const vscode = acquireVsCodeApi();
   const loading = document.getElementById('loading-overlay');
@@ -50,13 +52,23 @@
   }
 
   function renderLayers(layers) {
-    layerList.innerHTML = '';
+    layerList.replaceChildren();
     for (const layer of layers) {
       const row = document.createElement('label');
       row.className = 'layer-item';
-      row.innerHTML = `<input type="checkbox" ${layer.enabled ? 'checked' : ''} ${layer.supported ? '' : 'disabled'} />
-        <span class="layer-color" style="background:${layer.color}"></span>
-        <span>${layer.name}</span>`;
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = layer.enabled === true;
+      input.disabled = layer.supported === false;
+
+      const color = document.createElement('span');
+      color.className = 'layer-color';
+      color.style.backgroundColor = normalizeColor(layer.color);
+
+      const name = document.createElement('span');
+      name.textContent = String(layer.name ?? '');
+
+      row.append(input, color, name);
       layerList.appendChild(row);
     }
   }
@@ -93,7 +105,10 @@
   }
 
   function createViewerElement(text, fileName) {
-    if (!customElements.get('kicanvas-embed') || !customElements.get('kicanvas-source')) {
+    if (
+      !customElements.get('kicanvas-embed') ||
+      !customElements.get('kicanvas-source')
+    ) {
       showError(
         'KiCanvas did not initialize inside the webview. Reload the window and reopen the board. If it still fails, open Help > Toggle Developer Tools and check the Console.'
       );
@@ -136,7 +151,9 @@
         sourcePreview.textContent = text.slice(0, 12000);
       }
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Failed to decode PCB data.');
+      showError(
+        error instanceof Error ? error.message : 'Failed to decode PCB data.'
+      );
     }
   }
 
@@ -144,18 +161,25 @@
     if (!Array.isArray(summary) || !summary.length) {
       return;
     }
-    inspector.innerHTML = summary
-      .map(
-        (item) =>
-          `<div class="property-item"><strong>${escapeHtml(String(item.label ?? ''))}</strong><span>${escapeHtml(String(item.value ?? ''))}</span></div>`
-      )
-      .join('');
+    const fragment = document.createDocumentFragment();
+    for (const item of summary) {
+      const row = document.createElement('div');
+      row.className = 'property-item';
+      const label = document.createElement('strong');
+      label.textContent = String(item.label ?? '');
+      const value = document.createElement('span');
+      value.textContent = String(item.value ?? '');
+      row.append(label, value);
+      fragment.appendChild(row);
+    }
+    inspector.replaceChildren(fragment);
   }
 
   function loadInitialPayload() {
     const payloadEl = document.getElementById('initial-payload');
     if (!payloadEl?.textContent) {
-      diagnosticBanner.textContent = 'Initial payload was not embedded. Waiting for extension message.';
+      diagnosticBanner.textContent =
+        'Initial payload was not embedded. Waiting for extension message.';
       return;
     }
 
@@ -163,7 +187,11 @@
       const payload = JSON.parse(payloadEl.textContent);
       renderSummary(payload.summary);
       renderLayers(payload.layers || []);
-      if (sourcePreview && typeof payload.preview === 'string' && !sourcePreview.textContent.trim()) {
+      if (
+        sourcePreview &&
+        typeof payload.preview === 'string' &&
+        !sourcePreview.textContent.trim()
+      ) {
         sourcePreview.textContent = payload.preview;
       }
       if (payload.base64 && payload.fileName) {
@@ -173,25 +201,34 @@
         diagnosticBanner.textContent = `Interactive payload for ${payload.fileName} is not embedded.`;
       }
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Failed to parse initial viewer payload.');
+      showError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to parse initial viewer payload.'
+      );
     }
   }
 
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+  function normalizeColor(value) {
+    const color = String(value ?? '').trim();
+    return /^#[0-9a-f]{3,8}$/i.test(color) ? color : 'transparent';
   }
 
-  document.getElementById('btn-zoom-fit').addEventListener('click', () => currentViewer()?.fitToScreen?.());
-  document.getElementById('btn-zoom-in').addEventListener('click', () => currentViewer()?.zoomIn?.());
-  document.getElementById('btn-zoom-out').addEventListener('click', () => currentViewer()?.zoomOut?.());
-  document.getElementById('btn-grid').addEventListener('click', () => currentViewer()?.toggleGrid?.());
+  document
+    .getElementById('btn-zoom-fit')
+    .addEventListener('click', () => currentViewer()?.fitToScreen?.());
+  document
+    .getElementById('btn-zoom-in')
+    .addEventListener('click', () => currentViewer()?.zoomIn?.());
+  document
+    .getElementById('btn-zoom-out')
+    .addEventListener('click', () => currentViewer()?.zoomOut?.());
+  document
+    .getElementById('btn-grid')
+    .addEventListener('click', () => currentViewer()?.toggleGrid?.());
   document.getElementById('btn-theme').addEventListener('click', () => {
-    layerStatus.textContent = 'KiCanvas theme toggling is currently handled by the embedded viewer theme.';
+    layerStatus.textContent =
+      'KiCanvas theme toggling is currently handled by the embedded viewer theme.';
   });
   document.getElementById('btn-open-kicad').addEventListener('click', () => {
     vscode.postMessage({ type: 'openInKiCad' });
@@ -226,7 +263,9 @@
 
   window.addEventListener('unhandledrejection', (event) => {
     const reason =
-      event.reason instanceof Error ? event.reason.message : String(event.reason ?? 'Unknown promise rejection');
+      event.reason instanceof Error
+        ? event.reason.message
+        : String(event.reason ?? 'Unknown promise rejection');
     showError(`Viewer runtime error: ${reason}`);
   });
 

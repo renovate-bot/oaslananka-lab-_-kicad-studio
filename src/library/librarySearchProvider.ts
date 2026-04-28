@@ -5,10 +5,17 @@ import * as vscode from 'vscode';
 import { Logger } from '../utils/logger';
 import { KiCadCliDetector } from '../cli/kicadCliDetector';
 import { KiCadCliRunner } from '../cli/kicadCliRunner';
-import { LibraryFootprint, LibrarySymbol, KiCadLibraryIndexer } from './libraryIndexer';
+import { createNonce } from '../utils/nonce';
+import {
+  LibraryFootprint,
+  LibrarySymbol,
+  KiCadLibraryIndexer
+} from './libraryIndexer';
 
 type SymbolQuickPickItem = vscode.QuickPickItem & { symbol: LibrarySymbol };
-type FootprintQuickPickItem = vscode.QuickPickItem & { footprint: LibraryFootprint };
+type FootprintQuickPickItem = vscode.QuickPickItem & {
+  footprint: LibraryFootprint;
+};
 
 /**
  * QuickPick-based local KiCad library search UI.
@@ -87,7 +94,10 @@ export class LibrarySearchProvider {
       return;
     }
     await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: 'KiCad libraries are being indexed...' },
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'KiCad libraries are being indexed...'
+      },
       (progress) => this.indexer.indexAll(progress)
     );
   }
@@ -97,11 +107,22 @@ export class LibrarySearchProvider {
       'kicadstudio.librarySymbolPreview',
       `Symbol: ${symbol.name}`,
       vscode.ViewColumn.Beside,
-      { enableScripts: false, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')] }
+      {
+        enableScripts: false,
+        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')]
+      }
     );
+    const nonce = createNonce();
     panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
-<body style="font-family: Segoe UI, sans-serif; padding: 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background);">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; img-src ${panel.webview.cspSource} data:;">
+  <style nonce="${nonce}">
+    body { font-family: var(--vscode-font-family); padding: 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
   <h1>${escapeHtml(symbol.name)}</h1>
   <p><strong>Library:</strong> ${escapeHtml(symbol.libraryName)}</p>
   <p><strong>Description:</strong> ${escapeHtml(symbol.description || 'No description')}</p>
@@ -113,12 +134,17 @@ export class LibrarySearchProvider {
 </html>`;
   }
 
-  private async showFootprintPreview(footprint: LibraryFootprint): Promise<void> {
+  private async showFootprintPreview(
+    footprint: LibraryFootprint
+  ): Promise<void> {
     const panel = vscode.window.createWebviewPanel(
       'kicadstudio.libraryFootprintPreview',
       `Footprint: ${footprint.name}`,
       vscode.ViewColumn.Beside,
-      { enableScripts: false, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')] }
+      {
+        enableScripts: false,
+        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')]
+      }
     );
 
     let svgMarkup = '';
@@ -132,21 +158,33 @@ export class LibrarySearchProvider {
       }
     }
 
+    const svgDataUri = svgMarkup ? createSvgDataUri(svgMarkup) : '';
+    const nonce = createNonce();
     panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
-<body style="font-family: Segoe UI, sans-serif; padding: 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background);">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; img-src ${panel.webview.cspSource} data:;">
+  <style nonce="${nonce}">
+    body { font-family: var(--vscode-font-family); padding: 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .preview { max-width: 100%; max-height: 520px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); }
+  </style>
+</head>
+<body>
   <h1>${escapeHtml(footprint.name)}</h1>
   <p><strong>Library:</strong> ${escapeHtml(footprint.libraryName)}</p>
   <p><strong>Description:</strong> ${escapeHtml(footprint.description || 'No description')}</p>
   <p><strong>Tags:</strong> ${escapeHtml(footprint.tags.join(', ') || 'None')}</p>
-  ${svgMarkup ? `<div>${sanitizeSvg(svgMarkup)}</div>` : '<p>SVG preview unavailable. Showing metadata-only fallback.</p>'}
+  ${svgDataUri ? `<img class="preview" src="${escapeAttr(svgDataUri)}" alt="Footprint preview" />` : '<p>SVG preview unavailable. Showing metadata-only fallback.</p>'}
   <pre>${escapeHtml(footprint.libraryPath)}</pre>
 </body>
 </html>`;
   }
 
   private async renderFootprintSvg(filePath: string): Promise<string> {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kicadstudio-fp-preview-'));
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kicadstudio-fp-preview-')
+    );
     await this.cliRunner.run<string>({
       command: ['fp', 'export', 'svg', '--output', tempRoot, filePath],
       cwd: path.dirname(filePath),
@@ -172,14 +210,10 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/**
- * Strip potentially dangerous content from SVG markup before injecting into
- * a webview.  Removes <script>, <foreignObject>, and inline event handlers.
- * This is a defence-in-depth measure; the webview already has enableScripts:false.
- */
-function sanitizeSvg(svg: string): string {
-  return svg
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<foreignObject\b[^>]*>[\s\S]*?<\/foreignObject\s*>/gi, '')
-    .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s/>]*)/gi, '');
+function escapeAttr(value: string): string {
+  return escapeHtml(value);
+}
+
+function createSvgDataUri(svg: string): string {
+  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
 }

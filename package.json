@@ -1790,6 +1790,8 @@
     "lines": 75
   },
   "devDependencies": {
+    "@commitlint/cli": "20.5.2",
+    "@commitlint/config-conventional": "20.5.0",
     "@eslint/js": "9.39.4",
     "@playwright/test": "1.59.1",
     "@types/jest": "29.5.14",
