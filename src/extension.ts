@@ -47,7 +47,6 @@ import { ContextBridge } from './mcp/contextBridge';
 import { McpClient } from './mcp/mcpClient';
 import { McpDetector } from './mcp/mcpDetector';
 import { FixQueueProvider } from './mcp/fixQueueProvider';
-import { McpLogger } from './mcp/mcpLogger';
 import { KiCadDiagnosticsAggregator } from './language/diagnosticsAggregator';
 import { KiCadDiagnosticsProvider } from './language/diagnosticsProvider';
 import { KiCadHoverProvider } from './language/hoverProvider';
@@ -141,6 +140,7 @@ export async function activate(
   const diffEditorProvider = new DiffEditorProvider(context, gitDiffDetector);
   const aiProviders = new AIProviderRegistry(context);
   const mcpDetector = new McpDetector();
+  const { McpLogger } = await import('./mcp/mcpLogger');
   const mcpLogger = new McpLogger();
   const mcpClient = new McpClient(context, mcpDetector, logger, {
     logger: mcpLogger
