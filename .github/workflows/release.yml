@@ -18,9 +18,6 @@ on:
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 concurrency:
   group: release
   cancel-in-progress: false
@@ -46,23 +43,18 @@ jobs:
             echo "Set approval=APPROVE_RELEASE to publish" >&2; exit 1
           fi
 
-      - uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611
-        with:
-          version: 3.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - uses: actions/setup-node@670825a89dc0abd596e7a3abd0f5e3f6e5faf37c
         with:
           node-version-file: .node-version
 
       - name: Install dependencies
-        run: task install
+        run: npm ci
 
       - name: Build
-        run: task build
+        run: npm exec -- task build
 
       - name: Package
-        run: task package
+        run: npm exec -- task package
 
       - name: Build provenance attestation
         if: hashFiles('*.vsix') != ''
