@@ -6,4 +6,4 @@
 - Code Actions are emitted only for fix queue items with explicit `path` and `line` metadata. Text-only fixes continue to render in the tree.
 - The Quality Gates provider prefers structured `*_report` payloads and falls back to conservative text parsing for 3.x payloads without structured fields.
 - Real-server tests vendor benchmark fixtures under `test/fixtures/benchmark_projects` and do not clone or update `kicad-mcp-pro` during CI.
-- The checked-in quality gate screenshot is a placeholder copied from the existing DRC screenshot until a dev-host capture with a real MCP server is available.
+- The checked-in quality gate screenshot is a generated dashboard mock until a dev-host capture with a real MCP server is available.

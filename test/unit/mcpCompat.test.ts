@@ -16,9 +16,14 @@ describe('MCP compatibility helpers', () => {
 
   it('normalizes versions and classifies compatibility', () => {
     expect(normalizeMcpVersion('kicad-mcp-pro 3.0.2')).toBe('3.0.2');
+    expect(normalizeMcpVersion('v3.1')).toBe('3.1.0');
+    expect(normalizeMcpVersion('not-a-version')).toBe('0.0.0');
     expect(normalizeMcpVersion(undefined)).toBe('0.0.0');
     expect(getMcpCompatStatus('3.0.2')).toBe('ok');
+    expect(getMcpCompatStatus('3.1.0')).toBe('ok');
     expect(getMcpCompatStatus('3.0.0')).toBe('warn');
+    expect(getMcpCompatStatus('3.0.1')).toBe('warn');
+    expect(getMcpCompatStatus(undefined)).toBe('incompatible');
     expect(getMcpCompatStatus('2.4.8')).toBe('incompatible');
     expect(isMcpVersionSupported('3.1.0')).toBe(true);
     expect(isMcpVersionSupported('4.0.0')).toBe(false);

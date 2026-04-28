@@ -6,6 +6,7 @@ import { __setConfiguration, createExtensionContextMock } from './vscodeMock';
 
 function createPanelMock() {
   let messageHandler: ((message: unknown) => Promise<void>) | undefined;
+  let disposeHandler: (() => void) | undefined;
   const webview = {
     cspSource: 'vscode-resource:',
     html: '',
@@ -20,9 +21,13 @@ function createPanelMock() {
     panel: {
       webview,
       title: '',
-      onDidDispose: jest.fn(() => ({ dispose: jest.fn() }))
+      onDidDispose: jest.fn((callback: () => void) => {
+        disposeHandler = callback;
+        return { dispose: jest.fn() };
+      })
     },
-    send: async (message: unknown) => messageHandler?.(message)
+    send: async (message: unknown) => messageHandler?.(message),
+    dispose: () => disposeHandler?.()
   };
 }
 
@@ -61,18 +66,16 @@ describe('ComponentSearchCache', () => {
       context.globalState as unknown as vscode.Memento
     );
     const octopart = {
-      search: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            source: 'octopart',
-            mpn: 'STM32',
-            manufacturer: 'ST',
-            description: 'MCU',
-            offers: [],
-            specs: []
-          }
-        ])
+      search: jest.fn().mockResolvedValue([
+        {
+          source: 'octopart',
+          mpn: 'STM32',
+          manufacturer: 'ST',
+          description: 'MCU',
+          offers: [],
+          specs: []
+        }
+      ])
     };
     const lcsc = { search: jest.fn() };
     const service = new ComponentSearchService(
@@ -111,6 +114,29 @@ describe('ComponentSearchCache', () => {
     );
     nowSpy.mockReturnValue(24 * 60 * 60 * 1000 + 2_000);
     await expect(cache.get('oct:stm32')).resolves.toBeUndefined();
+  });
+
+  it('evicts the oldest cache entry before adding a new one when full', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(10_000);
+    const context = createExtensionContextMock();
+    const storage = context.globalState as unknown as vscode.Memento;
+    const cache = new ComponentSearchCache(storage);
+    const prefix = 'kicadstudio.search.cache.';
+
+    for (let index = 0; index < 100; index += 1) {
+      await storage.update(`${prefix}${index}`, {
+        results: [],
+        timestamp: index,
+        query: `Q${index}`,
+        source: 'octopart'
+      });
+    }
+
+    await cache.set('new', [], 'octopart', 'New');
+
+    expect(storage.get(`${prefix}0`)).toBeUndefined();
+    expect(storage.get(`${prefix}1`)).toBeDefined();
+    expect(storage.get(`${prefix}new`)).toBeDefined();
   });
 
   it('handles Octopart network error gracefully, falls back to LCSC', async () => {
@@ -253,6 +279,10 @@ describe('ComponentSearchCache', () => {
       'img-src vscode-resource: data:;'
     );
     expect(panelMock.panel.webview.html).not.toContain('img-src https:');
+
+    panelMock.dispose();
+    await (service as any).showDetails(result);
+    expect(vscode.window.createWebviewPanel).toHaveBeenCalledTimes(2);
   });
 
   it('rejects non-http datasheet URLs before opening externally', async () => {
@@ -364,18 +394,16 @@ describe('ComponentSearchCache', () => {
       context.globalState as unknown as vscode.Memento
     );
     const octopart = {
-      search: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            source: 'octopart',
-            mpn: 'TPS5430',
-            manufacturer: 'TI',
-            description: 'Buck regulator',
-            offers: [],
-            specs: []
-          }
-        ])
+      search: jest.fn().mockResolvedValue([
+        {
+          source: 'octopart',
+          mpn: 'TPS5430',
+          manufacturer: 'TI',
+          description: 'Buck regulator',
+          offers: [],
+          specs: []
+        }
+      ])
     };
     const lcsc = { search: jest.fn().mockResolvedValue([]) };
     const service = new ComponentSearchService(
@@ -433,5 +461,68 @@ describe('ComponentSearchCache', () => {
         manufacturer: 'Local KiCad Library'
       })
     ]);
+  });
+
+  it('indexes stale local libraries and includes footprint fallback results', async () => {
+    const context = createExtensionContextMock();
+    const cache = new ComponentSearchCache(
+      context.globalState as unknown as vscode.Memento
+    );
+    const libraryIndexer = {
+      isIndexed: jest.fn().mockReturnValue(true),
+      isStale: jest.fn().mockReturnValue(true),
+      indexAll: jest.fn().mockResolvedValue(undefined),
+      searchSymbols: jest.fn().mockReturnValue([]),
+      searchFootprints: jest.fn().mockReturnValue([
+        {
+          name: 'Connector_PinHeader_1x02',
+          libraryName: 'Connector_PinHeader_2.54mm',
+          description: '',
+          tags: ['pin-header', 'through-hole']
+        }
+      ])
+    };
+    const service = new ComponentSearchService(
+      { search: jest.fn().mockResolvedValue([]) } as never,
+      { search: jest.fn().mockResolvedValue([]) } as never,
+      cache,
+      libraryIndexer as never
+    );
+
+    const results = await service.searchQuery('pin header', []);
+
+    expect(libraryIndexer.indexAll).toHaveBeenCalled();
+    expect(results).toEqual([
+      expect.objectContaining({
+        source: 'local',
+        mpn: 'Connector_PinHeader_1x02',
+        description: 'Connector_PinHeader_1x02',
+        specs: [
+          { name: 'Tag', value: 'pin-header' },
+          { name: 'Tag', value: 'through-hole' }
+        ]
+      })
+    ]);
+  });
+
+  it('returns no local fallback results when library indexing fails', async () => {
+    const context = createExtensionContextMock();
+    const cache = new ComponentSearchCache(
+      context.globalState as unknown as vscode.Memento
+    );
+    const service = new ComponentSearchService(
+      { search: jest.fn().mockResolvedValue([]) } as never,
+      { search: jest.fn().mockResolvedValue([]) } as never,
+      cache,
+      {
+        isIndexed: jest.fn().mockReturnValue(false),
+        isStale: jest.fn(),
+        indexAll: jest.fn().mockRejectedValue(new Error('index failed')),
+        searchSymbols: jest.fn(),
+        searchFootprints: jest.fn()
+      } as never
+    );
+
+    await expect(service.searchQuery('pin header', [])).resolves.toEqual([]);
   });
 });

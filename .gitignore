@@ -12,3 +12,4 @@ fab/
 .vscode-test/
 .vscode/mcp.json
 TEMP_FOLDER/
+.vscode/settings.json

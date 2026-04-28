@@ -124,6 +124,38 @@ describe('VariantProvider', () => {
     });
   });
 
+  it('keeps variant switching local when MCP is disconnected or throws', async () => {
+    const disconnectedClient = {
+      testConnection: jest.fn().mockResolvedValue({ connected: false }),
+      callTool: jest.fn()
+    };
+    const disconnectedProvider = new VariantProvider(
+      disconnectedClient as never
+    );
+
+    await disconnectedProvider.setActive({
+      name: 'No-RF',
+      isDefault: false,
+      componentOverrides: []
+    });
+
+    expect(disconnectedClient.callTool).not.toHaveBeenCalled();
+
+    const throwingClient = {
+      testConnection: jest.fn().mockRejectedValue(new Error('offline')),
+      callTool: jest.fn()
+    };
+    const throwingProvider = new VariantProvider(throwingClient as never);
+
+    await expect(
+      throwingProvider.setActive({
+        name: 'Default',
+        isDefault: false,
+        componentOverrides: []
+      })
+    ).resolves.toBeUndefined();
+  });
+
   it('builds tree items for variants and override rows', async () => {
     const provider = new VariantProvider();
     const [firstVariant] = await provider.getChildren();
@@ -197,6 +229,44 @@ describe('VariantProvider', () => {
     );
   });
 
+  it('reports when selected variants have no BOM override differences', async () => {
+    fs.writeFileSync(
+      projectFile,
+      JSON.stringify(
+        {
+          variants: [
+            {
+              name: 'Assembly-A',
+              isDefault: true,
+              componentOverrides: [{ reference: 'R1', enabled: true }]
+            },
+            {
+              name: 'Assembly-B',
+              isDefault: false,
+              componentOverrides: [{ reference: 'R1', enabled: true }]
+            }
+          ]
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    const provider = new VariantProvider();
+    (window.showQuickPick as jest.Mock)
+      .mockResolvedValueOnce('Assembly-A')
+      .mockResolvedValueOnce('Assembly-B');
+
+    await provider.diffBom();
+
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'No component-level BOM override differences were found.'
+      ),
+      { modal: true }
+    );
+  });
+
   it('normalizes design_variants when no explicit default is stored', async () => {
     fs.writeFileSync(
       projectFile,
@@ -257,6 +327,29 @@ describe('VariantProvider', () => {
 
   it('falls back to a synthetic Default variant when the project has none yet', async () => {
     fs.writeFileSync(projectFile, JSON.stringify({}, null, 2), 'utf8');
+    const provider = new VariantProvider();
+
+    const [variant] = await provider.getChildren();
+    if (!variant || !('componentOverrides' in variant)) {
+      throw new Error('Expected a fallback default variant.');
+    }
+
+    expect(variant.name).toBe('Default');
+    expect(variant.isDefault).toBe(true);
+  });
+
+  it('returns no variants and does not prompt when no project file exists', async () => {
+    (workspace.findFiles as jest.Mock).mockResolvedValue([]);
+    const provider = new VariantProvider();
+
+    await expect(provider.getChildren()).resolves.toEqual([]);
+    await provider.createVariant();
+
+    expect(window.showInputBox).not.toHaveBeenCalled();
+  });
+
+  it('falls back to Default when the project file cannot be parsed', async () => {
+    fs.writeFileSync(projectFile, '{ invalid json', 'utf8');
     const provider = new VariantProvider();
 
     const [variant] = await provider.getChildren();

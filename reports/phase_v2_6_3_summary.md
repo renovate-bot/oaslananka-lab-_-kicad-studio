@@ -18,7 +18,7 @@
 
 - Gate status mapping and violation child rows are covered by unit tests.
 - Integration manifest coverage confirms the view and commands are contributed.
-- `assets/screenshots/quality-gates.png` exists; it is a placeholder copied from the existing DRC screenshot pending a fresh dev-host capture.
+- `assets/screenshots/quality-gates.png` exists as a generated quality-gates dashboard mock pending a fresh dev-host capture.
 
 ## Diff Counts
 
@@ -27,4 +27,4 @@
 
 ## Deferred Follow-ups
 
-- Capture a fresh quality-gates screenshot against a live MCP server and replace the placeholder.
+- Capture a fresh quality-gates screenshot against a live MCP server and replace the generated mock.

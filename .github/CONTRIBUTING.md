@@ -8,4 +8,4 @@ Please use that document for:
 - architecture map
 - commit style
 - PR checklist
-- Azure DevOps CI/CD expectations
+- CI/CD routing and expectations

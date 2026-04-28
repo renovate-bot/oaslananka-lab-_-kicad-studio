@@ -218,7 +218,7 @@ function createVariantFromBase(basePng, mode) {
   return result;
 }
 
-function writeLabel(png, text, hex) {
+function writeLabel(png, text, hex, startX = 24, startY = png.height - 52) {
   const fg = color(hex);
   const pattern = {
     K: ['1001', '1010', '1100', '1010', '1001'],
@@ -232,8 +232,8 @@ function writeLabel(png, text, hex) {
     O: ['0110', '1001', '1001', '1001', '0110']
   };
 
-  let cursorX = 24;
-  const cursorY = png.height - 52;
+  let cursorX = startX;
+  const cursorY = startY;
   for (const char of text) {
     const glyph = pattern[char];
     if (!glyph) {
@@ -275,6 +275,125 @@ function createScreenshot(filePath, title, top, bottom) {
   fs.writeFileSync(filePath, PNG.sync.write(png));
 }
 
+function drawPanel(png, x, y, w, h, fill, accent) {
+  drawRect(png, x, y, x + w, y + h, fill);
+  drawRect(png, x, y, x + w, y + 4, accent);
+}
+
+function createQualityGatesScreenshot(filePath) {
+  const png = new PNG({ width: 1280, height: 720 });
+  createGradientBackground(png, '#07111f', '#134e4a');
+
+  drawRect(png, 28, 28, 1252, 104, { r: 10, g: 16, b: 30, a: 236 });
+  drawRect(png, 52, 52, 242, 80, { r: 14, g: 165, b: 233, a: 225 });
+  drawRect(png, 250, 52, 410, 80, { r: 6, g: 182, b: 212, a: 200 });
+  drawRect(png, 1040, 52, 1216, 80, { r: 34, g: 197, b: 94, a: 200 });
+  writeLabel(png, 'KICAD', '#F8FAFC', 66, 44);
+  writeLabel(png, 'STATUS', '#F8FAFC', 1034, 44);
+
+  drawPanel(
+    png,
+    28,
+    124,
+    1224,
+    568,
+    { r: 7, g: 12, b: 24, a: 210 },
+    { r: 15, g: 23, b: 42, a: 255 }
+  );
+  drawPanel(
+    png,
+    72,
+    168,
+    272,
+    480,
+    { r: 15, g: 23, b: 42, a: 246 },
+    { r: 56, g: 189, b: 248, a: 180 }
+  );
+  drawPanel(
+    png,
+    372,
+    168,
+    856,
+    480,
+    { r: 247, g: 250, b: 252, a: 246 },
+    { r: 99, g: 102, b: 241, a: 180 }
+  );
+
+  writeLabel(png, 'STATUS', '#F8FAFC', 100, 194);
+
+  const sidebarCards = [
+    { y: 236, fill: { r: 34, g: 197, b: 94, a: 220 }, label: 'OK' },
+    { y: 324, fill: { r: 245, g: 158, b: 11, a: 220 }, label: 'OK' },
+    { y: 412, fill: { r: 239, g: 68, b: 68, a: 220 }, label: 'OK' }
+  ];
+
+  for (const card of sidebarCards) {
+    drawRect(png, 100, card.y, 316, card.y + 58, card.fill);
+    drawRect(png, 116, card.y + 14, 176, card.y + 44, {
+      r: 15,
+      g: 23,
+      b: 42,
+      a: 210
+    });
+    drawRect(png, 188, card.y + 14, 300, card.y + 44, {
+      r: 255,
+      g: 255,
+      b: 255,
+      a: 30
+    });
+    writeLabel(png, card.label, '#F8FAFC', 122, card.y + 10);
+  }
+
+  drawRect(png, 400, 198, 812, 240, { r: 219, g: 234, b: 254, a: 255 });
+  drawRect(png, 836, 198, 1184, 240, { r: 209, g: 250, b: 229, a: 255 });
+  drawRect(png, 400, 262, 1184, 620, { r: 255, g: 255, b: 255, a: 255 });
+
+  writeLabel(png, 'OK', '#064E3B', 434, 206);
+  writeLabel(png, 'OK', '#065F46', 870, 206);
+
+  for (let index = 0; index < 4; index += 1) {
+    const rowTop = 304 + index * 72;
+    const tone = index % 2 === 0 ? 250 : 243;
+    drawRect(png, 420, rowTop, 1144, rowTop + 50, {
+      r: tone,
+      g: tone,
+      b: tone,
+      a: 255
+    });
+    drawRect(png, 448, rowTop + 14, 716, rowTop + 28, {
+      r: 148,
+      g: 163,
+      b: 184,
+      a: 255
+    });
+    drawRect(png, 736, rowTop + 14, 1084, rowTop + 28, {
+      r: 34,
+      g: 197,
+      b: 94,
+      a: 255
+    });
+    const chipColor =
+      index === 3
+        ? { r: 239, g: 68, b: 68, a: 255 }
+        : index === 1
+          ? { r: 245, g: 158, b: 11, a: 255 }
+          : { r: 34, g: 197, b: 94, a: 255 };
+    drawRect(png, 1112, rowTop + 10, 1158, rowTop + 40, chipColor);
+    if (index !== 3) {
+      writeLabel(png, 'OK', '#F8FAFC', 1118, rowTop + 6);
+    }
+  }
+
+  drawRect(png, 420, 604, 1144, 626, { r: 59, g: 130, b: 246, a: 255 });
+  drawRect(png, 420, 640, 988, 652, { r: 96, g: 165, b: 250, a: 255 });
+  drawRect(png, 1000, 640, 1144, 652, { r: 34, g: 197, b: 94, a: 255 });
+
+  writeLabel(png, 'KICAD', '#F8FAFC', 74, 664);
+  writeLabel(png, 'STATUS', '#F8FAFC', 236, 664);
+
+  fs.writeFileSync(filePath, PNG.sync.write(png));
+}
+
 const root = path.resolve(__dirname, '..');
 const assetsDir = path.join(root, 'assets');
 const screenshotsDir = path.join(assetsDir, 'screenshots');
@@ -292,8 +411,14 @@ const baseIcon = PNG.sync.read(fs.readFileSync(baseIconPath));
 const darkVariant = createVariantFromBase(baseIcon, 'dark');
 const lightVariant = createVariantFromBase(baseIcon, 'light');
 
-fs.writeFileSync(path.join(assetsDir, 'icon-dark.png'), PNG.sync.write(darkVariant));
-fs.writeFileSync(path.join(assetsDir, 'icon-light.png'), PNG.sync.write(lightVariant));
+fs.writeFileSync(
+  path.join(assetsDir, 'icon-dark.png'),
+  PNG.sync.write(darkVariant)
+);
+fs.writeFileSync(
+  path.join(assetsDir, 'icon-light.png'),
+  PNG.sync.write(lightVariant)
+);
 
 createScreenshot(
   path.join(screenshotsDir, 'schematic-viewer.png'),
@@ -337,3 +462,4 @@ createScreenshot(
   '#1e1b4b',
   '#0f766e'
 );
+createQualityGatesScreenshot(path.join(screenshotsDir, 'quality-gates.png'));

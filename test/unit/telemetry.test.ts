@@ -29,4 +29,23 @@ describe('TelemetryService', () => {
       durationMs: 25
     });
   });
+
+  it('emits tracked events only when telemetry is enabled', () => {
+    __setConfiguration({
+      'kicadstudio.telemetry.enabled': true
+    });
+    const sender = { trackCommand: jest.fn(), trackEvent: jest.fn() };
+    const telemetry = new TelemetryService(sender);
+
+    telemetry.trackEvent('kicadstudio.qualityGateOpened', {
+      surface: 'sidebar'
+    });
+
+    expect(sender.trackEvent).toHaveBeenCalledWith(
+      'kicadstudio.qualityGateOpened',
+      {
+        surface: 'sidebar'
+      }
+    );
+  });
 });

@@ -166,7 +166,7 @@
 ### Changed
 
 - AI max tokens increased from 1200 to 4096.
-- Azure DevOps is now the primary CI/CD system, while GitHub Actions are manual fallback workflows only.
+- The `oaslananka-lab` GitHub mirror now owns the primary automated CI/CD system, while Azure DevOps and GitLab are manual fallback workflows only.
 - TypeScript now uses `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, and `noImplicitOverride`.
 - Status bar now reflects AI configuration/health in addition to CLI and DRC/ERC state.
 - README and docs were updated for KiCad 10, MCP, AI provider options, and Azure pipeline flow.

@@ -42,5 +42,6 @@ If `kicad-mcp-pro` is installed:
 
 ## CI/CD Note
 
-- Azure DevOps is the primary CI/CD platform for this project.
-- GitHub Actions are manual fallback workflows only.
+- The `oaslananka-lab` GitHub mirror owns the primary automated CI/CD workflows.
+- Azure DevOps and GitLab are manual fallback pipelines.
+- GitHub Actions in the personal mirror are manual fallback workflows only.

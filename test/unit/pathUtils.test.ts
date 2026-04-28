@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import {
+  findSiblingProjectFile,
   getWorkspaceRoot,
   isKiCadFile,
   normalizeUserPath,
@@ -30,7 +31,9 @@ describe('pathUtils', () => {
   });
 
   it('returns the workspace root for an explicit uri or the first folder', () => {
-    const explicit = getWorkspaceRoot(vscode.Uri.file('/workspace/demo/board.kicad_pcb'));
+    const explicit = getWorkspaceRoot(
+      vscode.Uri.file('/workspace/demo/board.kicad_pcb')
+    );
     const implicit = getWorkspaceRoot();
 
     expect(explicit).toBe(process.cwd());
@@ -41,10 +44,15 @@ describe('pathUtils', () => {
     const sample = ['folder', 'child', 'file.kicad_pcb'].join(path.sep);
 
     expect(toPosixPath(sample)).toBe('folder/child/file.kicad_pcb');
-    expect(relativeToWorkspace(path.join(process.cwd(), 'folder', 'board.kicad_pcb'), process.cwd())).toBe(
-      'folder/board.kicad_pcb'
+    expect(
+      relativeToWorkspace(
+        path.join(process.cwd(), 'folder', 'board.kicad_pcb'),
+        process.cwd()
+      )
+    ).toBe('folder/board.kicad_pcb');
+    expect(relativeToWorkspace('/tmp/board.kicad_pcb', '')).toBe(
+      '/tmp/board.kicad_pcb'
     );
-    expect(relativeToWorkspace('/tmp/board.kicad_pcb', '')).toBe('/tmp/board.kicad_pcb');
   });
 
   it('checks path existence for present and missing files', () => {
@@ -52,7 +60,9 @@ describe('pathUtils', () => {
     fs.writeFileSync(existing, 'ok', 'utf8');
 
     expect(pathExistsOnAnyPlatform(existing)).toBe(true);
-    expect(pathExistsOnAnyPlatform(path.join(tempDir, 'missing.txt'))).toBe(false);
+    expect(pathExistsOnAnyPlatform(path.join(tempDir, 'missing.txt'))).toBe(
+      false
+    );
   });
 
   it('expands home-relative user paths', () => {
@@ -61,5 +71,21 @@ describe('pathUtils', () => {
 
     expect(expanded).toContain('kicad');
     expect(normalized.endsWith(`board.kicad_pcb`)).toBe(true);
+  });
+
+  it('finds sibling project files and handles unreadable directories', () => {
+    const boardFile = path.join(tempDir, 'board.kicad_pcb');
+    const exactProject = path.join(tempDir, 'board.kicad_pro');
+    const fallbackProject = path.join(tempDir, 'fallback.kicad_pro');
+
+    fs.writeFileSync(exactProject, '{}', 'utf8');
+    expect(findSiblingProjectFile(boardFile)).toBe(exactProject);
+
+    fs.rmSync(exactProject, { force: true });
+    fs.writeFileSync(fallbackProject, '{}', 'utf8');
+    expect(findSiblingProjectFile(boardFile)).toBe(fallbackProject);
+    expect(
+      findSiblingProjectFile(path.join(tempDir, 'missing', 'board.kicad_pcb'))
+    ).toBeUndefined();
   });
 });

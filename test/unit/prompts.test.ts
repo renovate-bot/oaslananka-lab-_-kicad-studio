@@ -1,4 +1,5 @@
 import {
+  buildCircuitExplanationPrompt,
   buildComponentRecommendationPrompt,
   buildErrorAnalysisPrompt,
   buildNetAnalysisPrompt,
@@ -40,7 +41,10 @@ describe('AI prompt builders', () => {
   });
 
   it('builds component prompts with and without specs', () => {
-    const withSpecs = buildComponentRecommendationPrompt('10k', '0603', ['1%', '0.1W']);
+    const withSpecs = buildComponentRecommendationPrompt('10k', '0603', [
+      '1%',
+      '0.1W'
+    ]);
     const withoutSpecs = buildComponentRecommendationPrompt('', '', []);
 
     expect(withSpecs).toContain('1%, 0.1W');
@@ -48,9 +52,19 @@ describe('AI prompt builders', () => {
     expect(withoutSpecs).toContain('Required specs: none provided');
   });
 
+  it('builds the circuit explanation prompt', () => {
+    expect(buildCircuitExplanationPrompt()).toContain(
+      'selected KiCad circuit block'
+    );
+  });
+
   it('builds proactive DRC and net analysis prompts', () => {
     const drcPrompt = buildProactiveDRCPrompt(
-      ['Track too close to board edge', 'Unconnected net', 'Clearance violation on F.Cu'],
+      [
+        'Track too close to board edge',
+        'Unconnected net',
+        'Clearance violation on F.Cu'
+      ],
       '4-layer motor board'
     );
     const netPrompt = buildNetAnalysisPrompt('VBUS', []);
@@ -59,7 +73,9 @@ describe('AI prompt builders', () => {
     expect(drcPrompt).toContain('Board info: 4-layer motor board');
     expect(drcPrompt).toContain('clearance (1): Clearance violation on F.Cu');
     expect(drcPrompt).toContain('unconnected (1): Unconnected net');
-    expect(drcPrompt).toContain('mechanical (1): Track too close to board edge');
+    expect(drcPrompt).toContain(
+      'mechanical (1): Track too close to board edge'
+    );
     expect(netPrompt).toContain('Net name: VBUS');
     expect(netPrompt).toContain('Connections: none provided');
   });

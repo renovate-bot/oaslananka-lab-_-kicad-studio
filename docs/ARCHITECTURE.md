@@ -75,7 +75,7 @@ The extension is activated from KiCad project, schematic, PCB, jobset, or DRC ru
 
 ## CI/CD
 
-- Azure DevOps is the primary CI/CD platform for this repository.
-- `azure-pipelines-ci.yml` runs validation and packages a VSIX artifact.
-- `azure-pipelines-publish.yml` is approval-gated for Marketplace publishing.
-- GitHub Actions remain manual fallback workflows only.
+- The `oaslananka-lab` GitHub mirror owns the primary automated CI/CD workflows.
+- `azure-pipelines-ci.yml` runs validation and packages a VSIX artifact as a manual fallback path.
+- `azure-pipelines-publish.yml` is approval-gated for Marketplace publishing as a manual fallback path.
+- GitHub Actions in the personal mirror are manual fallback workflows only.
