@@ -36,7 +36,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check Node project
         id: node-project
-        run: test -f package.json && echo "present=true" >> "$GITHUB_OUTPUT" || true
+        run: |
+          if [ -f package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         if: steps.node-project.outputs.present == 'true'
         with:
