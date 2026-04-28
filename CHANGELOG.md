@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.7.0] - 2026-04-28
+
+### Changed
+
+- Raised the VS Code engine to `^1.99.0` and aligned `@types/vscode` with the manifest engine.
+- Aligned local development on Node.js 24.x and npm 11+ through `devEngines`, `.node-version`, `.nvmrc`, and hardened npm defaults.
+- Replaced the Taskfile with an `npm ci`-based task graph and removed hidden lint/security fallbacks.
+- Added merge queue triggers and fail-closed PR/push security behavior for repository workflows.
+- Added Renovate dependency pinning policy, expanded CODEOWNERS coverage, and moved durable report content into `docs/maintenance-policy.md`.
+
+### Security
+
+- Added local `scripts/local-security.sh` and `scripts/local-security.ps1` gates for npm audit, gitleaks, and bundle-size checks.
+- Added a hard 5 MB artifact limit message to the bundle-size checker.
+
 ## [2.6.0] - 2026-04-28
 
 ### Added

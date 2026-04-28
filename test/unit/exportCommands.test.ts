@@ -2,7 +2,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { buildCliExportCommands, KiCadExportService } from '../../src/cli/exportCommands';
+import {
+  buildCliExportCommands,
+  KiCadExportService
+} from '../../src/cli/exportCommands';
 import { zipDirectory } from '../../src/utils/zipUtils';
 import { __setConfiguration } from './vscodeMock';
 
@@ -19,47 +22,113 @@ describe('buildCliExportCommands', () => {
 
   it('builds KiCad 9+ 3D and CAM export commands', () => {
     const pcb = 'C:\\project\\board.kicad_pcb';
-    expect(buildCliExportCommands('export-brep', pcb, 'fab', { versionMajor: 9 })[0]).toContain('brep');
-    expect(buildCliExportCommands('export-ply', pcb, 'fab', { versionMajor: 9 })[0]).toContain('ply');
-    expect(buildCliExportCommands('export-gencad', pcb, 'fab', { versionMajor: 9 })[0]).toContain('gencad');
-    expect(buildCliExportCommands('export-ipcd356', pcb, 'fab', { versionMajor: 9 })[0]).toContain('ipcd356');
+    expect(
+      buildCliExportCommands('export-brep', pcb, 'fab', { versionMajor: 9 })[0]
+    ).toContain('brep');
+    expect(
+      buildCliExportCommands('export-ply', pcb, 'fab', { versionMajor: 9 })[0]
+    ).toContain('ply');
+    expect(
+      buildCliExportCommands('export-gencad', pcb, 'fab', {
+        versionMajor: 9
+      })[0]
+    ).toContain('gencad');
+    expect(
+      buildCliExportCommands('export-ipcd356', pcb, 'fab', {
+        versionMajor: 9
+      })[0]
+    ).toContain('ipcd356');
   });
 
   it('builds gerber precision only for KiCad 9 and newer', () => {
     const pcb = '/project/board.kicad_pcb';
-    expect(buildCliExportCommands('export-gerbers', pcb, '/project/fab', { versionMajor: 9 })[0]).toEqual(
-      expect.arrayContaining(['--precision', '6'])
-    );
-    expect(buildCliExportCommands('export-gerbers', pcb, '/project/fab', { versionMajor: 6 })[0]).not.toContain(
-      '--precision'
-    );
+    expect(
+      buildCliExportCommands('export-gerbers', pcb, '/project/fab', {
+        versionMajor: 9
+      })[0]
+    ).toEqual(expect.arrayContaining(['--precision', '6']));
+    expect(
+      buildCliExportCommands('export-gerbers', pcb, '/project/fab', {
+        versionMajor: 6
+      })[0]
+    ).not.toContain('--precision');
   });
 
   it('returns empty commands for BREP and PLY on KiCad 7 and older', () => {
     const pcb = '/project/board.kicad_pcb';
-    expect(buildCliExportCommands('export-brep', pcb, '/project/fab', { versionMajor: 7 })).toEqual([]);
-    expect(buildCliExportCommands('export-ply', pcb, '/project/fab', { versionMajor: 7 })).toEqual([]);
+    expect(
+      buildCliExportCommands('export-brep', pcb, '/project/fab', {
+        versionMajor: 7
+      })
+    ).toEqual([]);
+    expect(
+      buildCliExportCommands('export-ply', pcb, '/project/fab', {
+        versionMajor: 7
+      })
+    ).toEqual([]);
   });
 
   it('builds pick-and-place export as CSV in millimeters', () => {
-    const command = buildCliExportCommands('export-pos', '/project/board.kicad_pcb', '/project/fab')[0];
+    const command = buildCliExportCommands(
+      'export-pos',
+      '/project/board.kicad_pcb',
+      '/project/fab'
+    )[0];
     expect(command).toEqual(
-      expect.arrayContaining(['pos', '--format', 'csv', '--units', 'mm', '--side', 'both'])
+      expect.arrayContaining([
+        'pos',
+        '--format',
+        'csv',
+        '--units',
+        'mm',
+        '--side',
+        'both'
+      ])
     );
   });
 
   it('builds symbol and footprint SVG export commands', () => {
-    expect(buildCliExportCommands('export-fp-svg', '/project/R_0603.kicad_mod', '/project/fab')[0]).toEqual(
-      ['fp', 'export', 'svg', '--output', '/project/fab', '/project/R_0603.kicad_mod']
-    );
-    expect(buildCliExportCommands('export-sym-svg', '/project/lib.kicad_sym', '/project/fab')[0]).toEqual(
-      ['sym', 'export', 'svg', '--output', '/project/fab', '--theme', 'kicad', '/project/lib.kicad_sym']
-    );
+    expect(
+      buildCliExportCommands(
+        'export-fp-svg',
+        '/project/R_0603.kicad_mod',
+        '/project/fab'
+      )[0]
+    ).toEqual([
+      'fp',
+      'export',
+      'svg',
+      '--output',
+      '/project/fab',
+      '/project/R_0603.kicad_mod'
+    ]);
+    expect(
+      buildCliExportCommands(
+        'export-sym-svg',
+        '/project/lib.kicad_sym',
+        '/project/fab'
+      )[0]
+    ).toEqual([
+      'sym',
+      'export',
+      'svg',
+      '--output',
+      '/project/fab',
+      '--theme',
+      'kicad',
+      '/project/lib.kicad_sym'
+    ]);
   });
 
   it('reads IPC-2581 version and units from settings', () => {
-    const command = buildCliExportCommands('export-ipc2581', '/project/board.kicad_pcb', '/project/fab')[0];
-    expect(command).toEqual(expect.arrayContaining(['--version', 'C', '--units', 'mm']));
+    const command = buildCliExportCommands(
+      'export-ipc2581',
+      '/project/board.kicad_pcb',
+      '/project/fab'
+    )[0];
+    expect(command).toEqual(
+      expect.arrayContaining(['--version', 'C', '--units', 'mm'])
+    );
   });
 });
 
@@ -69,8 +138,16 @@ describe('zipDirectory', () => {
     const sourceDir = path.join(root, 'source');
     const outputFile = path.join(root, 'package.zip');
     fs.mkdirSync(path.join(sourceDir, 'nested'), { recursive: true });
-    fs.writeFileSync(path.join(sourceDir, 'manifest.json'), '{"ok":true}', 'utf8');
-    fs.writeFileSync(path.join(sourceDir, 'nested', 'board.gbr'), 'G04 test*', 'utf8');
+    fs.writeFileSync(
+      path.join(sourceDir, 'manifest.json'),
+      '{"ok":true}',
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(sourceDir, 'nested', 'board.gbr'),
+      'G04 test*',
+      'utf8'
+    );
 
     await zipDirectory(sourceDir, outputFile);
 
@@ -78,6 +155,29 @@ describe('zipDirectory', () => {
     expect(archive.subarray(0, 4).toString('hex')).toBe('504b0304');
     expect(archive.toString('utf8')).toContain('manifest.json');
     expect(archive.toString('utf8')).toContain('nested/board.gbr');
+  });
+
+  it('uses the KiCad 10 BOM preset flag while keeping legacy fallback', () => {
+    const modern = buildCliExportCommands(
+      'export-sch-bom',
+      '/project/main.kicad_sch',
+      '/project/fab',
+      {
+        versionMajor: 10
+      }
+    )[0];
+    const legacy = buildCliExportCommands(
+      'export-sch-bom',
+      '/project/main.kicad_sch',
+      '/project/fab',
+      {
+        versionMajor: 9
+      }
+    )[0];
+
+    expect(modern).toEqual(expect.arrayContaining(['--preset', 'CSV']));
+    expect(modern).not.toContain('--format-preset');
+    expect(legacy).toEqual(expect.arrayContaining(['--format-preset', 'CSV']));
   });
 });
 
@@ -88,7 +188,9 @@ describe('KiCadExportService.renderViewerSvg', () => {
       'kicadstudio.bom.fields': ['Reference']
     });
 
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kicadstudio-export-service-'));
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kicadstudio-export-service-')
+    );
     const schematicFile = path.join(workspaceRoot, 'sample.kicad_sch');
     fs.writeFileSync(schematicFile, '(kicad_sch (symbol "U1"))', 'utf8');
 
@@ -151,7 +253,9 @@ describe('KiCadExportService.renderViewerSvg', () => {
       'kicadstudio.viewer.theme': 'kicad'
     });
 
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kicadstudio-board-export-'));
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kicadstudio-board-export-')
+    );
     const boardFile = path.join(workspaceRoot, 'board.kicad_pcb');
     fs.writeFileSync(
       boardFile,

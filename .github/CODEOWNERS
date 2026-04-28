@@ -1,1 +1,18 @@
 * @oaslananka
+
+# Toolchain, security, and release surfaces
+/package.json @oaslananka
+/package-lock.json @oaslananka
+/.node-version @oaslananka
+/.nvmrc @oaslananka
+/.npmrc @oaslananka
+/Taskfile.yml @oaslananka
+/.pre-commit-config.yaml @oaslananka
+/renovate.json @oaslananka
+/.github/ @oaslananka
+/scripts/local-security.* @oaslananka
+/scripts/check-bundle-size.js @oaslananka
+/docs/ @oaslananka
+/README.md @oaslananka
+/CHANGELOG.md @oaslananka
+/SECURITY.md @oaslananka

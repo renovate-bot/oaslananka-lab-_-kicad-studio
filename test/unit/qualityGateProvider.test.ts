@@ -75,6 +75,9 @@ describe('QualityGateProvider', () => {
     expect(provider.getTreeItem(transfer as never).iconPath).toEqual(
       expect.objectContaining({ id: 'error' })
     );
+    expect(provider.getTreeItem(transfer as never).command).toEqual(
+      expect.objectContaining({ command: 'kicadstudio.qualityGate.runThis' })
+    );
     expect(provider.getChildren(transfer as never)).toHaveLength(1);
   });
 

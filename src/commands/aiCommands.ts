@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import { COMMANDS, SETTINGS } from '../constants';
 import { KiCadChatPanel } from '../ai/chatPanel';
 import { formatDiagnosticSummary, getActiveAiContext } from '../ai/context';
+import {
+  getDefaultModel,
+  getProviderModels,
+  type AiProviderId
+} from '../ai/modelCatalog';
 import { buildProactiveDRCPrompt } from '../ai/prompts';
 import { resolveTargetFile } from '../utils/workspaceUtils';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
@@ -118,59 +123,165 @@ export function registerAiCommands(
       const picked = await vscode.window.showQuickPick(
         [
           {
-            label: 'Set Claude API key',
+            label: 'Pick AI provider',
             description:
-              'Store the API key used by the KiCad Studio chat provider.',
+              'Choose Claude, OpenAI, Copilot, Gemini, or disable AI.',
+            action: 'pick-provider'
+          },
+          {
+            label: 'Set provider API key',
+            description: 'Store the API key for the selected provider.',
             action: 'set-key'
           },
           {
-            label: 'Pick Claude model',
+            label: 'Clear provider API key',
+            description: 'Remove the API key for the selected provider.',
+            action: 'clear-key'
+          },
+          {
+            label: 'Clear all AI API keys',
             description:
-              'Choose the model string exposed by the KiCad Studio chat provider.',
+              'Remove Claude, OpenAI, and Gemini keys from SecretStorage.',
+            action: 'clear-all'
+          },
+          {
+            label: 'Pick provider model',
+            description: 'Choose a known model or enter a custom model string.',
             action: 'pick-model'
           },
           {
             label: 'Test chat provider',
             description:
-              'Verify the configured Claude-backed provider can answer a test request.',
+              'Verify the selected provider can answer a test request.',
             action: 'test'
           }
         ],
         {
           title: 'Manage KiCad Studio chat provider',
-          placeHolder: 'Choose a KiCad Studio Claude provider action'
+          placeHolder: 'Choose a provider, key, model, or test action'
         }
       );
       if (!picked) {
         return;
       }
 
-      if (picked.action === 'set-key') {
-        await vscode.commands.executeCommand(COMMANDS.setAiApiKey);
-        return;
-      }
-
-      if (picked.action === 'pick-model') {
-        const currentModel = vscode.workspace
-          .getConfiguration()
-          .get<string>(SETTINGS.aiModel, '');
-        const model = await vscode.window.showInputBox({
-          title: 'Claude model for KiCad Studio chat provider',
-          value: currentModel,
-          placeHolder: 'claude-sonnet-4-6',
-          prompt: 'Leave empty to use the default Claude model.'
-        });
-        if (typeof model !== 'string') {
+      if (picked.action === 'pick-provider') {
+        const currentProvider = services.aiProviders.getSelection().provider;
+        const provider = await vscode.window.showQuickPick(
+          [
+            { label: 'Disabled', provider: 'none' },
+            { label: 'Claude', provider: 'claude' },
+            { label: 'OpenAI', provider: 'openai' },
+            { label: 'GitHub Copilot', provider: 'copilot' },
+            { label: 'Gemini', provider: 'gemini' }
+          ],
+          {
+            title: 'AI provider',
+            placeHolder: `Current: ${currentProvider}`
+          }
+        );
+        if (!provider) {
           return;
         }
-
         await vscode.workspace
           .getConfiguration()
           .update(
             SETTINGS.aiProvider,
-            'claude',
+            provider.provider,
             vscode.ConfigurationTarget.Global
           );
+        const defaultModel =
+          provider.provider === 'none'
+            ? ''
+            : services.aiProviders.getDefaultModel(provider.provider);
+        await vscode.workspace
+          .getConfiguration()
+          .update(
+            SETTINGS.aiModel,
+            defaultModel,
+            vscode.ConfigurationTarget.Global
+          );
+        await services.refreshContexts();
+        void vscode.window.showInformationMessage(
+          'KiCad Studio AI provider updated.'
+        );
+        return;
+      }
+
+      if (picked.action === 'set-key') {
+        await vscode.commands.executeCommand(COMMANDS.setAiApiKey);
+        await services.refreshContexts();
+        return;
+      }
+
+      if (picked.action === 'clear-key') {
+        await vscode.commands.executeCommand(COMMANDS.clearAiKey);
+        await services.refreshContexts();
+        return;
+      }
+
+      if (picked.action === 'clear-all') {
+        await services.aiProviders.clearAllApiKeys();
+        await services.refreshContexts();
+        void vscode.window.showInformationMessage(
+          'Stored AI API keys cleared.'
+        );
+        return;
+      }
+
+      if (picked.action === 'pick-model') {
+        const selectedProvider = services.aiProviders.getSelection().provider;
+        const provider = (
+          selectedProvider === 'claude' ||
+          selectedProvider === 'openai' ||
+          selectedProvider === 'copilot' ||
+          selectedProvider === 'gemini'
+            ? selectedProvider
+            : 'claude'
+        ) as AiProviderId;
+        const knownModels =
+          provider === 'claude' ||
+          provider === 'openai' ||
+          provider === 'copilot' ||
+          provider === 'gemini'
+            ? getProviderModels(provider)
+            : [];
+        const currentModel = vscode.workspace
+          .getConfiguration()
+          .get<string>(SETTINGS.aiModel, '');
+        const modelPick = await vscode.window.showQuickPick(
+          [
+            ...knownModels.map((model) => ({
+              label: model.id,
+              description: model.recommended ? 'Recommended' : model.label,
+              model: model.id
+            })),
+            {
+              label: 'Custom model...',
+              description: 'Enter an explicit provider model id.',
+              model: '__custom__'
+            }
+          ],
+          {
+            title: 'AI model',
+            placeHolder: currentModel || getDefaultModel(provider)
+          }
+        );
+        if (!modelPick) {
+          return;
+        }
+        const model =
+          modelPick.model === '__custom__'
+            ? await vscode.window.showInputBox({
+                title: 'Custom AI model',
+                value: currentModel,
+                prompt: 'Leave empty to use the provider default.'
+              })
+            : modelPick.model;
+        if (typeof model !== 'string') {
+          return;
+        }
+
         await vscode.workspace
           .getConfiguration()
           .update(
@@ -185,13 +296,6 @@ export function registerAiCommands(
       }
 
       if (picked.action === 'test') {
-        await vscode.workspace
-          .getConfiguration()
-          .update(
-            SETTINGS.aiProvider,
-            'claude',
-            vscode.ConfigurationTarget.Global
-          );
         await vscode.commands.executeCommand(COMMANDS.testAiConnection);
       }
     })

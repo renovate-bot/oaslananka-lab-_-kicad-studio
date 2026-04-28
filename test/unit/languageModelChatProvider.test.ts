@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AI_SECRET_KEY } from '../../src/constants';
+import { getAiSecretKey } from '../../src/utils/secrets';
 import {
   KiCadStudioLanguageModelChatProvider,
   registerLanguageModelChatProvider
@@ -55,7 +55,7 @@ describe('KiCadStudioLanguageModelChatProvider', () => {
 
   it('streams chat responses through progress reporting', async () => {
     const context = createExtensionContextMock();
-    await context.secrets.store(AI_SECRET_KEY, 'secret');
+    await context.secrets.store(getAiSecretKey('claude'), 'secret');
     const progress = { report: jest.fn() };
     let cancellationHandler: (() => void) | undefined;
     let streamSignal: AbortSignal | undefined;
@@ -111,7 +111,7 @@ describe('KiCadStudioLanguageModelChatProvider', () => {
 
   it('returns model metadata when a key is configured', async () => {
     const context = createExtensionContextMock();
-    await context.secrets.store(AI_SECRET_KEY, 'secret');
+    await context.secrets.store(getAiSecretKey('claude'), 'secret');
     const provider = new KiCadStudioLanguageModelChatProvider(
       context as unknown as vscode.ExtensionContext,
       { debug: jest.fn() } as never,

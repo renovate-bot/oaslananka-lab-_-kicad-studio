@@ -265,12 +265,25 @@ function createExportGerbersTool(
       const activeVariant =
         options.input.variant?.trim() ||
         (await services.variantProvider.getActiveVariantName());
-      const commands = buildCliExportCommands(
+      const exportCommands = buildCliExportCommands(
         'export-gerbers',
         file,
         outputDir,
         { versionMajor }
-      ).map((command) => withVariantFlag(command, activeVariant, versionMajor));
+      );
+      const commands = await Promise.all(
+        exportCommands.map(async (command) =>
+          withVariantFlag(
+            command,
+            activeVariant,
+            await supportsVariantFlag(
+              services.cliDetector,
+              command,
+              versionMajor
+            )
+          )
+        )
+      );
 
       for (const [index, command] of commands.entries()) {
         await services.cliRunner.run({
@@ -556,9 +569,9 @@ function resolveOutputDir(file: string): string {
 function withVariantFlag(
   command: string[],
   variant: string | undefined,
-  versionMajor: number
+  supported: boolean
 ): string[] {
-  if (!variant || versionMajor < 10 || command.includes('--variant')) {
+  if (!variant || !supported || command.includes('--variant')) {
     return command;
   }
 
@@ -567,6 +580,21 @@ function withVariantFlag(
     return command;
   }
   return [...command.slice(0, -1), '--variant', variant, file];
+}
+
+async function supportsVariantFlag(
+  detector: KiCadCliDetector,
+  command: string[],
+  versionMajor: number
+): Promise<boolean> {
+  if (versionMajor < 10) {
+    return false;
+  }
+  if (typeof detector.commandHelpIncludes !== 'function') {
+    return false;
+  }
+  const helpCommand = command.filter((arg) => arg !== '--output').slice(0, 3);
+  return detector.commandHelpIncludes(helpCommand, /--variant\b/);
 }
 
 async function ensureLibraryIndex(indexer: KiCadLibraryIndexer): Promise<void> {

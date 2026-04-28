@@ -273,10 +273,18 @@ export interface VariantOverride {
   footprintOverride?: string | undefined;
 }
 
+export interface KiCadVariantComponent {
+  reference: string;
+  included: boolean;
+  value?: string | undefined;
+  footprint?: string | undefined;
+}
+
 export interface KiCadVariant {
   name: string;
   isDefault: boolean;
   componentOverrides: VariantOverride[];
+  components?: KiCadVariantComponent[] | undefined;
 }
 
 export interface McpInstallStatus {
@@ -396,6 +404,8 @@ export interface StudioContext {
     | undefined;
   activeSheetPath?: string | undefined;
   visibleLayers?: string[] | undefined;
+  kicadVersion?: string | undefined;
+  designBlocks?: string[] | undefined;
 }
 
 export interface FixItem {

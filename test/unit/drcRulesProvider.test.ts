@@ -106,4 +106,27 @@ describe('DrcRulesProvider', () => {
       'extra_rules.kicad_dru:power_clearance'
     ]);
   });
+
+  it('keeps KiCad 10 multi-constraint rule syntax readable', async () => {
+    const advancedFile = path.join(
+      process.cwd(),
+      'test',
+      'fixtures',
+      'kicad10',
+      'advanced_rules.kicad_dru'
+    );
+    (workspace.findFiles as jest.Mock).mockResolvedValue([
+      vscode.Uri.file(advancedFile)
+    ]);
+    const provider = new DrcRulesProvider(new SExpressionParser());
+
+    await (provider as any).load();
+
+    const [item] = provider.getChildren();
+    expect(item?.name).toBe('kicad10_diff_pair_inner_layer');
+    expect(item?.condition).toContain("A.Layer == 'In1.Cu'");
+    expect(item?.constraint).toContain(
+      'diff_pair_gap min 0.12mm opt 0.15mm max 0.20mm'
+    );
+  });
 });

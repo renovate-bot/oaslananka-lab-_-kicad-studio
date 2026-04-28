@@ -52,6 +52,6 @@ jobs:
             short="${org_branch#origin/}"
             [ "$short" = "HEAD" ] && continue
             if ! git show-ref --verify --quiet "refs/remotes/canonical/${short}"; then
-              git push origin --delete "$short" || true
+              git push origin --delete "$short"
             fi
           done

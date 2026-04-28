@@ -62,4 +62,28 @@ describe('ContextBridge', () => {
 
     expect(client.pushContext).toHaveBeenCalledTimes(2);
   });
+
+  it('treats active variant, KiCad version, and design blocks as context-changing fields', async () => {
+    const client = { pushContext: jest.fn().mockResolvedValue(undefined) };
+    const bridge = new ContextBridge(client as never);
+
+    await bridge.pushContext({
+      ...context,
+      activeVariant: 'Assembly-A',
+      kicadVersion: '10.0.1',
+      designBlocks: ['USB Power Input']
+    });
+    jest.advanceTimersByTime(500);
+    await Promise.resolve();
+    await bridge.pushContext({
+      ...context,
+      activeVariant: 'Assembly-B',
+      kicadVersion: '10.0.1',
+      designBlocks: ['USB Power Input', 'Sensor Front End']
+    });
+    jest.advanceTimersByTime(500);
+    await Promise.resolve();
+
+    expect(client.pushContext).toHaveBeenCalledTimes(2);
+  });
 });

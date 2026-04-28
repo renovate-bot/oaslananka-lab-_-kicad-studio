@@ -18,7 +18,10 @@ import * as fs from 'node:fs';
 import * as childProcess from 'node:child_process';
 import * as vscode from 'vscode';
 import { __setConfiguration } from './vscodeMock';
-import { getCliCandidates, KiCadCliDetector } from '../../src/cli/kicadCliDetector';
+import {
+  getCliCandidates,
+  KiCadCliDetector
+} from '../../src/cli/kicadCliDetector';
 
 describe('KiCadCliDetector', () => {
   beforeEach(() => {
@@ -47,16 +50,18 @@ describe('KiCadCliDetector', () => {
       'kicadstudio.kicadCliPath': ''
     });
     const detector = new KiCadCliDetector() as any;
-    detector.validateCandidate = jest.fn().mockImplementation(async (_candidate: string, source: string) => (
-      source === 'path'
-        ? {
-            path: '/usr/bin/kicad-cli',
-            version: '8.0.0',
-            versionLabel: 'KiCad 8.0.0',
-            source: 'path'
-          }
-        : undefined
-    ));
+    detector.validateCandidate = jest
+      .fn()
+      .mockImplementation(async (_candidate: string, source: string) =>
+        source === 'path'
+          ? {
+              path: '/usr/bin/kicad-cli',
+              version: '8.0.0',
+              versionLabel: 'KiCad 8.0.0',
+              source: 'path'
+            }
+          : undefined
+      );
     detector.findOnPath = jest.fn().mockReturnValue('/usr/bin/kicad-cli');
 
     const result = await detector.detect();
@@ -68,22 +73,26 @@ describe('KiCadCliDetector', () => {
       'kicadstudio.kicadCliPath': ''
     });
     const detector = new KiCadCliDetector() as any;
-    detector.validateCandidate = jest.fn().mockImplementation(async (_candidate: string, source: string) => (
-      source === 'path'
-        ? {
-            path: '/usr/bin/kicad-cli',
-            version: '8.0.0',
-            versionLabel: 'KiCad 8.0.0',
-            source: 'path'
-          }
-        : undefined
-    ));
+    detector.validateCandidate = jest
+      .fn()
+      .mockImplementation(async (_candidate: string, source: string) =>
+        source === 'path'
+          ? {
+              path: '/usr/bin/kicad-cli',
+              version: '8.0.0',
+              versionLabel: 'KiCad 8.0.0',
+              source: 'path'
+            }
+          : undefined
+      );
     detector.findOnPath = jest.fn().mockReturnValue('/usr/bin/kicad-cli');
 
     const detected = await detector.detect();
 
     expect(detected?.path).toBe('/usr/bin/kicad-cli');
-    expect((detector as { detected?: { path: string } }).detected?.path).toBe('/usr/bin/kicad-cli');
+    expect((detector as { detected?: { path: string } }).detected?.path).toBe(
+      '/usr/bin/kicad-cli'
+    );
   });
 
   it('returns null when not found', async () => {
@@ -179,6 +188,31 @@ describe('KiCadCliDetector', () => {
     expect(spawnSyncMock).toHaveBeenCalledTimes(1);
   });
 
+  it('reads and caches command help for option/format probes', async () => {
+    const detector = new KiCadCliDetector() as any;
+    detector.detect = jest.fn().mockResolvedValue({
+      path: 'C:\\KiCad\\bin\\kicad-cli.exe',
+      version: '10.0.1',
+      versionLabel: 'KiCad 10.0.1',
+      source: 'settings'
+    });
+    const spawnSyncMock = childProcess.spawnSync as unknown as jest.Mock;
+    spawnSyncMock.mockReturnValue({
+      status: 0,
+      stdout: 'Usage: kicad-cli pcb import --format pads|altium|geda',
+      stderr: ''
+    } as never);
+
+    await expect(
+      detector.commandHelpIncludes(['pcb', 'import'], /\bgeda\b/i)
+    ).resolves.toBe(true);
+    await expect(detector.getCommandHelp(['pcb', 'import'])).resolves.toContain(
+      '--format'
+    );
+
+    expect(spawnSyncMock).toHaveBeenCalledTimes(1);
+  });
+
   it('validates real candidates and rejects broken binaries gracefully', async () => {
     const detector = new KiCadCliDetector() as any;
     const existsSyncMock = fs.existsSync as unknown as jest.Mock;
@@ -186,17 +220,31 @@ describe('KiCadCliDetector', () => {
     const spawnSyncMock = childProcess.spawnSync as unknown as jest.Mock;
 
     existsSyncMock.mockReturnValue(true);
-    realpathNativeMock.mockImplementation((value: fs.PathLike) => String(value));
+    realpathNativeMock.mockImplementation((value: fs.PathLike) =>
+      String(value)
+    );
     spawnSyncMock
       .mockReturnValueOnce({ status: 1, stdout: '', stderr: 'bad' } as never)
-      .mockReturnValueOnce({ status: 0, stdout: 'other-tool 1.0', stderr: '' } as never)
-      .mockReturnValueOnce({ status: 0, stdout: 'kicad-cli 9.0.3', stderr: '' } as never);
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: 'other-tool 1.0',
+        stderr: ''
+      } as never)
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: 'kicad-cli 9.0.3',
+        stderr: ''
+      } as never);
 
-    await expect(detector.validateCandidate('C:\\broken.exe', 'settings')).resolves.toBeUndefined();
-    await expect(detector.validateCandidate('C:\\other.exe', 'settings')).resolves.toBeUndefined();
-    await expect(detector.validateCandidate('C:\\KiCad\\bin\\kicad-cli.exe', 'settings')).resolves.toEqual(
-      expect.objectContaining({ version: '9.0.3' })
-    );
+    await expect(
+      detector.validateCandidate('C:\\broken.exe', 'settings')
+    ).resolves.toBeUndefined();
+    await expect(
+      detector.validateCandidate('C:\\other.exe', 'settings')
+    ).resolves.toBeUndefined();
+    await expect(
+      detector.validateCandidate('C:\\KiCad\\bin\\kicad-cli.exe', 'settings')
+    ).resolves.toEqual(expect.objectContaining({ version: '9.0.3' }));
   });
 
   it('parses PATH lookup results and opens settings when requested', async () => {
@@ -212,7 +260,9 @@ describe('KiCadCliDetector', () => {
 
     detector.validateCandidate = jest.fn().mockResolvedValue(undefined);
     detector.findOnPath = jest.fn().mockReturnValue(undefined);
-    (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue('Set Manual Path');
+    (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue(
+      'Set Manual Path'
+    );
 
     await detector.detect(true);
 
@@ -235,10 +285,18 @@ describe('KiCadCliDetector', () => {
     const spawnSyncMock = childProcess.spawnSync as unknown as jest.Mock;
 
     existsSyncMock.mockReturnValue(false);
-    spawnSyncMock.mockReturnValue({ status: 1, stdout: '', stderr: '' } as never);
+    spawnSyncMock.mockReturnValue({
+      status: 1,
+      stdout: '',
+      stderr: ''
+    } as never);
 
-    await expect(detector.validateCandidate('', 'settings')).resolves.toBeUndefined();
-    await expect(detector.validateCandidate('C:\\missing\\kicad-cli.exe', 'settings')).resolves.toBeUndefined();
+    await expect(
+      detector.validateCandidate('', 'settings')
+    ).resolves.toBeUndefined();
+    await expect(
+      detector.validateCandidate('C:\\missing\\kicad-cli.exe', 'settings')
+    ).resolves.toBeUndefined();
     expect(detector.findOnPath()).toBeUndefined();
   });
 
@@ -267,7 +325,9 @@ describe('KiCadCliDetector', () => {
     });
 
     try {
-      expect(detector.normalizeCandidate(' .\\kicad-cli.exe ')).toContain('kicad-cli.exe');
+      expect(detector.normalizeCandidate(' .\\kicad-cli.exe ')).toContain(
+        'kicad-cli.exe'
+      );
       detector.warnIfWorkspaceConfiguredPath('C:\\KiCad\\bin\\kicad-cli.exe');
       detector.warnIfWorkspaceConfiguredPath('C:\\KiCad\\bin\\kicad-cli.exe');
       expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);

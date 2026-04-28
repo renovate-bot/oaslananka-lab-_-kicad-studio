@@ -1,9 +1,14 @@
 import * as fs from 'node:fs';
 import * as vscode from 'vscode';
 import { COMMANDS } from '../constants';
-import type { KiCadVariant, VariantOverride } from '../types';
+import type {
+  KiCadVariant,
+  KiCadVariantComponent,
+  VariantOverride
+} from '../types';
 import { findFirstWorkspaceFile } from '../utils/pathUtils';
 import type { McpClient } from '../mcp/mcpClient';
+import { createNonce } from '../utils/nonce';
 
 interface VariantDocument {
   activeVariant?: string | undefined;
@@ -33,9 +38,9 @@ class VariantTreeItem extends vscode.TreeItem {
   }
 }
 
-export class VariantProvider implements vscode.TreeDataProvider<
-  KiCadVariant | VariantOverride
-> {
+export class VariantProvider
+  implements vscode.TreeDataProvider<KiCadVariant | VariantOverride>
+{
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<
     KiCadVariant | VariantOverride | undefined
   >();
@@ -194,17 +199,8 @@ export class VariantProvider implements vscode.TreeDataProvider<
       return;
     }
 
-    const changes = diffOverrides(
-      leftVariant.componentOverrides,
-      rightVariant.componentOverrides
-    );
-    const message = changes.length
-      ? changes.join('\n')
-      : 'No component-level BOM override differences were found.';
-    void vscode.window.showInformationMessage(
-      `Variant BOM diff\n\n${message}`,
-      { modal: true }
-    );
+    const changes = diffVariants(leftVariant, rightVariant);
+    this.openBomDiffWebview(leftVariant, rightVariant, changes);
   }
 
   private async loadVariants(): Promise<void> {
@@ -239,6 +235,23 @@ export class VariantProvider implements vscode.TreeDataProvider<
       // Variant switching should remain local when MCP is unavailable.
     }
   }
+
+  private openBomDiffWebview(
+    left: KiCadVariant,
+    right: KiCadVariant,
+    changes: string[]
+  ): void {
+    const panel = vscode.window.createWebviewPanel(
+      'kicadstudio.variantBomDiff',
+      `BOM Diff: ${left.name} -> ${right.name}`,
+      vscode.ViewColumn.Beside,
+      {
+        enableScripts: false,
+        localResourceRoots: []
+      }
+    );
+    panel.webview.html = renderBomDiffHtml(left, right, changes);
+  }
 }
 
 function readVariantDocument(projectFile: string): VariantDocument {
@@ -269,7 +282,8 @@ function normalizeVariants(document: VariantDocument): KiCadVariant[] {
       {
         name: activeVariant ?? 'Default',
         isDefault: true,
-        componentOverrides: []
+        componentOverrides: [],
+        components: []
       }
     ];
   }
@@ -305,6 +319,9 @@ function normalizeVariant(
     : Array.isArray(record['overrides'])
       ? record['overrides']
       : [];
+  const componentsSource = Array.isArray(record['components'])
+    ? record['components']
+    : [];
 
   return {
     name,
@@ -314,7 +331,10 @@ function normalizeVariant(
       (activeVariant ? activeVariant === name : false),
     componentOverrides: overridesSource
       .map((item) => normalizeOverride(item))
-      .filter((item): item is VariantOverride => Boolean(item))
+      .filter((item): item is VariantOverride => Boolean(item)),
+    components: componentsSource
+      .map((item) => normalizeComponent(item))
+      .filter((item): item is KiCadVariantComponent => Boolean(item))
   };
 }
 
@@ -345,6 +365,34 @@ function normalizeOverride(value: unknown): VariantOverride | undefined {
   return normalized;
 }
 
+function normalizeComponent(value: unknown): KiCadVariantComponent | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const reference =
+    typeof record['reference'] === 'string'
+      ? record['reference']
+      : typeof record['ref'] === 'string'
+        ? record['ref']
+        : undefined;
+  if (!reference) {
+    return undefined;
+  }
+
+  const component: KiCadVariantComponent = {
+    reference,
+    included: record['included'] !== false && record['dnp'] !== true
+  };
+  if (typeof record['value'] === 'string') {
+    component.value = record['value'];
+  }
+  if (typeof record['footprint'] === 'string') {
+    component.footprint = record['footprint'];
+  }
+  return component;
+}
+
 function serializeVariants(
   variants: KiCadVariant[]
 ): Array<Record<string, unknown>> {
@@ -360,8 +408,26 @@ function serializeVariants(
       ...(override.footprintOverride
         ? { footprintOverride: override.footprintOverride }
         : {})
+    })),
+    components: variant.components?.map((component) => ({
+      reference: component.reference,
+      included: component.included,
+      ...(component.value ? { value: component.value } : {}),
+      ...(component.footprint ? { footprint: component.footprint } : {})
     }))
   }));
+}
+
+function diffVariants(left: KiCadVariant, right: KiCadVariant): string[] {
+  const overrideChanges = diffOverrides(
+    left.componentOverrides,
+    right.componentOverrides
+  );
+  const componentChanges = diffComponents(
+    left.components ?? [],
+    right.components ?? []
+  );
+  return [...overrideChanges, ...componentChanges];
 }
 
 function diffOverrides(
@@ -400,4 +466,83 @@ function diffOverrides(
     changes.push(`Removed in target: ${remaining.reference}`);
   }
   return changes;
+}
+
+function diffComponents(
+  left: KiCadVariantComponent[],
+  right: KiCadVariantComponent[]
+): string[] {
+  const changes: string[] = [];
+  const index = new Map<string, KiCadVariantComponent>();
+  for (const item of left) {
+    index.set(item.reference, item);
+  }
+  for (const item of right) {
+    const previous = index.get(item.reference);
+    if (!previous) {
+      changes.push(`Added component in target: ${item.reference}`);
+      continue;
+    }
+    if (previous.included !== item.included) {
+      changes.push(
+        `${item.reference}: included ${previous.included} -> ${item.included}`
+      );
+    }
+    if (previous.value !== item.value) {
+      changes.push(
+        `${item.reference}: value ${previous.value ?? 'base'} -> ${item.value ?? 'base'}`
+      );
+    }
+    if (previous.footprint !== item.footprint) {
+      changes.push(
+        `${item.reference}: footprint ${previous.footprint ?? 'base'} -> ${item.footprint ?? 'base'}`
+      );
+    }
+    index.delete(item.reference);
+  }
+  for (const remaining of index.values()) {
+    changes.push(`Removed component in target: ${remaining.reference}`);
+  }
+  return changes;
+}
+
+function renderBomDiffHtml(
+  left: KiCadVariant,
+  right: KiCadVariant,
+  changes: string[]
+): string {
+  const nonce = createNonce();
+  const rows = changes.length
+    ? changes.map((change) => `<li>${escapeHtml(change)}</li>`).join('')
+    : '<li>No component-level BOM differences were found.</li>';
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOM Diff</title>
+  <style nonce="${nonce}">
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; padding: 16px; }
+    h1 { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
+    .meta { color: var(--vscode-descriptionForeground); margin-bottom: 16px; }
+    ul { padding-left: 20px; }
+    li { margin: 6px 0; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h1>Variant BOM Diff</h1>
+  <div class="meta">${escapeHtml(left.name)} -> ${escapeHtml(right.name)}</div>
+  <ul>${rows}</ul>
+</body>
+</html>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

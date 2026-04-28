@@ -40,7 +40,9 @@ abstract class BaseLanguageModelProvider implements AIProvider {
   ): Promise<string> {
     const model = await this.selectModel();
     const response = await model.sendRequest([
-      this.createUserMessage(`${systemPrompt}\n\n${prompt}\n\nContext:\n${context}`)
+      this.createUserMessage(
+        `${systemPrompt}\n\n${prompt}\n\nContext:\n${context}`
+      )
     ]);
 
     let result = '';
@@ -93,8 +95,9 @@ abstract class BaseLanguageModelProvider implements AIProvider {
   }
 
   protected createUserMessage(content: string): unknown {
-    const factory = (vscode as unknown as { LanguageModelChatMessage?: MessageFactory })
-      .LanguageModelChatMessage;
+    const factory = (
+      vscode as unknown as { LanguageModelChatMessage?: MessageFactory }
+    ).LanguageModelChatMessage;
     return typeof factory?.User === 'function'
       ? factory.User(content)
       : { role: 'user', content };
@@ -114,7 +117,9 @@ abstract class BaseLanguageModelProvider implements AIProvider {
       }
     }
 
-    throw new Error(`No ${this.name} model is currently available through the VS Code Language Model API.`);
+    throw new Error(
+      `No ${this.name} model is currently available through the VS Code Language Model API.`
+    );
   }
 }
 
@@ -124,14 +129,5 @@ export class CopilotProvider extends BaseLanguageModelProvider {
     { vendor: 'copilot', family: 'gpt-4o' },
     { vendor: 'copilot', family: 'gpt-4' },
     { vendor: 'copilot' }
-  ];
-}
-
-export class GeminiProvider extends BaseLanguageModelProvider {
-  readonly name = 'Gemini';
-  protected readonly selectors = [
-    { vendor: 'gemini' },
-    { vendor: 'google' },
-    { family: 'gemini' }
   ];
 }

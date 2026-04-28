@@ -27,7 +27,9 @@ const DEFAULT_GATES: QualityGateResult[] = [
   pendingGate('manufacturing', 'Manufacturing')
 ];
 
-export class QualityGateProvider implements vscode.TreeDataProvider<QualityGateElement> {
+export class QualityGateProvider
+  implements vscode.TreeDataProvider<QualityGateElement>
+{
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<
     QualityGateElement | undefined
   >();
@@ -82,8 +84,8 @@ export class QualityGateProvider implements vscode.TreeDataProvider<QualityGateE
     item.contextValue = `qualityGate-${gate.status.toLowerCase()}`;
     item.iconPath = new vscode.ThemeIcon(iconForStatus(gate.status));
     item.command = {
-      command: COMMANDS.qualityGateShowRaw,
-      title: 'Show Raw Output',
+      command: COMMANDS.qualityGateRunThis,
+      title: 'Run This Quality Gate',
       arguments: [gate]
     };
     return item;

@@ -45,7 +45,7 @@ Use `kicadstudio.ai.language` to control the response language independently fro
 
 ## Language Model Tools
 
-When `kicadstudio.ai.allowTools` is enabled and the host VS Code build exposes the API, KiCad Studio registers tools for:
+KiCad Studio 2.7.0 targets VS Code `^1.99.0` for Language Model Tool and chat-provider contribution metadata. When `kicadstudio.ai.allowTools` is enabled and the host VS Code build exposes the API, KiCad Studio registers tools for:
 
 - DRC
 - ERC
@@ -63,6 +63,8 @@ These tools are available to agent mode and can also be referenced directly in s
 ## Chat Provider
 
 When the host exposes `registerLanguageModelChatProvider`, KiCad Studio contributes a `kicadstudio` chat-model vendor that routes requests through the stored Claude API key and enriches the prompt with active project context.
+
+The contributed prompt-facing tool definitions are pinned in the extension manifest and should be updated with the VS Code engine and `@types/vscode` version together.
 
 Use `KiCad: Manage Chat Provider` to:
 

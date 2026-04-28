@@ -33,7 +33,6 @@ import {
   SETTINGS,
   TREE_VIEW_ID,
   VARIANTS_VIEW_ID,
-  AI_SECRET_KEY,
   OCTOPART_SECRET_KEY
 } from './constants';
 import { registerAllCommands } from './commands';
@@ -68,6 +67,7 @@ import { KiCadTaskProvider } from './tasks/kicadTaskProvider';
 import { VariantProvider } from './variants/variantProvider';
 import { readConfiguredMcpProfile } from './commands/mcpProfilePicker';
 import { Logger } from './utils/logger';
+import { getAiSecretKey, isAiSecretProvider } from './utils/secrets';
 import {
   getActiveResourceUri,
   workspaceHasVariants
@@ -100,7 +100,7 @@ export async function activate(
   const languageServer = new KiCadDocumentStore(parser);
   const cliDetector = new KiCadCliDetector();
   const cliRunner = new KiCadCliRunner(cliDetector, logger);
-  const importService = new KiCadImportService(cliRunner, logger);
+  const importService = new KiCadImportService(cliRunner, cliDetector, logger);
   const statusBar = new KiCadStatusBar(context);
   const bomParser = new BomParser(parser);
   const bomExporter = new BomExporter();
@@ -654,6 +654,8 @@ export async function activate(
       | undefined;
     activeSheetPath?: string | undefined;
     visibleLayers?: string[] | undefined;
+    kicadVersion?: string | undefined;
+    designBlocks?: string[] | undefined;
   }> {
     const activeUri = getActiveResourceUri();
     const activeEditor = vscode.window.activeTextEditor;
@@ -669,6 +671,7 @@ export async function activate(
           ? schematicEditorProvider.getViewerState(activeUri)
           : undefined;
     const mcpState = await mcpClient.testConnection();
+    const cli = isWorkspaceTrusted() ? await cliDetector.detect() : undefined;
     return {
       activeFile: activeUri?.fsPath,
       fileType,
@@ -693,7 +696,9 @@ export async function activate(
           : undefined,
       visibleLayers: viewerState?.activeLayers,
       activeVariant: await variantProvider.getActiveVariantName(),
-      mcpConnected: mcpState.connected
+      mcpConnected: mcpState.connected,
+      kicadVersion: cli?.version,
+      designBlocks: activeUri ? readDesignBlockNames(activeUri.fsPath) : []
     };
   }
 
@@ -701,6 +706,22 @@ export async function activate(
     reason: 'save' | 'focus' | 'cursor' | 'drc' | 'default' = 'default'
   ): Promise<void> {
     await contextBridge.pushContext(await buildStudioContext(), reason);
+  }
+}
+
+function readDesignBlockNames(file: string): string[] {
+  try {
+    const text = fs.readFileSync(file, 'utf8');
+    return [
+      ...new Set(
+        Array.from(
+          text.matchAll(/\(\s*design_block\b[\s\S]*?\(\s*name\s+"([^"]+)"/g),
+          (match) => match[1]
+        ).filter((entry): entry is string => Boolean(entry))
+      )
+    ];
+  } catch {
+    return [];
   }
 }
 
@@ -721,7 +742,7 @@ async function migrateDeprecatedSecretSettings(
     context,
     logger,
     settingKey: SETTINGS.aiApiKey,
-    secretKey: AI_SECRET_KEY,
+    secretKey: getAiSecretKey(getConfiguredAiSecretProvider()),
     label: 'AI'
   });
   await migrateDeprecatedSecretSetting({
@@ -731,6 +752,13 @@ async function migrateDeprecatedSecretSettings(
     secretKey: OCTOPART_SECRET_KEY,
     label: 'Octopart/Nexar'
   });
+}
+
+function getConfiguredAiSecretProvider(): 'claude' | 'openai' | 'gemini' {
+  const provider = vscode.workspace
+    .getConfiguration()
+    .get<string>(SETTINGS.aiProvider, 'claude');
+  return isAiSecretProvider(provider) ? provider : 'claude';
 }
 
 async function migrateDeprecatedSecretSetting(args: {

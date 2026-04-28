@@ -1,9 +1,15 @@
 import * as vscode from 'vscode';
 import { ClaudeProvider } from '../ai/claudeProvider';
-import { buildSystemPrompt, DEFAULT_AI_LANGUAGE, DEFAULT_CLAUDE_MODEL, normalizeAiLanguage } from '../ai/prompts';
-import { AI_SECRET_KEY, COMMANDS, SETTINGS } from '../constants';
+import {
+  buildSystemPrompt,
+  DEFAULT_AI_LANGUAGE,
+  DEFAULT_CLAUDE_MODEL,
+  normalizeAiLanguage
+} from '../ai/prompts';
+import { COMMANDS, SETTINGS } from '../constants';
 import type { StudioContext } from '../types';
 import { Logger } from '../utils/logger';
+import { migrateLegacyAiSecret } from '../utils/secrets';
 import {
   createLanguageModelTextPart,
   estimateLanguageModelTokens,
@@ -35,17 +41,21 @@ export class KiCadStudioLanguageModelChatProvider
     private readonly extensionContext: vscode.ExtensionContext,
     private readonly logger: Logger,
     private readonly getStudioContext: () => Promise<StudioContext>,
-    private readonly providerFactory: (apiKey: string, model: string) => ClaudeLikeProvider = (
-      apiKey,
-      model
-    ) => new ClaudeProvider(apiKey, model)
+    private readonly providerFactory: (
+      apiKey: string,
+      model: string
+    ) => ClaudeLikeProvider = (apiKey, model) =>
+      new ClaudeProvider(apiKey, model)
   ) {}
 
   async provideLanguageModelChatInformation(
     options: { silent: boolean },
     _token: vscode.CancellationToken
   ): Promise<LanguageModelChatInformation[]> {
-    const apiKey = await this.extensionContext.secrets.get(AI_SECRET_KEY);
+    const apiKey = await migrateLegacyAiSecret({
+      secrets: this.extensionContext.secrets,
+      provider: 'claude'
+    });
     if (!apiKey) {
       if (!options.silent) {
         const choice = await vscode.window.showInformationMessage(
@@ -59,10 +69,14 @@ export class KiCadStudioLanguageModelChatProvider
       return [];
     }
 
-    this.logger.debug('KiCad Studio chat provider exposed its Claude-backed chat model.');
+    this.logger.debug(
+      'KiCad Studio chat provider exposed its Claude-backed chat model.'
+    );
     const configuredModel =
-      vscode.workspace.getConfiguration().get<string>(SETTINGS.aiModel, '').trim() ||
-      DEFAULT_CLAUDE_MODEL;
+      vscode.workspace
+        .getConfiguration()
+        .get<string>(SETTINGS.aiModel, '')
+        .trim() || DEFAULT_CLAUDE_MODEL;
     return [
       {
         id: CHAT_PROVIDER_MODEL_ID,
@@ -71,7 +85,8 @@ export class KiCadStudioLanguageModelChatProvider
         version: configuredModel,
         maxInputTokens: 200_000,
         maxOutputTokens: 4096,
-        detail: 'Uses the KiCad Studio Claude configuration and current project context.',
+        detail:
+          'Uses the KiCad Studio Claude configuration and current project context.',
         tooltip: 'Claude with KiCad Studio prompts and project-aware context.',
         capabilities: {
           toolCalling: false
@@ -87,34 +102,46 @@ export class KiCadStudioLanguageModelChatProvider
     progress: { report(value: unknown): void },
     token: vscode.CancellationToken
   ): Promise<void> {
-    const apiKey = await this.extensionContext.secrets.get(AI_SECRET_KEY);
+    const apiKey = await migrateLegacyAiSecret({
+      secrets: this.extensionContext.secrets,
+      provider: 'claude'
+    });
     if (!apiKey) {
-      throw new Error('KiCad Studio Claude is not configured. Store an API key first.');
+      throw new Error(
+        'KiCad Studio Claude is not configured. Store an API key first.'
+      );
     }
 
     const studioContext = await this.getStudioContext();
     const prompt = getLastUserFacingMessage(messages);
     const transcript = flattenLanguageModelMessages(messages);
     const language = normalizeAiLanguage(
-      vscode.workspace.getConfiguration().get<string>(SETTINGS.aiLanguage, DEFAULT_AI_LANGUAGE)
+      vscode.workspace
+        .getConfiguration()
+        .get<string>(SETTINGS.aiLanguage, DEFAULT_AI_LANGUAGE)
     );
     const systemPrompt = buildSystemPrompt(language, {
       activeVariant: studioContext.activeVariant,
-      kicadVersion: studioContext.fileType === 'other' ? undefined : 'workspace',
+      kicadVersion:
+        studioContext.fileType === 'other' ? undefined : 'workspace',
       mcpConnected: studioContext.mcpConnected
     });
 
-    const context = [
-      transcript,
-      buildStudioContextSummary(studioContext)
-    ]
+    const context = [transcript, buildStudioContextSummary(studioContext)]
       .filter(Boolean)
       .join('\n\n');
 
-    const provider = this.providerFactory(apiKey, model.version || DEFAULT_CLAUDE_MODEL);
+    const provider = this.providerFactory(
+      apiKey,
+      model.version || DEFAULT_CLAUDE_MODEL
+    );
     const abortController = new AbortController();
-    token.onCancellationRequested(() => abortController.abort(new Error('Chat request cancelled.')));
-    this.logger.debug(`Streaming KiCad Studio chat provider response with model ${model.version}.`);
+    token.onCancellationRequested(() =>
+      abortController.abort(new Error('Chat request cancelled.'))
+    );
+    this.logger.debug(
+      `Streaming KiCad Studio chat provider response with model ${model.version}.`
+    );
     await provider.analyzeStream(
       prompt,
       context,
@@ -140,20 +167,30 @@ export function registerLanguageModelChatProvider(
 ): void {
   const lm = getLanguageModelApi();
   if (typeof lm?.registerLanguageModelChatProvider !== 'function') {
-    logger.debug('VS Code language model chat provider API is unavailable on this host.');
+    logger.debug(
+      'VS Code language model chat provider API is unavailable on this host.'
+    );
     return;
   }
 
   context.subscriptions.push(
     lm.registerLanguageModelChatProvider(
       CHAT_PROVIDER_VENDOR,
-      new KiCadStudioLanguageModelChatProvider(context, logger, getStudioContext)
+      new KiCadStudioLanguageModelChatProvider(
+        context,
+        logger,
+        getStudioContext
+      )
     )
   );
 }
 
-function getLastUserFacingMessage(messages: readonly LanguageModelChatRequestMessage[]): string {
-  const lastMessage = [...messages].reverse().find((message) => message.content.length > 0);
+function getLastUserFacingMessage(
+  messages: readonly LanguageModelChatRequestMessage[]
+): string {
+  const lastMessage = [...messages]
+    .reverse()
+    .find((message) => message.content.length > 0);
   return lastMessage
     ? lastMessage.content.map((part) => getLanguageModelPartText(part)).join('')
     : 'Continue the conversation using the provided KiCad context.';

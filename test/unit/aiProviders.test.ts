@@ -1,5 +1,5 @@
 import { ClaudeProvider } from '../../src/ai/claudeProvider';
-import { CopilotProvider, GeminiProvider } from '../../src/ai/copilotProvider';
+import { CopilotProvider } from '../../src/ai/copilotProvider';
 import { OpenAIProvider } from '../../src/ai/openaiProvider';
 import { lm } from './vscodeMock';
 
@@ -89,38 +89,33 @@ describe('AI providers', () => {
     expect(body.messages.at(0)?.content).toContain('context');
   });
 
-  it.each([
-    ['Copilot', new CopilotProvider(), { vendor: 'copilot', family: 'gpt-4o' }],
-    ['Gemini', new GeminiProvider(), { vendor: 'gemini' }]
-  ])(
-    'streams %s language model chunks through the VS Code LM API',
-    async (_name, provider, firstSelector) => {
-      const model = {
-        sendRequest: jest.fn().mockResolvedValue({
-          text: streamChunks(['alpha ', 'beta'])
-        })
-      };
-      (lm as { selectChatModels?: jest.Mock }).selectChatModels = jest
-        .fn()
-        .mockResolvedValue([model]);
-      const chunks: string[] = [];
+  it('streams Copilot language model chunks through the VS Code LM API', async () => {
+    const provider = new CopilotProvider();
+    const model = {
+      sendRequest: jest.fn().mockResolvedValue({
+        text: streamChunks(['alpha ', 'beta'])
+      })
+    };
+    (lm as { selectChatModels?: jest.Mock }).selectChatModels = jest
+      .fn()
+      .mockResolvedValue([model]);
+    const chunks: string[] = [];
 
-      await provider.analyzeStream('Explain', 'context', 'system', (chunk) =>
-        chunks.push(chunk)
-      );
+    await provider.analyzeStream('Explain', 'context', 'system', (chunk) =>
+      chunks.push(chunk)
+    );
 
-      expect(
-        (lm as unknown as { selectChatModels: jest.Mock }).selectChatModels
-      ).toHaveBeenCalledWith(firstSelector);
-      expect(chunks).toEqual(['alpha ', 'beta']);
-      expect(model.sendRequest).toHaveBeenCalledWith([
-        expect.objectContaining({
-          role: 'user',
-          content: expect.stringContaining('Context:\ncontext')
-        })
-      ]);
-    }
-  );
+    expect(
+      (lm as unknown as { selectChatModels: jest.Mock }).selectChatModels
+    ).toHaveBeenCalledWith({ vendor: 'copilot', family: 'gpt-4o' });
+    expect(chunks).toEqual(['alpha ', 'beta']);
+    expect(model.sendRequest).toHaveBeenCalledWith([
+      expect.objectContaining({
+        role: 'user',
+        content: expect.stringContaining('Context:\ncontext')
+      })
+    ]);
+  });
 });
 
 async function* streamChunks(chunks: string[]): AsyncIterable<string> {

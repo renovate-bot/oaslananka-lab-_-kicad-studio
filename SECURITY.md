@@ -17,3 +17,13 @@ We aim to respond within 5 business days and coordinate a fix release.
 | ------- | --------- |
 | 2.x     | Yes       |
 | 1.x     | No        |
+
+## Maintainer Security Checks
+
+Before release, run:
+
+```bash
+task security
+```
+
+The local security task runs high-severity `npm audit`, `gitleaks detect --redact`, and the bundle-size gate. GitHub pull request, merge queue, and push security workflows are expected to fail closed on findings.

@@ -6,6 +6,7 @@ import {
   AIStreamAbortedError
 } from '../errors';
 import type { AIConnectionResult, AIProvider } from '../types';
+import { redactApiKey } from '../utils/secrets';
 import { buildSystemPrompt, DEFAULT_AI_LANGUAGE } from './prompts';
 import { createManagedAbortSignal, readEventStream } from './providerUtils';
 
@@ -84,7 +85,11 @@ export class ClaudeProvider implements AIProvider {
   ): Promise<void> {
     const response = await this.request(
       {
-        ...this.buildRequestBody(prompt, context, systemPrompt ?? buildSystemPrompt(DEFAULT_AI_LANGUAGE)),
+        ...this.buildRequestBody(
+          prompt,
+          context,
+          systemPrompt ?? buildSystemPrompt(DEFAULT_AI_LANGUAGE)
+        ),
         stream: true
       },
       signal
@@ -127,7 +132,11 @@ export class ClaudeProvider implements AIProvider {
     }
   }
 
-  private buildRequestBody(prompt: string, context: string, systemPrompt: string): ClaudeMessageBody {
+  private buildRequestBody(
+    prompt: string,
+    context: string,
+    systemPrompt: string
+  ): ClaudeMessageBody {
     return {
       model: this.model,
       max_tokens: AI_MAX_TOKENS,
@@ -141,12 +150,19 @@ export class ClaudeProvider implements AIProvider {
     };
   }
 
-  private async request(body: ClaudeMessageBody, signal?: AbortSignal): Promise<Response> {
+  private async request(
+    body: ClaudeMessageBody,
+    signal?: AbortSignal
+  ): Promise<Response> {
     if (!this.isConfigured()) {
       throw new AIProviderNotConfiguredError();
     }
 
-    const managedSignal = createManagedAbortSignal(this.name, AI_STREAM_TIMEOUT_MS, signal);
+    const managedSignal = createManagedAbortSignal(
+      this.name,
+      AI_STREAM_TIMEOUT_MS,
+      signal
+    );
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -169,27 +185,37 @@ export class ClaudeProvider implements AIProvider {
         throw new AIRequestTimeoutError(this.name, AI_STREAM_TIMEOUT_MS);
       }
       if (signal?.aborted) {
-        throw signal.reason instanceof Error ? signal.reason : new AIStreamAbortedError();
+        throw signal.reason instanceof Error
+          ? signal.reason
+          : new AIStreamAbortedError();
       }
       if (error instanceof AIHttpError) {
         throw error;
       }
-      if (error instanceof AIRequestTimeoutError || error instanceof AIStreamAbortedError) {
+      if (
+        error instanceof AIRequestTimeoutError ||
+        error instanceof AIStreamAbortedError
+      ) {
         throw error;
       }
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new AIRequestTimeoutError(this.name, AI_STREAM_TIMEOUT_MS);
       }
       throw error instanceof Error
-        ? error
-        : new Error('Claude request failed due to an unknown network error.', { cause: error });
+        ? new Error(redactApiKey(error.message, this.apiKey), { cause: error })
+        : new Error('Claude request failed due to an unknown network error.', {
+            cause: error
+          });
     } finally {
       managedSignal.cleanup();
     }
   }
 
   private async formatHttpError(response: Response): Promise<string> {
-    const bodyText = await response.text().catch(() => '');
+    const bodyText = redactApiKey(
+      await response.text().catch(() => ''),
+      this.apiKey
+    );
     let apiMessage = bodyText.trim();
     try {
       const parsed = JSON.parse(bodyText) as ClaudeErrorResponse;
@@ -206,6 +232,8 @@ export class ClaudeProvider implements AIProvider {
           : response.status >= 500
             ? 'Claude service returned a server error.'
             : `Claude request failed with HTTP ${response.status}.`;
-    return apiMessage ? `${prefix} ${apiMessage}` : prefix;
+    return apiMessage
+      ? `${prefix} ${redactApiKey(apiMessage, this.apiKey)}`
+      : prefix;
   }
 }

@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: ['**']
+  merge_group:
 
 permissions:
   contents: read
@@ -25,8 +26,8 @@ jobs:
           fail-on-error: true
       - name: yamllint
         run: |
-          pipx install yamllint || pip install --user yamllint
-          yamllint -d "{extends: relaxed, rules: {line-length: disable}}" .github/ || true
+          pipx install yamllint
+          yamllint -d "{extends: relaxed, rules: {line-length: disable}}" .github/
 
   node:
     if: github.repository == 'oaslananka-lab/kicad-studio'
@@ -45,7 +46,7 @@ jobs:
         with:
           node-version-file: .node-version
       - if: steps.node-project.outputs.present == 'true'
-        run: npm install --frozen-lockfile || npm install
+        run: npm ci
       - name: Lint
         if: steps.node-project.outputs.present == 'true'
         run: npm run lint

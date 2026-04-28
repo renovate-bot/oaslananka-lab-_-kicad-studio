@@ -1,4 +1,13 @@
-export type AiLanguage = 'en' | 'tr' | 'de' | 'zh-CN' | 'ja' | 'fr' | 'es' | 'ko' | 'pt-BR';
+export type AiLanguage =
+  | 'en'
+  | 'tr'
+  | 'de'
+  | 'zh-CN'
+  | 'ja'
+  | 'fr'
+  | 'es'
+  | 'ko'
+  | 'pt-BR';
 
 export interface KiCadContext {
   boardLayers?: number | undefined;
@@ -10,7 +19,8 @@ export interface KiCadContext {
 
 export const DEFAULT_AI_LANGUAGE: AiLanguage = 'en';
 export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-6';
-export const DEFAULT_OPENAI_MODEL = 'gpt-5.4';
+export const DEFAULT_OPENAI_MODEL = 'gpt-5.5';
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-pro';
 export const DEFAULT_OPENAI_API_MODE = 'responses';
 
 const LANGUAGE_NAMES: Record<AiLanguage, string> = {
@@ -47,7 +57,10 @@ export function normalizeAiLanguage(value: string | undefined): AiLanguage {
 /**
  * Build the base system prompt used by the extension's AI providers.
  */
-export function buildSystemPrompt(language: AiLanguage, context?: KiCadContext): string {
+export function buildSystemPrompt(
+  language: AiLanguage,
+  context?: KiCadContext
+): string {
   const parts = [
     'You are an expert electrical engineer specializing in KiCad PCB and schematic design.',
     'You understand KiCad S-expression file format, design rules, fabrication requirements, and component selection.',
@@ -110,7 +123,10 @@ export function buildComponentRecommendationPrompt(
   ].join('\n');
 }
 
-export function buildProactiveDRCPrompt(errors: string[], boardInfo: string): string {
+export function buildProactiveDRCPrompt(
+  errors: string[],
+  boardInfo: string
+): string {
   const grouped = groupErrorsByCategory(errors);
   return [
     'Summarize these KiCad DRC findings and prioritize them from critical to informational.',
@@ -130,7 +146,10 @@ export function buildProactiveDRCPrompt(errors: string[], boardInfo: string): st
   ].join('\n');
 }
 
-export function buildNetAnalysisPrompt(netName: string, connections: string[]): string {
+export function buildNetAnalysisPrompt(
+  netName: string,
+  connections: string[]
+): string {
   return [
     'Analyze this KiCad net and explain what it likely does electrically.',
     `Net name: ${netName}`,
@@ -160,7 +179,10 @@ function groupErrorsByCategory(errors: string[]): Record<string, string[]> {
     const normalized = error.toLowerCase();
     if (normalized.includes('clearance') || normalized.includes('spacing')) {
       groups['clearance'].push(error);
-    } else if (normalized.includes('unconnected') || normalized.includes('not connected')) {
+    } else if (
+      normalized.includes('unconnected') ||
+      normalized.includes('not connected')
+    ) {
       groups['unconnected'].push(error);
     } else if (normalized.includes('courtyard')) {
       groups['courtyard'].push(error);

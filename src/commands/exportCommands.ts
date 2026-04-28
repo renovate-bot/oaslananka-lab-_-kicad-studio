@@ -178,6 +178,11 @@ export function registerExportCommands(
       COMMANDS.importSolidworks,
       () => services.importService.importBoard('solidworks'),
       'Import SolidWorks Board'
+    ),
+    registerTrustedCommand(
+      COMMANDS.importGeda,
+      () => services.importService.importBoard('geda'),
+      'Import gEDA/Lepton Board'
     )
   ];
 }

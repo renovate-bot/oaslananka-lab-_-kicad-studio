@@ -75,7 +75,7 @@ repos:
     hooks:
       - id: ci-parity
         name: CI parity (typecheck + test)
-        entry: npx task pre-push
+        entry: task pre-push
         language: system
         pass_filenames: false
         stages: [pre-push]

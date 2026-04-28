@@ -20,7 +20,7 @@ jobs:
           set -euo pipefail
           mkdir -p assets
           gh release download "${{ github.event.release.tag_name }}" \
-            --repo oaslananka-lab/kicad-studio --dir assets || true
+            --repo oaslananka-lab/kicad-studio --dir assets
 
       - name: Re-publish on canonical
         env:

@@ -120,4 +120,52 @@ describe('SExpressionParser', () => {
     );
     expect((parser as any).lazyFullText.get(ast)).toBeUndefined();
   });
+
+  it('parses KiCad 10 design blocks with semicolon comments', () => {
+    const parser = new SExpressionParser();
+    const text = fs.readFileSync(
+      path.join(
+        __dirname,
+        '..',
+        'fixtures',
+        'kicad10',
+        'design_blocks.kicad_sch'
+      ),
+      'utf8'
+    );
+    const ast = parser.parse(text);
+    const blocks = parser.findAllNodes(ast, 'design_block');
+
+    expect(parser.getErrors(ast)).toEqual([]);
+    expect(blocks).toHaveLength(2);
+    expect(parser.getAtomValue(blocks[0] as never, 'name')).toBe(
+      'USB Power Input'
+    );
+  });
+
+  it('indexes KiCad 10 inner copper layer nodes without dropping high layer numbers', () => {
+    const parser = new SExpressionParser();
+    const text = fs.readFileSync(
+      path.join(
+        __dirname,
+        '..',
+        'fixtures',
+        'kicad10',
+        'inner_layers.kicad_pcb'
+      ),
+      'utf8'
+    );
+    const ast = parser.parse(text);
+    const layerNames = parser
+      .findAllNodes(ast, 'layers')
+      .flatMap((layers) => layers.children ?? [])
+      .filter((node) => node.type === 'list')
+      .map((node) => node.children?.[1]?.value)
+      .filter(Boolean);
+
+    expect(parser.getErrors(ast)).toEqual([]);
+    expect(layerNames).toEqual(
+      expect.arrayContaining(['In1.Cu', 'In2.Cu', 'In30.Cu'])
+    );
+  });
 });

@@ -6,7 +6,10 @@ import * as vscode from 'vscode';
 import { CLI_CAPABILITY_COMMANDS, SETTINGS } from '../constants';
 import type { DetectedKiCadCli } from '../types';
 
-export function getCliCandidates(platform = process.platform, configuredPath = ''): string[] {
+export function getCliCandidates(
+  platform = process.platform,
+  configuredPath = ''
+): string[] {
   const candidates: string[] = [];
   if (configuredPath) {
     candidates.push(configuredPath);
@@ -14,14 +17,43 @@ export function getCliCandidates(platform = process.platform, configuredPath = '
 
   if (platform === 'win32') {
     const programFiles = process.env['PROGRAMFILES'] ?? 'C:\\Program Files';
-    const programFilesX86 = process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)';
+    const programFilesX86 =
+      process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)';
     const localAppData = process.env['LOCALAPPDATA'] ?? '';
-    for (const version of ['10.0', '10', '9.0', '9', '8.0', '8', '7.0', '7', '6.0', '6']) {
-      candidates.push(path.win32.join(programFiles, 'KiCad', version, 'bin', 'kicad-cli.exe'));
-      candidates.push(path.win32.join(programFilesX86, 'KiCad', version, 'bin', 'kicad-cli.exe'));
+    for (const version of [
+      '10.0',
+      '10',
+      '9.0',
+      '9',
+      '8.0',
+      '8',
+      '7.0',
+      '7',
+      '6.0',
+      '6'
+    ]) {
+      candidates.push(
+        path.win32.join(programFiles, 'KiCad', version, 'bin', 'kicad-cli.exe')
+      );
+      candidates.push(
+        path.win32.join(
+          programFilesX86,
+          'KiCad',
+          version,
+          'bin',
+          'kicad-cli.exe'
+        )
+      );
       if (localAppData) {
         candidates.push(
-          path.win32.join(localAppData, 'Programs', 'KiCad', version, 'bin', 'kicad-cli.exe')
+          path.win32.join(
+            localAppData,
+            'Programs',
+            'KiCad',
+            version,
+            'bin',
+            'kicad-cli.exe'
+          )
         );
       }
     }
@@ -37,7 +69,15 @@ export function getCliCandidates(platform = process.platform, configuredPath = '
       '/usr/local/bin/kicad-cli',
       '/snap/bin/kicad-cli',
       path.join(os.homedir(), '.local', 'bin', 'kicad-cli'),
-      path.join(os.homedir(), '.var', 'app', 'org.kicad.KiCad', 'data', 'bin', 'kicad-cli')
+      path.join(
+        os.homedir(),
+        '.var',
+        'app',
+        'org.kicad.KiCad',
+        'data',
+        'bin',
+        'kicad-cli'
+      )
     );
   }
 
@@ -47,6 +87,7 @@ export function getCliCandidates(platform = process.platform, configuredPath = '
 export class KiCadCliDetector {
   private detected: DetectedKiCadCli | undefined;
   private readonly capabilityCache = new Map<string, boolean>();
+  private readonly helpCache = new Map<string, string | undefined>();
   private warnedWorkspaceConfiguredPath = false;
 
   async detect(notifyOnMissing = false): Promise<DetectedKiCadCli | undefined> {
@@ -62,7 +103,10 @@ export class KiCadCliDetector {
 
     const candidates = getCliCandidates(process.platform, configuredPath);
     for (const candidate of candidates) {
-      const resolved = await this.validateCandidate(candidate, candidate === configuredPath ? 'settings' : 'common-path');
+      const resolved = await this.validateCandidate(
+        candidate,
+        candidate === configuredPath ? 'settings' : 'common-path'
+      );
       if (resolved) {
         this.detected = resolved;
         return resolved;
@@ -86,9 +130,14 @@ export class KiCadCliDetector {
         'Help'
       );
       if (selected === 'Download KiCad') {
-        await vscode.env.openExternal(vscode.Uri.parse('https://www.kicad.org/download/'));
+        await vscode.env.openExternal(
+          vscode.Uri.parse('https://www.kicad.org/download/')
+        );
       } else if (selected === 'Set Manual Path') {
-        await vscode.commands.executeCommand('workbench.action.openSettings', SETTINGS.cliPath);
+        await vscode.commands.executeCommand(
+          'workbench.action.openSettings',
+          SETTINGS.cliPath
+        );
       } else if (selected === 'Help') {
         await vscode.env.openExternal(
           vscode.Uri.parse(
@@ -104,16 +153,22 @@ export class KiCadCliDetector {
   clearCache(): void {
     this.detected = undefined;
     this.capabilityCache.clear();
+    this.helpCache.clear();
   }
 
   getVersion(): number | undefined {
     if (!this.detected) {
       return undefined;
     }
-    return Number.parseInt(this.detected.version.split('.')[0] ?? '', 10) || undefined;
+    return (
+      Number.parseInt(this.detected.version.split('.')[0] ?? '', 10) ||
+      undefined
+    );
   }
 
-  async hasCapability(command: keyof typeof CLI_CAPABILITY_COMMANDS): Promise<boolean> {
+  async hasCapability(
+    command: keyof typeof CLI_CAPABILITY_COMMANDS
+  ): Promise<boolean> {
     const detected = await this.detect();
     if (!detected) {
       return false;
@@ -125,9 +180,42 @@ export class KiCadCliDetector {
 
     const args = [...CLI_CAPABILITY_COMMANDS[command], '--help'];
     const result = spawnSync(detected.path, args, { encoding: 'utf8' });
-    const supported = result.status === 0 || /Usage:/i.test(`${result.stdout}\n${result.stderr}`);
+    const supported =
+      result.status === 0 ||
+      /Usage:/i.test(`${result.stdout}\n${result.stderr}`);
     this.capabilityCache.set(command, supported);
     return supported;
+  }
+
+  async commandHelpIncludes(
+    command: readonly string[],
+    pattern: RegExp
+  ): Promise<boolean> {
+    const help = await this.getCommandHelp(command);
+    return Boolean(help && pattern.test(help));
+  }
+
+  async getCommandHelp(
+    command: readonly string[]
+  ): Promise<string | undefined> {
+    const detected = await this.detect();
+    if (!detected) {
+      return undefined;
+    }
+
+    const key = command.join('\0');
+    if (this.helpCache.has(key)) {
+      return this.helpCache.get(key);
+    }
+
+    const result = spawnSync(detected.path, [...command, '--help'], {
+      encoding: 'utf8'
+    });
+    const help = `${result.stdout}\n${result.stderr}`;
+    const supported = result.status === 0 || /Usage:/i.test(help);
+    const normalized = supported ? help : undefined;
+    this.helpCache.set(key, normalized);
+    return normalized;
   }
 
   private async validateCandidate(
@@ -143,7 +231,9 @@ export class KiCadCliDetector {
       return undefined;
     }
 
-    const result = spawnSync(resolvedCandidate, ['--version'], { encoding: 'utf8' });
+    const result = spawnSync(resolvedCandidate, ['--version'], {
+      encoding: 'utf8'
+    });
     if (result.status !== 0) {
       return undefined;
     }
@@ -185,7 +275,10 @@ export class KiCadCliDetector {
   }
 
   private looksLikeKiCadCli(versionOutput: string, candidate: string): boolean {
-    return /\bkicad(?:-cli)?\b/i.test(versionOutput) || /kicad-cli(?:\.exe)?$/i.test(path.basename(candidate));
+    return (
+      /\bkicad(?:-cli)?\b/i.test(versionOutput) ||
+      /kicad-cli(?:\.exe)?$/i.test(path.basename(candidate))
+    );
   }
 
   private warnIfWorkspaceConfiguredPath(configuredPath: string): void {

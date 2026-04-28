@@ -79,8 +79,7 @@ export function buildStatusMenuItems(options: {
     { label: '$(git-compare) Show Visual Diff', command: COMMANDS.showDiff },
     {
       label: '$(settings-gear) Open KiCad Studio Settings',
-      command: 'workbench.action.openSettings',
-      args: ['@ext:oaslananka.kicadstudio']
+      command: COMMANDS.openSettings
     }
   ];
 }

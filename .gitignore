@@ -42,6 +42,8 @@ requirements-build.txt
 # Agent-local notes; never commit these
 reports/autonomy_setup/
 reports/phase*/
+reports/*
+!reports/.gitkeep
 .agent/
 .agent-reports/
 AUTONOMY_RESULT.md

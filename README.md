@@ -20,15 +20,13 @@ KiCad Studio turns VS Code into a practical KiCad workspace: view schematics and
 - **Operations:** See [docs/repository-operations.md](docs/repository-operations.md) for detailed guidance on the dual-owner model.
 - **Fallbacks:** Azure DevOps and GitLab pipelines are maintained for manual redundancy.
 
-## What's New In 2.6.0
+## What's New In 2.7.0
 
-- MCP compatibility negotiation for `kicad-mcp-pro >=3.0.0 <4.0.0`, with recommended status for `>=3.0.2 <4.0.0`.
-- Quality Gates sidebar for project, placement, transfer, and manufacturing readiness checks.
-- One-click `kicad-mcp-pro` installer with `uvx`, `pipx`, and `pip` fallback options.
-- MCP profile picker for `full`, `minimal`, `schematic_only`, `pcb_only`, `manufacturing`, `high_speed`, `power`, `simulation`, `analysis`, and `agent_full`.
-- Code Actions for MCP fix queue items that include source `path` and `line` metadata.
-- Manufacturing release wizard with MCP pre-flight gate inspection and structured error hints.
-- JSON schema validation for `.vscode/mcp.json` and a redacted MCP traffic log viewer.
+- VS Code engine raised to `^1.99.0` with matching manifest typings.
+- Node.js/npm development toolchain aligned on Node.js 24.x and npm 11+.
+- CI and merge queue workflows now use `npm ci` and fail closed on PR/push security checks.
+- Local security scripts run high-severity npm audit, gitleaks, and bundle-size enforcement.
+- Taskfile, pre-commit, Renovate, CODEOWNERS, and report hygiene were tightened for release maintenance.
 
 ## Feature Highlights
 
@@ -83,7 +81,7 @@ KiCad Studio turns VS Code into a practical KiCad workspace: view schematics and
 
 #### Compatibility
 
-KiCad Studio 2.6.0 supports `kicad-mcp-pro >=3.0.0 <4.0.0` and recommends `>=3.0.2 <4.0.0`. The extension was tested against `kicad-mcp-pro 3.0.2`. If a connected server reports a version outside the required range, MCP-dependent commands are disabled and KiCad-only viewers, exports, checks, BOM/netlist, language services, and library features continue to work.
+KiCad Studio 2.7.0 supports `kicad-mcp-pro >=3.0.0 <4.0.0` and recommends `>=3.0.2 <4.0.0`. The extension was tested against `kicad-mcp-pro 3.0.2`. If a connected server reports a version outside the required range, MCP-dependent commands are disabled and KiCad-only viewers, exports, checks, BOM/netlist, language services, and library features continue to work.
 
 See [docs/INTEGRATION.md](docs/INTEGRATION.md) for the detailed MCP workflow.
 

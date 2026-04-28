@@ -46,6 +46,12 @@ describe('VariantProvider', () => {
     (workspace.findFiles as jest.Mock).mockResolvedValue([
       vscode.Uri.file(projectFile)
     ]);
+    (window.createWebviewPanel as jest.Mock).mockReturnValue({
+      webview: {
+        html: ''
+      },
+      dispose: jest.fn()
+    });
   });
 
   afterEach(() => {
@@ -223,9 +229,14 @@ describe('VariantProvider', () => {
 
     await provider.diffBom();
 
-    expect(window.showInformationMessage).toHaveBeenCalledWith(
-      expect.stringContaining('Variant BOM diff'),
-      { modal: true }
+    expect(window.createWebviewPanel).toHaveBeenCalledWith(
+      'kicadstudio.variantBomDiff',
+      expect.stringContaining('Default -> No-RF'),
+      vscode.ViewColumn.Beside,
+      expect.objectContaining({
+        enableScripts: false,
+        localResourceRoots: []
+      })
     );
   });
 
@@ -259,12 +270,12 @@ describe('VariantProvider', () => {
 
     await provider.diffBom();
 
-    expect(window.showInformationMessage).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'No component-level BOM override differences were found.'
-      ),
-      { modal: true }
+    const panel = (window.createWebviewPanel as jest.Mock).mock.results.at(-1)
+      ?.value as { webview: { html: string } };
+    expect(panel.webview.html).toContain(
+      'No component-level BOM differences were found.'
     );
+    expect(panel.webview.html).toContain("default-src 'none'");
   });
 
   it('normalizes design_variants when no explicit default is stored', async () => {
@@ -303,6 +314,49 @@ describe('VariantProvider', () => {
     expect(variant.componentOverrides[0]?.footprintOverride).toBe(
       'Resistor_SMD:R_0603_1608Metric'
     );
+  });
+
+  it('normalizes KiCad 10 variants component arrays', async () => {
+    fs.writeFileSync(
+      projectFile,
+      JSON.stringify(
+        {
+          activeVariant: 'Production',
+          variants: [
+            {
+              name: 'Production',
+              components: [
+                {
+                  reference: 'R1',
+                  included: true,
+                  value: '10k',
+                  footprint: 'Resistor_SMD:R_0603_1608Metric'
+                },
+                {
+                  ref: 'J1',
+                  dnp: true
+                }
+              ]
+            }
+          ]
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    const provider = new VariantProvider();
+
+    const [variant] = await provider.getChildren();
+    if (!variant || !('componentOverrides' in variant)) {
+      throw new Error('Expected a normalized variant item.');
+    }
+
+    expect(variant.isDefault).toBe(true);
+    expect(variant.components).toEqual([
+      expect.objectContaining({ reference: 'R1', included: true }),
+      expect.objectContaining({ reference: 'J1', included: false })
+    ]);
   });
 
   it('returns no children for a leaf override item', async () => {

@@ -38,7 +38,10 @@ export class SExpressionParser {
 
   parse(text: string): SNode {
     if (Buffer.byteLength(text, 'utf8') > LARGE_FILE_BYTES) {
-      const head = text.split(/\r?\n/).slice(0, PARTIAL_PARSE_LINE_LIMIT).join('\n');
+      const head = text
+        .split(/\r?\n/)
+        .slice(0, PARTIAL_PARSE_LINE_LIMIT)
+        .join('\n');
       const partial = this.parseInternal(head, true);
       this.lazyFullText.set(partial, text);
       this.errors.set(partial, []);
@@ -60,7 +63,9 @@ export class SExpressionParser {
       if (!current?.children) {
         return undefined;
       }
-      current = current.children.find((child) => this.getListTag(child) === tag);
+      current = current.children.find(
+        (child) => this.getListTag(child) === tag
+      );
     }
     return current;
   }
@@ -72,7 +77,9 @@ export class SExpressionParser {
 
   getAtomValue(node: SNode, childTag: string): string | undefined {
     this.ensureExpanded(node);
-    const child = node.children?.find((candidate) => this.getListTag(candidate) === childTag);
+    const child = node.children?.find(
+      (candidate) => this.getListTag(candidate) === childTag
+    );
     if (!child?.children || child.children.length < 2) {
       return undefined;
     }
@@ -80,7 +87,11 @@ export class SExpressionParser {
     if (!valueNode) {
       return undefined;
     }
-    if (valueNode.type === 'string' || valueNode.type === 'atom' || valueNode.type === 'number') {
+    if (
+      valueNode.type === 'string' ||
+      valueNode.type === 'atom' ||
+      valueNode.type === 'number'
+    ) {
       return String(valueNode.value ?? '');
     }
     return undefined;
@@ -90,9 +101,19 @@ export class SExpressionParser {
     this.ensureExpanded(node);
     const range = this.ranges.get(node);
     if (!range) {
-      return new vscode.Range(node.position.line, node.position.col, node.position.line, node.position.col);
+      return new vscode.Range(
+        node.position.line,
+        node.position.col,
+        node.position.line,
+        node.position.col
+      );
     }
-    return new vscode.Range(range.startLine, range.startCol, range.endLine, range.endCol);
+    return new vscode.Range(
+      range.startLine,
+      range.startCol,
+      range.endLine,
+      range.endCol
+    );
   }
 
   private ensureExpanded(root: SNode): void {
@@ -106,12 +127,15 @@ export class SExpressionParser {
     root.value = expanded.value;
     root.children = expanded.children;
     root.position = expanded.position;
-    this.ranges.set(root, this.ranges.get(expanded) ?? {
-      startLine: root.position.line,
-      startCol: root.position.col,
-      endLine: root.position.line,
-      endCol: root.position.col
-    });
+    this.ranges.set(
+      root,
+      this.ranges.get(expanded) ?? {
+        startLine: root.position.line,
+        startCol: root.position.col,
+        endLine: root.position.line,
+        endCol: root.position.col
+      }
+    );
     this.errors.set(root, this.errors.get(expanded) ?? []);
     this.lazyFullText.delete(root);
     this.nodeIndexes.delete(root);
@@ -279,7 +303,11 @@ export class SExpressionParser {
       this.advance(context, char);
     }
 
-    if (this.isEof(context) && context.text[context.cursor.index - 1] !== '"' && !context.allowPartialEof) {
+    if (
+      this.isEof(context) &&
+      context.text[context.cursor.index - 1] !== '"' &&
+      !context.allowPartialEof
+    ) {
       context.errors.push({
         message: 'Unterminated string literal.',
         line: start.line,
@@ -321,7 +349,8 @@ export class SExpressionParser {
     }
 
     const numeric = Number(raw);
-    const isNumber = raw.length > 0 && !Number.isNaN(numeric) && /^-?\d+(\.\d+)?$/.test(raw);
+    const isNumber =
+      raw.length > 0 && !Number.isNaN(numeric) && /^-?\d+(\.\d+)?$/.test(raw);
     const node: SNode = {
       type: isNumber ? 'number' : 'atom',
       value: isNumber ? numeric : raw,
@@ -343,7 +372,7 @@ export class SExpressionParser {
   private skipTrivia(context: ParseContext): boolean {
     while (!this.isEof(context)) {
       const char = this.currentChar(context);
-      if (char === '#') {
+      if (char === '#' || char === ';') {
         while (!this.isEof(context) && this.currentChar(context) !== '\n') {
           this.advance(context, this.currentChar(context));
         }

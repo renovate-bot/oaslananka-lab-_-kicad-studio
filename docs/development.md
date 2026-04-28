@@ -4,9 +4,13 @@
 
 ```bash
 # Install Task: https://taskfile.dev/installation/
-task install     # install dev deps
+task install     # npm ci from package-lock.json
 task hooks       # install git hooks
 ```
+
+KiCad Studio development is pinned to Node.js 24.x and npm 11 or newer.
+Use `.node-version` or `.nvmrc` with your version manager before installing
+dependencies.
 
 ## Daily workflow
 
@@ -16,6 +20,7 @@ task lint        # check formatting and linting
 task typecheck   # static types
 task test        # run tests
 task ci          # run the full CI pipeline locally
+task security    # run npm audit, gitleaks, and bundle-size checks
 ```
 
 ## Before push
@@ -31,5 +36,6 @@ task ci:act      # optional: run GitHub Actions in Docker locally
 ## Troubleshooting
 
 - `task: command not found` → install Task: `brew install go-task` or download from https://taskfile.dev/installation/
+- `npm ci` rejects your runtime → switch to Node.js 24.x and npm 11 or newer.
 - pre-commit hook is too slow → run `pre-commit run --all-files` once to warm caches
 - `task ci` fails but CI passes (or vice versa) → likely Doppler secrets differ; run `task doppler:check`

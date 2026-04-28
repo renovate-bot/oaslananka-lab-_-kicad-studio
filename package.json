@@ -2,17 +2,17 @@
   "name": "kicadstudio",
   "displayName": "KiCad Studio",
   "description": "The complete KiCad development environment for VS Code — view schematics & PCBs, run DRC/ERC, export production files, search components, and get AI-powered design assistance.",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "publisher": "oaslananka",
   "engines": {
-    "vscode": "^1.95.0",
-    "node": ">=20.0.0"
+    "vscode": "^1.99.0",
+    "node": "24.x"
   },
   "packageManager": "npm@11.13.0",
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "24.14.x",
+      "version": "24.x",
       "onFail": "error"
     },
     "packageManager": {
@@ -273,7 +273,7 @@
     "viewsWelcome": [
       {
         "view": "kicadstudio.projectTree",
-        "contents": "Open a folder containing a `.kicad_pro`, `.kicad_sch`, or `.kicad_pcb` file to start using KiCad Studio.\n[Open Folder](command:workbench.action.files.openFolder)"
+        "contents": "Open a folder containing a `.kicad_pro`, `.kicad_sch`, or `.kicad_pcb` file to start using KiCad Studio.\n[Open Folder](command:workbench.action.files.openFolder)\n[Open Settings Panel](command:kicadstudio.openSettings)"
       },
       {
         "view": "kicadstudio.bomView",
@@ -479,6 +479,12 @@
         "icon": "$(comment-discussion)"
       },
       {
+        "command": "kicadstudio.openSettings",
+        "title": "KiCad: Open Settings Panel",
+        "category": "KiCad",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "kicadstudio.testAiConnection",
         "title": "KiCad: Test AI Connection",
         "category": "KiCad AI",
@@ -526,6 +532,11 @@
       {
         "command": "kicadstudio.setAiApiKey",
         "title": "KiCad: Set AI API Key",
+        "category": "KiCad Setup"
+      },
+      {
+        "command": "kicadstudio.clearAiKey",
+        "title": "KiCad: Clear AI Provider Key",
         "category": "KiCad Setup"
       },
       {
@@ -712,6 +723,11 @@
         "command": "kicadstudio.importSolidworks",
         "title": "KiCad: Import SolidWorks PCB",
         "category": "KiCad Import"
+      },
+      {
+        "command": "kicadstudio.importGeda",
+        "title": "KiCad: Import gEDA/Lepton PCB",
+        "category": "KiCad Import"
       }
     ],
     "menus": {
@@ -745,6 +761,11 @@
         }
       ],
       "view/title": [
+        {
+          "when": "view == kicadstudio.projectTree",
+          "command": "kicadstudio.openSettings",
+          "group": "navigation"
+        },
         {
           "when": "view == kicadstudio.projectTree",
           "command": "kicadstudio.refreshProjectTree",
@@ -872,6 +893,9 @@
           "when": "kicadstudio.aiEnabled"
         },
         {
+          "command": "kicadstudio.openSettings"
+        },
+        {
           "command": "kicadstudio.setupMcpIntegration"
         },
         {
@@ -904,6 +928,9 @@
         },
         {
           "command": "kicadstudio.showStoredSecrets"
+        },
+        {
+          "command": "kicadstudio.clearAiKey"
         },
         {
           "command": "kicadstudio.manageChatProvider"
@@ -948,6 +975,9 @@
         },
         {
           "command": "kicadstudio.importEagle"
+        },
+        {
+          "command": "kicadstudio.importGeda"
         }
       ]
     },
@@ -979,6 +1009,11 @@
         "command": "kicadstudio.searchLibraryFootprint",
         "key": "ctrl+shift+k ctrl+shift+f",
         "mac": "cmd+shift+k cmd+shift+f"
+      },
+      {
+        "command": "kicadstudio.openSettings",
+        "key": "ctrl+shift+k ctrl+shift+,",
+        "mac": "cmd+shift+k cmd+shift+,"
       }
     ],
     "configuration": {
@@ -1110,7 +1145,7 @@
         "kicadstudio.ai.model": {
           "type": "string",
           "default": "",
-          "description": "Optional AI model override. Leave empty to use the provider default: claude-sonnet-4-6 for Claude or gpt-5.4 for OpenAI."
+          "description": "Optional AI model override. Leave empty to use the provider default: claude-sonnet-4-6 for Claude, gpt-5.5 for OpenAI, or gemini-2.5-pro for Gemini."
         },
         "kicadstudio.ai.openaiApiMode": {
           "type": "string",
@@ -1120,6 +1155,33 @@
             "chat-completions"
           ],
           "description": "OpenAI API mode. Responses is the default for new work; Chat Completions is retained for compatibility."
+        },
+        "kicadstudio.ai.geminiApiMode": {
+          "type": "string",
+          "default": "rest",
+          "enum": [
+            "rest"
+          ],
+          "description": "Gemini API mode (REST only; Vertex AI not yet supported)."
+        },
+        "kicadstudio.ai.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "minimum": 512,
+          "maximum": 65536,
+          "description": "Maximum tokens for AI responses. Higher values allow more detailed analysis."
+        },
+        "kicadstudio.ai.streamingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Stream AI responses in the chat panel as they arrive."
+        },
+        "kicadstudio.ai.timeout": {
+          "type": "number",
+          "default": 120,
+          "minimum": 30,
+          "maximum": 600,
+          "description": "AI request timeout in seconds."
         },
         "kicadstudio.ai.language": {
           "type": "string",
@@ -1316,6 +1378,18 @@
             },
             "completionEvents": [
               "onCommand:kicadstudio.setupMcpIntegration"
+            ]
+          },
+          {
+            "id": "kicadstudio.step.configureAi",
+            "title": "Configure AI",
+            "description": "Open the Settings Panel to choose Claude, OpenAI, Gemini, or GitHub Copilot and store provider keys securely. [Open Settings Panel](command:kicadstudio.openSettings)",
+            "media": {
+              "altText": "settings panel",
+              "image": "assets/screenshots/ai-assistant.png"
+            },
+            "completionEvents": [
+              "onCommand:kicadstudio.openSettings"
             ]
           },
           {
@@ -1716,33 +1790,34 @@
     "lines": 75
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.59.1",
-    "@types/jest": "^30.0.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^20.0.0",
-    "@types/vscode": "1.95.0",
-    "@typescript-eslint/eslint-plugin": "8.59.0",
-    "@typescript-eslint/parser": "8.59.0",
-    "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.9.1",
-    "c8": "^10.1.3",
-    "eslint": "^10.2.1",
+    "@eslint/js": "9.39.4",
+    "@playwright/test": "1.59.1",
+    "@types/jest": "29.5.14",
+    "@types/mocha": "10.0.10",
+    "@types/node": "20.19.39",
+    "@types/vscode": "1.99.0",
+    "@typescript-eslint/eslint-plugin": "8.30.0",
+    "@typescript-eslint/parser": "8.30.0",
+    "@vscode/test-electron": "2.5.2",
+    "@vscode/vsce": "3.3.2",
+    "c8": "10.1.3",
+    "eslint": "9.39.4",
     "husky": "9.1.7",
-    "jest": "^30.3.0",
-    "lint-staged": "16.4.0",
-    "mocha": "^11.7.5",
-    "pngjs": "^7.0.0",
-    "prettier": "^3.8.3",
-    "ts-jest": "^29.4.9",
-    "ts-loader": "^9.5.7",
-    "typescript": "^6.0.3",
-    "webpack": "^5.106.2",
-    "webpack-cli": "^7.0.2"
+    "jest": "29.7.0",
+    "jest-util": "29.7.0",
+    "lint-staged": "16.1.0",
+    "mocha": "11.7.5",
+    "pngjs": "7.0.0",
+    "prettier": "3.5.3",
+    "ts-jest": "29.4.9",
+    "ts-loader": "9.5.7",
+    "typescript": "5.8.3",
+    "webpack": "5.106.2",
+    "webpack-cli": "6.0.1"
   },
   "dependencies": {
-    "exceljs": "^4.4.0",
-    "semver": "^7.7.4"
+    "exceljs": "4.4.0",
+    "semver": "7.7.1"
   },
   "lint-staged": {
     "*.{js,cjs,mjs,ts}": [

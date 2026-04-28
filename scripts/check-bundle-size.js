@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const BASELINE_PATH = path.join(__dirname, 'bundle-size-baseline.json');
-const MAX_GROWTH_FACTOR = 1.15;
+const HARD_MAX_BYTES = 5 * 1024 * 1024;
 
 if (!fs.existsSync(BASELINE_PATH)) {
   console.error(`Missing bundle size baseline: ${BASELINE_PATH}`);
@@ -27,15 +27,16 @@ for (const [name, baselineBytes] of Object.entries(artifacts)) {
     continue;
   }
 
-  const maxBytes = Math.floor(baselineBytes * MAX_GROWTH_FACTOR);
   console.log(
-    `${name}: ${formatBytes(currentBytes)} / baseline ${formatBytes(
+    `${name}: ${formatBytes(currentBytes)} / baseline reference ${formatBytes(
       baselineBytes
-    )} / max ${formatBytes(maxBytes)}`
+    )} / hard max ${formatBytes(HARD_MAX_BYTES)}`
   );
-  if (currentBytes > maxBytes) {
+  if (currentBytes > HARD_MAX_BYTES) {
     console.error(
-      `Bundle size regression: ${name} grew beyond the allowed 15% threshold.`
+      `Bundle size limit exceeded: ${name} is ${formatBytes(
+        currentBytes
+      )}, above the hard 5 MB limit. Split or externalize assets before release.`
     );
     failed = true;
   }

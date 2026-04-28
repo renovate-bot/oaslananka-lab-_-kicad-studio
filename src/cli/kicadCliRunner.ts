@@ -84,6 +84,7 @@ export class KiCadCliRunner {
   private async executeCommand<T>(
     options: CliRunOptions
   ): Promise<CliResult<T>> {
+    this.validateRunOptions(options);
     const detected = await this.detector.detect(true);
     if (!detected) {
       throw new KiCadCliNotFoundError();
@@ -204,6 +205,29 @@ export class KiCadCliRunner {
         });
       });
     });
+  }
+
+  private validateRunOptions(options: CliRunOptions): void {
+    if (!path.isAbsolute(options.cwd) || !fs.existsSync(options.cwd)) {
+      throw new Error(
+        `KiCad command working directory must be an existing absolute path: ${options.cwd}`
+      );
+    }
+
+    if (!options.command.length) {
+      throw new Error('KiCad command cannot be empty.');
+    }
+
+    for (const arg of options.command) {
+      if (typeof arg !== 'string' || arg.length === 0) {
+        throw new Error('KiCad command arguments must be non-empty strings.');
+      }
+      if (/[\0\r\n]/.test(arg)) {
+        throw new Error(
+          'KiCad command arguments cannot contain control-line characters.'
+        );
+      }
+    }
   }
 
   private normalizeError(error: unknown, command: string): Error {

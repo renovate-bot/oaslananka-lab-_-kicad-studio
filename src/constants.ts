@@ -25,7 +25,13 @@ export const VIEWER_HIDDEN_CACHE_RELEASE_MS = 5 * 60 * 1000;
 export const VIEWER_DEFAULT_LARGE_FILE_THRESHOLD_BYTES = 10 * 1024 * 1024;
 export const EXPORT_PRESET_SETTING = 'kicadstudio.exportPresets';
 export const OCTOPART_SECRET_KEY = 'kicadstudio.secrets.octopart';
-export const AI_SECRET_KEY = 'kicadstudio.secrets.ai';
+export const AI_SECRET_KEYS = {
+  claude: 'kicadstudio.secrets.ai.claude',
+  openai: 'kicadstudio.secrets.ai.openai',
+  gemini: 'kicadstudio.secrets.ai.gemini'
+} as const;
+export type AiProviderName = keyof typeof AI_SECRET_KEYS;
+export const AI_SECRET_KEY_LEGACY = 'kicadstudio.secrets.ai';
 export const KICAD_LANGUAGES = [
   'kicad-schematic',
   'kicad-pcb',
@@ -85,6 +91,7 @@ export const COMMANDS = {
   aiAnalyzeError: 'kicadstudio.aiAnalyzeError',
   aiExplainCircuit: 'kicadstudio.aiExplainCircuit',
   openAiChat: 'kicadstudio.openAiChat',
+  openSettings: 'kicadstudio.openSettings',
   aiProactiveDRC: 'kicadstudio.aiProactiveDRC',
   testAiConnection: 'kicadstudio.testAiConnection',
   searchLibrarySymbol: 'kicadstudio.searchLibrarySymbol',
@@ -95,6 +102,7 @@ export const COMMANDS = {
   runExportPreset: 'kicadstudio.runExportPreset',
   setOctopartApiKey: 'kicadstudio.setOctopartApiKey',
   setAiApiKey: 'kicadstudio.setAiApiKey',
+  clearAiKey: 'kicadstudio.clearAiKey',
   clearSecrets: 'kicadstudio.clearSecrets',
   showStoredSecrets: 'kicadstudio.showStoredSecrets',
   manageChatProvider: 'kicadstudio.manageChatProvider',
@@ -131,7 +139,8 @@ export const COMMANDS = {
   importCadstar: 'kicadstudio.importCadstar',
   importFabmaster: 'kicadstudio.importFabmaster',
   importPcad: 'kicadstudio.importPcad',
-  importSolidworks: 'kicadstudio.importSolidworks'
+  importSolidworks: 'kicadstudio.importSolidworks',
+  importGeda: 'kicadstudio.importGeda'
 } as const;
 export const CONTEXT_KEYS = {
   hasProject: 'kicadstudio.hasProject',
@@ -171,6 +180,10 @@ export const SETTINGS = {
   aiLanguage: 'kicadstudio.ai.language',
   aiAllowTools: 'kicadstudio.ai.allowTools',
   aiOpenAIApiMode: 'kicadstudio.ai.openaiApiMode',
+  aiGeminiApiMode: 'kicadstudio.ai.geminiApiMode',
+  aiMaxTokens: 'kicadstudio.ai.maxTokens',
+  aiStreamingEnabled: 'kicadstudio.ai.streamingEnabled',
+  aiTimeout: 'kicadstudio.ai.timeout',
   logLevel: 'kicadstudio.logLevel',
   autoRunDRC: 'kicadstudio.drc.autoRunOnSave',
   autoRunERC: 'kicadstudio.erc.autoRunOnSave',

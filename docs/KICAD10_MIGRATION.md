@@ -13,10 +13,11 @@ KiCad 10 introduces workflow changes that matter to extension users:
 ## Recommended Upgrade Path
 
 1. Update your local KiCad installation to KiCad 10.
-2. Re-run `KiCad: Detect kicad-cli` so the extension refreshes CLI capability detection.
-3. Open the project in KiCad 10 once and save it before testing in VS Code.
-4. Confirm that your `.kicad_pro` contains the expected variant data if you plan to use the Variants sidebar.
-5. Add or open any `.kicad_dru` file so KiCad Studio can expose it through the DRC Rules view.
+2. Update VS Code to 1.99 or newer before installing KiCad Studio 2.7.0.
+3. Re-run `KiCad: Detect kicad-cli` so the extension refreshes CLI capability detection.
+4. Open the project in KiCad 10 once and save it before testing in VS Code.
+5. Confirm that your `.kicad_pro` contains the expected variant data if you plan to use the Variants sidebar.
+6. Add or open any `.kicad_dru` file so KiCad Studio can expose it through the DRC Rules view.
 
 ## Extension Features To Verify After Migration
 
@@ -35,6 +36,7 @@ KiCad 10 introduces workflow changes that matter to extension users:
 - BOM and export commands can pass an active variant automatically.
 - `.kicad_dru` files highlight correctly and show hover help for rule keywords.
 - MCP context push includes the active variant and current visible layer set when MCP is enabled.
+- Local development and CI use Node.js 24.x/npm 11; extension runtime support is governed by the VS Code engine.
 
 ## Known Caveats
 

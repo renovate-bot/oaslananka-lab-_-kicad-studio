@@ -360,6 +360,8 @@ export class McpClient {
       });
       const { json, sessionId } =
         await this.postJsonRpcWithRetry<InitializeResult>('initialize', {
+          // Streamable HTTP servers can negotiate newer MCP capabilities, but
+          // kicad-mcp-pro 3.x currently targets the 2024-11-05 contract.
           protocolVersion: '2024-11-05',
           clientInfo: {
             name: 'kicad-studio',

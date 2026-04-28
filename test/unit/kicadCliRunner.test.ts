@@ -202,6 +202,43 @@ describe('KiCadCliRunner', () => {
     ).rejects.toBeInstanceOf(KiCadCliNotFoundError);
   });
 
+  it('rejects unsafe child-process arguments before spawning', async () => {
+    __setConfiguration({});
+    const detector = {
+      detect: jest.fn().mockResolvedValue({
+        path: '/usr/bin/kicad-cli',
+        version: '10.0.1',
+        versionLabel: 'KiCad 10.0.1',
+        source: 'path'
+      })
+    };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    };
+    const spawnMock = childProcess.spawn as unknown as jest.Mock;
+    const runner = new KiCadCliRunner(detector as never, logger as never);
+
+    await expect(
+      runner.run({
+        command: ['pcb', 'drc', 'board.kicad_pcb\n--delete'],
+        cwd: tempDir,
+        progressTitle: 'DRC'
+      })
+    ).rejects.toThrow('control-line characters');
+    await expect(
+      runner.run({
+        command: ['pcb', 'drc', 'board.kicad_pcb'],
+        cwd: path.join(tempDir, 'missing'),
+        progressTitle: 'DRC'
+      })
+    ).rejects.toThrow('existing absolute path');
+
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
   it('normalizes ENOENT child-process errors into KiCadCliNotFoundError', async () => {
     __setConfiguration({});
     const detector = {

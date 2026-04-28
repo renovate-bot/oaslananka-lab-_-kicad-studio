@@ -26,9 +26,10 @@ jobs:
             echo
             echo "## Branches older than 90 days (no open PR)"
             gh api -X GET "/repos/${{ github.repository }}/branches?per_page=100" --jq '.[].name' \
-              | grep -Ev '^(main|master|develop|gh-pages)$' \
-              | grep -Ev '^(release|hotfix)/' \
               | while read -r br; do
+                  case "$br" in
+                    main|master|develop|gh-pages|release/*|hotfix/*) continue ;;
+                  esac
                   open=$(gh pr list --repo "${{ github.repository }}" --head "$br" --state open --json number --jq 'length')
                   [ "$open" -gt 0 ] && continue
                   sha=$(gh api "/repos/${{ github.repository }}/branches/${br}" --jq '.commit.sha' 2>/dev/null) || continue
@@ -52,7 +53,10 @@ jobs:
           set -euo pipefail
           title="Monthly branch hygiene — $(date -u +%Y-%m)"
           body="$(cat hygiene-report.md)"
-          existing=$(gh issue list --repo "${{ github.repository }}" --search "in:title \"$title\"" --json number --jq '.[0].number' 2>/dev/null || true)
+          existing=""
+          if result=$(gh issue list --repo "${{ github.repository }}" --search "in:title \"$title\"" --json number --jq '.[0].number' 2>/dev/null); then
+            existing="$result"
+          fi
           if [ -n "$existing" ]; then
             gh issue edit "$existing" --repo "${{ github.repository }}" --body "$body"
           else
