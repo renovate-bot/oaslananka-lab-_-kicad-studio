@@ -1,7 +1,6 @@
 name: Bug Report
-description: Create a report to help us improve KiCad Studio
-title: '[Bug]: '
-labels: ['type:bug', 'status:triage']
+description: Report a bug to help us improve KiCad Studio
+labels: ['type:bug']
 body:
   - type: markdown
     attributes:
@@ -10,21 +9,30 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: What is the bug?
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Reproduction
-      description: Steps to reproduce the behavior.
+      label: Steps to Reproduce
+      description: How do we trigger the bug?
+      placeholder: |
+        1. Open file '...'
+        2. Click on '...'
+        3. See error '...'
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Expected behavior
+      label: Expected Behavior
       description: What did you expect to happen?
     validations:
       required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment & Context
+      description: KiCad version, OS, KiCad Studio version, etc.

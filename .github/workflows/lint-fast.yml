@@ -36,18 +36,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: package.json
-      - run: corepack enable
-      - name: Detect package manager and install
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then echo "cmd=pnpm" >> "$GITHUB_OUTPUT"
-          elif [ -f yarn.lock ]; then echo "cmd=yarn" >> "$GITHUB_OUTPUT"
-          else echo "cmd=npm" >> "$GITHUB_OUTPUT"; fi
-      - run: ${{ steps.pm.outputs.cmd }} install --frozen-lockfile || ${{ steps.pm.outputs.cmd }} install
-      - name: Lint (if defined)
-        run: |
-          if node -e "process.exit(require('./package.json').scripts?.lint?0:1)"; then
-            ${{ steps.pm.outputs.cmd }} run lint
-          else
-            echo "No lint script; skipping."
-          fi
+      - run: npm ci
+      - name: Lint
+        run: npm run lint

@@ -1,13 +1,25 @@
-$ErrorActionPreference = "Stop"
+$RepoName = "kicad-studio"
+$Owner = "oaslananka"
+$Org = "oaslananka-lab"
 
-if (-not (git remote get-url origin 2>$null)) {
-  git remote add origin "git@github.com:oaslananka/kicad-studio.git"
-}
-if (-not (git remote get-url org 2>$null)) {
-  git remote add org "git@github.com:oaslananka-lab/kicad-studio.git"
+# Ensure personal remote
+$remotes = git remote
+if ($remotes -notcontains "personal") {
+    git remote add personal "https://github.com/$Owner/$RepoName.git"
 }
 
-git push origin --all
-git push origin --tags
-git push org --all
-git push org --tags
+# Ensure org remote
+if ($remotes -notcontains "org") {
+    git remote add org "https://github.com/$Org/$RepoName.git"
+}
+
+Write-Host "Fetching all..."
+git fetch --all
+
+Write-Host "Pushing to personal..."
+git push personal --all --tags
+
+Write-Host "Pushing to org..."
+git push org --all --tags
+
+Write-Host "Sync complete."

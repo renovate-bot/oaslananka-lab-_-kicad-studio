@@ -1,8 +1,15 @@
 # Doppler Setup
 
-To set up secrets for this repository:
+To enable CI/CD with Doppler secrets:
 
-1. Go to Doppler dashboard → Integrations → GitHub.
-2. Install the Doppler app on both `oaslananka` and `oaslananka-lab`.
-3. Create two GitHub Sync configurations per repo (canonical and org).
-4. Add `DOPPLER_TOKEN` (read-only service token, scoped to `all/main`) as a GitHub Action secret on both repositories.
+1. Doppler dashboard → Integrations → GitHub → install app on `oaslananka` and `oaslananka-lab`.
+2. Create two GitHub Sync configs per repo (canonical and org).
+3. Add `DOPPLER_TOKEN` (read-only service token, scoped to `all/main`) as the single GitHub secret on both repos.
+
+The following secrets should be present in the `all/main` config:
+
+- `CODECOV_TOKEN`
+- `DOPPLER_GITHUB_SERVICE_TOKEN`
+- `VSCE_PAT`
+- `OVSX_PAT`
+- `JULES_API_KEY`

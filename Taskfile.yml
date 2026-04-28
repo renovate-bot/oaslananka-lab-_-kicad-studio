@@ -1,0 +1,116 @@
+version: '3'
+
+dotenv: ['.env']
+
+tasks:
+  # ---- Setup ----
+  install:
+    desc: Install all dev dependencies
+    cmds:
+      - npm install
+
+  hooks:
+    desc: Install git hooks
+    cmds:
+      - npx pre-commit install --install-hooks
+      - npx pre-commit install --hook-type commit-msg
+      - npx pre-commit install --hook-type pre-push
+
+  # ---- Format ----
+  format:
+    desc: Auto-format the codebase
+    cmds:
+      - npm run format
+
+  # ---- Lint ----
+  lint:
+    desc: Run all linters (read-only)
+    cmds:
+      - npm run lint
+      - npx actionlint || true
+
+  # ---- Typecheck ----
+  typecheck:
+    desc: Static type checking
+    cmds:
+      - npm run typecheck
+
+  # ---- Tests ----
+  test:
+    desc: Run unit tests
+    cmds:
+      - npm run test:unit
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - npm run test:unit
+
+  test:unit:coverage:
+    desc: Run unit tests with coverage
+    cmds:
+      - npm run test:unit:coverage
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - npm run test:integration
+
+  test:e2e:
+    desc: Run E2E tests
+    cmds:
+      - npm run test:e2e
+
+  # ---- Build ----
+  build:
+    desc: Build the extension
+    cmds:
+      - npm run build
+
+  package:
+    desc: Package the extension
+    cmds:
+      - npm run package
+
+  # ---- Security ----
+  security:
+    desc: Security scans
+    cmds:
+      - npm run audit:ci
+      - gitleaks detect --no-banner --redact || true
+
+  # ---- Composite ----
+  pre-push:
+    desc: What pre-push hook runs
+    cmds:
+      - task: typecheck
+      - task: test
+      - npx actionlint || true
+
+  ci:
+    desc: Run the exact CI pipeline locally
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test:unit:coverage
+      - task: build
+      - task: package
+      - task: security
+
+  # ---- Doppler ----
+  doppler:check:
+    desc: Verify all required Doppler secrets are present
+    cmds:
+      - cmd: bash scripts/verify_doppler_secrets.sh
+        platforms: [linux, darwin]
+      - cmd: powershell -File scripts/verify_doppler_secrets.ps1
+        platforms: [windows]
+
+  # ---- Cleanup ----
+  clean:
+    desc: Remove build artifacts and caches
+    cmds:
+      - cmd: rm -rf dist out *.vsix coverage .vscode-test junit.xml test-results.xml
+        platforms: [linux, darwin]
+      - cmd: powershell -Command "Remove-Item -Recurse -Force dist,out,*.vsix,coverage,.vscode-test,junit.xml,test-results.xml -ErrorAction SilentlyContinue"
+        platforms: [windows]

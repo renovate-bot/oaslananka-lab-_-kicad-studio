@@ -263,6 +263,20 @@
       event.reason instanceof Error
         ? event.reason.message
         : String(event.reason || 'Unknown error');
+
+    // Guard: KiCanvas lib_symbols.by_name() fails when symbols are absent
+    if (reason.includes('by_name') || reason.includes('lib_symbols')) {
+      showError(
+        'Diff viewer could not resolve library symbols.',
+        'One or both revisions may have missing or incompatible lib_symbols data. ' +
+          'This can happen when comparing versions with different KiCad formats or ' +
+          'when the schematic has unresolved library references.\n\nOriginal: ' +
+          reason
+      );
+      event.preventDefault();
+      return;
+    }
+
     showError('Diff viewer runtime error.', reason);
   });
 })();

@@ -1,13 +1,39 @@
 # Repository Operations
 
-This repository uses a dual-owner model:
+## Dual-owner mirror model
 
-- `oaslananka/kicad-studio`: Canonical public repository.
-- `oaslananka-lab/kicad-studio`: Internal CI/CD mirror.
+- `oaslananka/kicad-studio` is the canonical public repository.
+- `oaslananka-lab/kicad-studio` is the CI/CD runner mirror.
+- The human pushes only to the canonical repo.
+- Mirroring is automatic via GitHub Actions.
 
-All changes should be pushed to the canonical repository. The canonical repository automatically mirrors changes to the org repository where heavy CI jobs run. Releases published in the org repository are automatically mirrored back.
+## Daily operations
 
-If the mirror breaks, you can use the manual sync script:
+### Local sync
 
-- `./scripts/sync-remotes.sh` (Linux/macOS)
-- `.\scripts\sync-remotes.ps1` (Windows)
+```bash
+bash scripts/sync-remotes.sh
+```
+
+### Secret verification
+
+```bash
+task doppler:check
+```
+
+## Repository hygiene
+
+A cleanup script is available to identify and prune old branches:
+
+```bash
+bash scripts/repo-cleanup.sh           # dry-run
+bash scripts/repo-cleanup.sh --apply   # execute deletions
+```
+
+## Auto-delete head branches
+
+It is recommended to enable "Automatically delete head branches" in GitHub settings for the canonical repo:
+
+```bash
+gh api -X PATCH /repos/oaslananka/kicad-studio -f delete_branch_on_merge=true
+```

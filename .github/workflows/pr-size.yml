@@ -1,14 +1,12 @@
-name: PR Size Label
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+name: 'Pull Request Size Labeler'
+on: [pull_request]
 
 permissions:
+  contents: read
   pull-requests: write
 
 jobs:
-  size:
+  triage:
     runs-on: ubuntu-latest
     steps:
       - uses: pascalgn/size-label-action@v0.5.5

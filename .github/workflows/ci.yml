@@ -2,46 +2,39 @@ name: KiCad Studio CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: ['**']
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  lint-build-test:
-    name: Lint, Build, Test, Package
+  ci:
+    name: Full CI Pipeline
     if: github.repository == 'oaslananka-lab/kicad-studio'
-    permissions:
-      contents: read
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
       - uses: actions/setup-node@v4
         with:
           node-version-file: package.json
-      - run: npm install -g npm@11.13.0
-      - run: npm ci
-      - name: Run checks (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run -a npm run check:ci
-      - name: Run checks (Windows/macOS)
-        if: runner.os != 'Linux'
-        run: npm run check:ci
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.os }}
-          path: coverage/
+      - name: Install dependencies
+        run: task install
+      - name: Run CI
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            xvfb-run -a task ci
+          else
+            task ci
+          fi
+        shell: bash
       - name: Publish test results
         if: always() && hashFiles('**/junit.xml', '**/test-results.xml') != ''
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -54,34 +47,10 @@ jobs:
         uses: test-summary/action@v2
         with:
           paths: '**/junit.xml'
-
-  integration-real-server:
-    name: Real kicad-mcp-pro integration
-    if: github.repository == 'oaslananka-lab/kicad-studio'
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    env:
-      SKIP_REAL_SERVER: ${{ secrets.SKIP_REAL_SERVER }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
         with:
-          node-version-file: package.json
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-      - run: npm install -g npm@11.13.0
-      - run: npm ci
-      - run: xvfb-run -a npm run test:integration:real
-      - name: Publish test results
-        if: always() && hashFiles('**/junit.xml', '**/test-results.xml') != ''
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: |
-            **/junit.xml
-            **/test-results.xml
-      - name: Test summary
-        if: always() && hashFiles('**/junit.xml') != ''
-        uses: test-summary/action@v2
-        with:
-          paths: '**/junit.xml'
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false

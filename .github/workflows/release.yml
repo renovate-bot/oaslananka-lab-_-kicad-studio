@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g. v1.2.3)'
+        description: 'Version (e.g. v2.6.0)'
         required: true
       publish:
         description: Publish to registries
@@ -41,6 +41,29 @@ jobs:
             echo "Set approval=APPROVE_RELEASE to publish" >&2; exit 1
           fi
 
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+
+      - name: Install dependencies
+        run: task install
+
+      - name: Build
+        run: task build
+
+      - name: Package
+        run: task package
+
+      - name: Build provenance attestation
+        if: hashFiles('*.vsix') != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: '*.vsix'
+
       - name: Install Doppler CLI
         uses: dopplerhq/cli-action@v4
 
@@ -49,24 +72,6 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: bash scripts/verify_doppler_secrets.sh
 
-      - name: Set up Node
-        if: hashFiles('package.json') != ''
-        uses: actions/setup-node@v4
-        with: { node-version-file: package.json }
-      - name: Build (Node)
-        if: hashFiles('package.json') != ''
-        run: |
-          corepack enable
-          npm ci || npm install
-          npm run build --if-present
-          npx vsce package
-
-      - name: Build provenance attestation
-        if: hashFiles('*.vsix') != ''
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: '*.vsix'
-
       - name: Publish
         if: inputs.publish == 'true'
         env:
@@ -74,7 +79,7 @@ jobs:
         run: |
           doppler run --project all --config main -- bash scripts/publish.sh
 
-      - name: Create GitHub release (draft if not publishing)
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -86,6 +91,5 @@ jobs:
             gh_args+=(--draft)
           fi
           assets=()
-          if compgen -G "dist/*" > /dev/null; then assets+=(dist/*); fi
           if compgen -G "*.vsix" > /dev/null; then assets+=(*.vsix); fi
           gh release create "${{ inputs.version }}" "${gh_args[@]}" "${assets[@]}"

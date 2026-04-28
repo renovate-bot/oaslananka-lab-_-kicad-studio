@@ -1,13 +1,16 @@
 # Release Process
 
-This repository automates releases using GitHub Actions.
+Releases are triggered manually from the `oaslananka-lab/kicad-studio` repository.
 
-To invoke a release:
+1. Go to **Actions** → **Release**.
+2. Click **Run workflow**.
+3. Enter the version (e.g., `v2.6.0`).
+4. Choose whether to **Publish to registries** (`true` or `false`).
+5. If publishing, type `APPROVE_RELEASE` in the approval field.
 
-1. Go to the Actions tab in the `oaslananka-lab/kicad-studio` repository.
-2. Select the "Release" workflow.
-3. Click "Run workflow".
-4. Provide the version string (e.g., `v1.2.3`).
-5. To actually publish to registries, set "Publish to registries" to `true` and type `APPROVE_RELEASE` in the approval field.
+The workflow will:
 
-The workflow will build the project, attest artifacts, publish to Open VSX and VS Code Marketplace, and create a GitHub release.
+- Build and package the extension.
+- Create a build provenance attestation.
+- Publish to VS Code Marketplace and Open VSX (if requested).
+- Create a GitHub Release (draft if not publishing).

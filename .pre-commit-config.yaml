@@ -1,3 +1,6 @@
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -7,9 +10,12 @@ repos:
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-toml
+      - id: check-json
       - id: check-added-large-files
         args: [--maxkb=512]
       - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=lf]
@@ -24,8 +30,53 @@ repos:
     hooks:
       - id: actionlint
 
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-d, '{extends: relaxed, rules: {line-length: disable}}']
+        files: ^\.github/
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: [--fix, --disable, MD013, MD033, MD041]
+
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
+        exclude: ^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          [
+            feat,
+            fix,
+            docs,
+            style,
+            refactor,
+            perf,
+            test,
+            chore,
+            build,
+            ci,
+            revert,
+            security
+          ]
+
+  - repo: local
+    hooks:
+      - id: ci-parity
+        name: CI parity (typecheck + test)
+        entry: npx task pre-push
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true

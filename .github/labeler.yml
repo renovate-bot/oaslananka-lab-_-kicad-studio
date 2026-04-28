@@ -1,8 +1,34 @@
-'type:bug':
-  - 'bug_report.yml'
-'type:feature':
-  - 'feature_request.yml'
-'type:docs':
-  - 'documentation.yml'
-'regression':
-  - 'regression.yml'
+# Pull Request Labeler configuration
+# https://github.com/actions/labeler
+
+type:bug:
+  - changed-files:
+      - any-glob-to-any-file: '**/test/**'
+
+type:feature:
+  - changed-files:
+      - any-glob-to-any-file: 'src/**'
+
+type:docs:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', '*.md']
+
+type:refactor:
+  - changed-files:
+      - any-glob-to-any-file: ['src/**', 'test/**']
+
+type:chore:
+  - changed-files:
+      - any-glob-to-any-file:
+          [
+            '.github/**',
+            'scripts/**',
+            'package.json',
+            'package-lock.json',
+            'Taskfile.yml',
+            '.pre-commit-config.yaml'
+          ]
+
+area:js:
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.js', '**/*.ts', '**/*.cjs']

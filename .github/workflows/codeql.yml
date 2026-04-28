@@ -6,10 +6,7 @@ on:
   pull_request:
     branches: ['main']
   schedule:
-    - cron: '0 0 * * 0'
-
-permissions:
-  contents: read
+    - cron: '20 18 * * 1'
 
 jobs:
   analyze:
@@ -24,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript', 'typescript']
+        language: ['javascript-typescript']
 
     steps:
       - name: Checkout repository
@@ -34,6 +31,9 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
