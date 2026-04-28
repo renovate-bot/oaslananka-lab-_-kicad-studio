@@ -19,14 +19,18 @@ do_or_print() {
 }
 
 echo "== Local branches with gone upstream and >30 days old =="
-git fetch --all --prune
+if command -v timeout >/dev/null 2>&1; then
+  timeout 20 git fetch origin --prune --quiet || true
+else
+  git fetch origin --prune --quiet || true
+fi
 git for-each-ref --format='%(refname:short) %(upstream:track) %(committerdate:unix)' refs/heads \
   | awk -v cutoff="$(date -d '30 days ago' +%s 2>/dev/null || date -v-30d +%s)" \
         '$2 ~ /gone/ && $3+0 < cutoff { print $1 }' \
   | grep -v '^chore/autonomy-setup$' \
   | while read -r br; do
       do_or_print "git branch -D '$br'"
-    done
+    done || true
 
 echo
 echo "== Remote branches on canonical older than 90 days, no open PR =="
@@ -44,7 +48,7 @@ gh api -X GET "/repos/${REPO_CANONICAL}/branches?per_page=100" --jq '.[].name' \
       if [[ "$last" < "$cutoff" ]]; then
         do_or_print "gh api -X DELETE /repos/${REPO_CANONICAL}/git/refs/heads/${br}"
       fi
-    done
+    done || true
 
 echo
 echo "== Same on org mirror =="
@@ -58,7 +62,7 @@ gh api -X GET "/repos/${REPO_ORG}/branches?per_page=100" --jq '.[].name' \
       if [[ "$last" < "$cutoff" ]]; then
         do_or_print "gh api -X DELETE /repos/${REPO_ORG}/git/refs/heads/${br}"
       fi
-    done
+    done || true
 
 echo
 echo "== Decisions you must make manually (script only lists, never deletes) =="

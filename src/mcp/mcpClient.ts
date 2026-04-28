@@ -529,28 +529,8 @@ export class McpClient {
   }
 
   private async readWellKnownServerVersion(): Promise<string | undefined> {
-    for (const path of ['/.well-known/mcp-server', '/well-known/mcp-server']) {
-      try {
-        const response = await fetch(`${this.getEndpoint()}${path}`, {
-          method: 'GET',
-          headers: { Accept: 'application/json' }
-        });
-        if (!response.ok) {
-          continue;
-        }
-        const metadata = (await response.json()) as unknown;
-        const version = normalizeMcpVersion(readWellKnownVersion(metadata));
-        if (getMcpCompatStatus(version) !== 'incompatible') {
-          this.logger.debug(
-            `Using MCP server-card version ${version} from ${path}.`
-          );
-          return version;
-        }
-      } catch {
-        continue;
-      }
-    }
-    return undefined;
+    const { readWellKnownMcpServerVersion } = await import('./serverMetadata');
+    return readWellKnownMcpServerVersion(this.getEndpoint(), this.logger);
   }
 
   private setState(state: McpConnectionState): McpConnectionState {
@@ -706,22 +686,6 @@ function normalizeCapabilities(value: unknown): McpCapabilityCard {
     resources: normalizeCapabilityNames(record['resources']),
     prompts: normalizeCapabilityNames(record['prompts'])
   };
-}
-
-function readWellKnownVersion(value: unknown): string | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  const serverInfo = isRecord(value['serverInfo']) ? value['serverInfo'] : {};
-  const name = String(serverInfo['name'] ?? serverInfo['title'] ?? '');
-  if (!/kicad[- ]mcp[- ]pro/i.test(name)) {
-    return undefined;
-  }
-  return typeof serverInfo['version'] === 'string'
-    ? serverInfo['version']
-    : typeof value['version'] === 'string'
-      ? value['version']
-      : undefined;
 }
 
 function normalizeCapabilityNames(value: unknown): string[] {

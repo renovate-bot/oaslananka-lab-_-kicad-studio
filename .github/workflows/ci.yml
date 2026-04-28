@@ -22,9 +22,10 @@ jobs:
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
-          node-version-file: package.json
+          node-version-file: .node-version
       - name: Install dependencies
         run: task install
       - name: Run CI
@@ -47,10 +48,17 @@ jobs:
         uses: test-summary/action@v2
         with:
           paths: '**/junit.xml'
+      - name: Install Doppler CLI
+        if: matrix.os == 'ubuntu-latest'
+        uses: dopplerhq/cli-action@v4
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run --project all --config main -- bash -euo pipefail -c "
+            curl -Os https://uploader.codecov.io/latest/linux/codecov
+            chmod +x codecov
+            ./codecov -f coverage/lcov.info -t \"\$CODECOV_TOKEN\"
+          "
+        shell: bash

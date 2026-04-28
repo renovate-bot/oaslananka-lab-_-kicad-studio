@@ -9,8 +9,6 @@ import {
   structuredErrorFromUnknown,
   troubleshootingUri
 } from '../utils/notifications';
-import { pickMcpProfile } from './mcpProfilePicker';
-import { runManufacturingReleaseWizard } from './manufacturingReleaseWizard';
 import type { CommandServices } from './types';
 
 /**
@@ -150,7 +148,10 @@ export function registerMcpCommands(
 
     registerTrustedCommand(
       COMMANDS.pickMcpProfile,
-      () => pickMcpProfile(services),
+      async () => {
+        const { pickMcpProfile } = await import('./mcpProfilePicker');
+        await pickMcpProfile(services);
+      },
       'Pick MCP Profile'
     ),
 
@@ -191,7 +192,11 @@ export function registerMcpCommands(
 
     registerTrustedCommand(
       COMMANDS.manufacturingRelease,
-      () => runManufacturingReleaseWizard(services),
+      async () => {
+        const { runManufacturingReleaseWizard } =
+          await import('./manufacturingReleaseWizard');
+        await runManufacturingReleaseWizard(services);
+      },
       'Manufacturing Release'
     )
   ];

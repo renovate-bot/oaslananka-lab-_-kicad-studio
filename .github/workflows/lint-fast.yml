@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   meta:
+    if: github.repository == 'oaslananka-lab/kicad-studio'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -28,14 +29,23 @@ jobs:
           yamllint -d "{extends: relaxed, rules: {line-length: disable}}" .github/ || true
 
   node:
-    if: hashFiles('package.json') != ''
+    if: github.repository == 'oaslananka-lab/kicad-studio'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Check Node project
+        id: node-project
+        run: |
+          if [ -f package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.node-project.outputs.present == 'true'
         with:
-          node-version-file: package.json
-      - run: npm ci
+          node-version-file: .node-version
+      - if: steps.node-project.outputs.present == 'true'
+        run: npm install --frozen-lockfile || npm install
       - name: Lint
+        if: steps.node-project.outputs.present == 'true'
         run: npm run lint

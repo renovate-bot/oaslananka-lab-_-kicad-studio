@@ -1,4 +1,5 @@
 .github/**
+.doppler/**
 .gitlab-ci.yml
 .husky/**
 .vscode/**
@@ -18,13 +19,18 @@ playwright-report/**
 **/*.ts
 **/*.map
 *.vsix
+.actrc
+.pre-commit-config.yaml
 .node-version
 .nvmrc
 .gitignore
 .prettierignore
+Taskfile.yml
+commitlint.config.cjs
 tsconfig.json
 tsconfig.test.json
 webpack.config.js
 .eslintrc.json
+eslint.config.cjs
 .prettierrc
 jest.config.js
