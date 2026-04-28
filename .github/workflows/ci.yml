@@ -56,5 +56,5 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          doppler run --project all --config main -- npx codecov --file ./coverage/lcov.info --disable-search
+          doppler run --project all --config main -- npx codecov --file ./coverage/lcov.info
         shell: bash
