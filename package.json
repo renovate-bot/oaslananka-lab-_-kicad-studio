@@ -2,7 +2,7 @@
   "name": "kicadstudio",
   "displayName": "KiCad Studio",
   "description": "The complete KiCad development environment for VS Code — view schematics & PCBs, run DRC/ERC, export production files, search components, and get AI-powered design assistance.",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "publisher": "oaslananka",
   "engines": {
     "vscode": "^1.99.0",
@@ -289,11 +289,23 @@
       },
       {
         "view": "kicadstudio.fixQueue",
-        "contents": "Connect `kicad-mcp-pro` to see actionable AI fixes here."
+        "contents": "Connect `kicad-mcp-pro` to see actionable AI fixes here.",
+        "when": "!kicadstudio.mcpVsCodeStdio"
+      },
+      {
+        "view": "kicadstudio.fixQueue",
+        "contents": "kicad-mcp-pro is connected via VS Code stdio.\n\nAI fixes require the HTTP transport. Open the **AI Chat** panel and use MCP tools there instead.",
+        "when": "kicadstudio.mcpVsCodeStdio"
       },
       {
         "view": "kicadstudio.qualityGate",
-        "contents": "Connect `kicad-mcp-pro` and run quality gates to inspect release readiness."
+        "contents": "Connect `kicad-mcp-pro` and run quality gates to inspect release readiness.",
+        "when": "!kicadstudio.mcpVsCodeStdio"
+      },
+      {
+        "view": "kicadstudio.qualityGate",
+        "contents": "kicad-mcp-pro is connected via VS Code stdio.\n\nQuality Gates require the HTTP transport (port 27185). Start kicad-mcp-pro with `--transport http` to enable this feature.",
+        "when": "kicadstudio.mcpVsCodeStdio"
       },
       {
         "view": "kicadstudio.drcRules",

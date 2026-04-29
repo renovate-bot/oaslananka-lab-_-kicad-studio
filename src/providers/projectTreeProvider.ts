@@ -15,7 +15,13 @@ class KiCadTreeItem extends vscode.TreeItem {
       this.resourceUri = node.uri;
     }
 
-    if (node.uri && (node.type === 'schematic' || node.type === 'pcb' || node.type === 'file' || node.type === 'jobset')) {
+    if (
+      node.uri &&
+      (node.type === 'schematic' ||
+        node.type === 'pcb' ||
+        node.type === 'file' ||
+        node.type === 'jobset')
+    ) {
       this.command = {
         command:
           node.type === 'schematic'
@@ -32,8 +38,12 @@ class KiCadTreeItem extends vscode.TreeItem {
   }
 }
 
-export class KiCadProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeNode> {
-  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<ProjectTreeNode | undefined>();
+export class KiCadProjectTreeProvider
+  implements vscode.TreeDataProvider<ProjectTreeNode>
+{
+  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<
+    ProjectTreeNode | undefined
+  >();
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
   refresh(): void {
@@ -64,66 +74,94 @@ export class KiCadProjectTreeProvider implements vscode.TreeDataProvider<Project
   }
 
   private async buildWorkspaceNode(rootPath: string): Promise<ProjectTreeNode> {
-    const outputDirName = vscode.workspace.getConfiguration().get<string>('kicadstudio.defaultOutputDir', 'fab');
-    const [projectFiles, jobsetFiles, symbolFiles, footprintFiles, models, fabFiles] = await Promise.all([
+    const outputDirName = vscode.workspace
+      .getConfiguration()
+      .get<string>('kicadstudio.defaultOutputDir', 'fab');
+    const [
+      projectFiles,
+      jobsetFiles,
+      symbolFiles,
+      footprintFiles,
+      models,
+      fabFiles
+    ] = await Promise.all([
       collectFiles(rootPath, /\.(kicad_pro|kicad_sch|kicad_pcb)$/i),
       collectFiles(rootPath, /\.kicad_jobset$/i),
       collectFiles(rootPath, /\.kicad_sym$/i),
       collectFiles(rootPath, /\.kicad_mod$/i),
       collectFiles(rootPath, /\.(step|stp|wrl)$/i),
-      collectFiles(path.join(rootPath, outputDirName), /\.(gbr|drl|pdf|svg|zip|glb|csv|xlsx|json|html|net)$/i)
+      collectFiles(
+        path.join(rootPath, outputDirName),
+        /\.(gbr|drl|pdf|svg|zip|glb|csv|xlsx|json|html|net)$/i
+      )
     ]);
 
     const children: ProjectTreeNode[] = [
-      ...projectFiles.map((file): ProjectTreeNode => ({
-        label: path.basename(file),
-        type: file.endsWith('.kicad_sch') ? 'schematic' : file.endsWith('.kicad_pcb') ? 'pcb' : 'file',
-        uri: vscode.Uri.file(file)
-      })),
+      ...projectFiles.map(
+        (file): ProjectTreeNode => ({
+          label: path.basename(file),
+          type: file.endsWith('.kicad_sch')
+            ? 'schematic'
+            : file.endsWith('.kicad_pcb')
+              ? 'pcb'
+              : 'file',
+          uri: vscode.Uri.file(file)
+        })
+      ),
       {
         label: 'Jobsets',
         type: 'jobset' as const,
-        children: jobsetFiles.map((file): ProjectTreeNode => ({
-          label: path.basename(file),
-          type: 'jobset',
-          uri: vscode.Uri.file(file)
-        }))
+        children: jobsetFiles.map(
+          (file): ProjectTreeNode => ({
+            label: path.basename(file),
+            type: 'jobset',
+            uri: vscode.Uri.file(file)
+          })
+        )
       },
       {
         label: 'Schematic Libraries',
         type: 'symbol-library' as const,
-        children: symbolFiles.map((file): ProjectTreeNode => ({
-          label: path.basename(file),
-          type: 'file',
-          uri: vscode.Uri.file(file)
-        }))
+        children: symbolFiles.map(
+          (file): ProjectTreeNode => ({
+            label: path.basename(file),
+            type: 'file',
+            uri: vscode.Uri.file(file)
+          })
+        )
       },
       {
         label: 'Footprint Libraries',
         type: 'footprint-library' as const,
-        children: footprintFiles.map((file): ProjectTreeNode => ({
-          label: path.basename(file),
-          type: 'file',
-          uri: vscode.Uri.file(file)
-        }))
+        children: footprintFiles.map(
+          (file): ProjectTreeNode => ({
+            label: path.basename(file),
+            type: 'file',
+            uri: vscode.Uri.file(file)
+          })
+        )
       },
       {
         label: 'Fabrication Outputs',
         type: 'fab-output' as const,
-        children: fabFiles.map((file): ProjectTreeNode => ({
-          label: path.basename(file),
-          type: 'file',
-          uri: vscode.Uri.file(file)
-        }))
+        children: fabFiles.map(
+          (file): ProjectTreeNode => ({
+            label: path.basename(file),
+            type: 'file',
+            uri: vscode.Uri.file(file)
+          })
+        )
       },
       {
         label: '3D Models',
         type: 'model' as const,
-        children: models.map((file): ProjectTreeNode => ({
-          label: path.basename(file),
-          type: 'file',
-          uri: vscode.Uri.file(file)
-        }))
+        children: models.map(
+          (file): ProjectTreeNode => ({
+            label: path.basename(file),
+            type: 'file',
+            uri: vscode.Uri.file(file)
+          })
+        )
       }
     ].filter((node) => !node.children || node.children.length > 0);
 
@@ -136,7 +174,10 @@ export class KiCadProjectTreeProvider implements vscode.TreeDataProvider<Project
   }
 }
 
-async function collectFiles(rootPath: string, pattern: RegExp): Promise<string[]> {
+async function collectFiles(
+  rootPath: string,
+  pattern: RegExp
+): Promise<string[]> {
   try {
     await fs.promises.access(rootPath);
   } catch {
@@ -154,7 +195,29 @@ async function collectFiles(rootPath: string, pattern: RegExp): Promise<string[]
     for (const entry of entries) {
       const absolute = path.join(currentPath, entry.name);
       if (entry.isDirectory()) {
-        if (['.git', 'node_modules', 'dist', 'out'].includes(entry.name)) {
+        if (
+          [
+            // Version control / dependency management
+            '.git',
+            'node_modules',
+            // Build/coverage artefacts
+            'dist',
+            'out',
+            'build',
+            'coverage',
+            '.nyc_output',
+            // Extension development dirs (not KiCad design files)
+            'src',
+            'test',
+            'scripts',
+            'media',
+            'docs',
+            // Hidden/tooling dirs
+            '.vscode',
+            '.github',
+            '.husky'
+          ].includes(entry.name)
+        ) {
           continue;
         }
         await visit(absolute);

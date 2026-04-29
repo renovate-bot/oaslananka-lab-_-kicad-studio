@@ -154,6 +154,7 @@ export const CONTEXT_KEYS = {
   mcpCompatible: 'kicadstudio.mcpCompatible',
   mcpIncompatible: 'kicadstudio.mcpIncompatible',
   mcpDisconnected: 'kicadstudio.mcpDisconnected',
+  mcpVsCodeStdio: 'kicadstudio.mcpVsCodeStdio',
   mcpProfile: 'kicadstudio.mcpProfile',
   hasVariants: 'kicadstudio.hasVariants',
   workspaceTrusted: 'kicadstudio.workspaceTrusted'

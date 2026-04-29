@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.7.4] - 2026-04-29
+
+### Fixed
+
+- **DRC syntax false-positives** — added `min`, `max`, `opt` and all standard constraint-type identifiers
+  (`clearance`, `courtyard_clearance`, `track_width`, `length`, `skew`, `diff_pair_gap`, etc.) to
+  `DRC_SCHEMA`; extended `isSafeTag` to recognise dimension values with units (`0.20mm`, `1.00mil`,
+  `45deg`, etc.) so `kicad-studio:syntax` no longer flags valid `.kicad_dru` nodes.
+- **Git diff viewer cyan background** — changed the `<kicanvas-embed>` theme for schematics in
+  `diff.js` from `kicad` (cyan eeschema background) to `light` (white background); PCB diffs keep
+  the `kicad` dark theme.
+- **Project tree duplicate files** — `projectTreeProvider.ts` `collectFiles()` now skips
+  `src`, `test`, `scripts`, `media`, `docs`, `.github`, `.husky`, `build`, `coverage` and other
+  non-KiCad directories so the extension's own development tree is not polluted by test fixture files.
+- **AI Fix Queue / Quality Gates — VsCodeStdio guidance** — added `kicadstudio.mcpVsCodeStdio`
+  VS Code context key; `package.json` `viewsWelcome` now shows a targeted message when kicad-mcp-pro
+  is connected via stdio (directing users to the AI Chat panel) instead of the generic
+  "Connect kicad-mcp-pro" prompt.
+
+### Added
+
+- **CH224A-breakout benchmark fixture** — full KiCad 10 project files
+  (`CH224A breakout board design.kicad_sch/pcb/pro`, 7 069 + 7 394 lines) from
+  [uwrealitylabs/CH224A-breakout](https://github.com/uwrealitylabs/CH224A-breakout)
+  added to `test/fixtures/benchmark_projects/ch224a_breakout/` with attribution.
+
 ## [2.7.3] - 2026-04-29
 
 ### Fixed

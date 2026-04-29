@@ -80,7 +80,10 @@
     const viewer = document.createElement('kicanvas-embed');
     viewer.setAttribute('controls', 'basic');
     viewer.setAttribute('controlslist', 'zoom pan select');
-    viewer.setAttribute('theme', 'kicad');
+    // Use 'light' for schematics so the diff panels have a neutral white
+    // background instead of the cyan eeschema background from the 'kicad' theme.
+    // PCB files keep 'kicad' which gives the expected dark board surface.
+    viewer.setAttribute('theme', fileType === 'board' ? 'kicad' : 'light');
 
     const source = document.createElement('kicanvas-source');
     source.setAttribute('name', fileName);

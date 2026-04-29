@@ -585,6 +585,11 @@ export async function activate(
       CONTEXT_KEYS.mcpDisconnected,
       state.kind === 'Disconnected'
     );
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpVsCodeStdio,
+      state.kind === 'VsCodeStdio'
+    );
     statusBar.update({
       mcpState: state,
       mcpProfile: readConfiguredMcpProfile()

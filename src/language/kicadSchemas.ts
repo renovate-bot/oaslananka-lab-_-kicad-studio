@@ -2,8 +2,14 @@ import type { SchemaNodeDefinition } from '../types';
 
 const commonNodes: SchemaNodeDefinition[] = [
   { tag: 'at', description: 'Position of an item in X/Y coordinates.' },
-  { tag: 'property', description: 'Named property attached to a symbol or object.' },
-  { tag: 'uuid', description: 'Stable unique identifier used across KiCad files.' },
+  {
+    tag: 'property',
+    description: 'Named property attached to a symbol or object.'
+  },
+  {
+    tag: 'uuid',
+    description: 'Stable unique identifier used across KiCad files.'
+  },
   { tag: 'effects', description: 'Text and style effects definition.' },
   { tag: 'stroke', description: 'Line stroke style information.' },
   { tag: 'fill', description: 'Fill style information.' },
@@ -15,15 +21,30 @@ export const SCHEMATIC_SCHEMA: SchemaNodeDefinition[] = [
   { tag: 'version', description: 'Document version marker.' },
   { tag: 'generator', description: 'Tool that created the file.' },
   { tag: 'paper', description: 'Paper size configuration.' },
-  { tag: 'symbol', description: 'Symbol instance placed on a schematic sheet.' },
+  {
+    tag: 'symbol',
+    description: 'Symbol instance placed on a schematic sheet.'
+  },
   { tag: 'wire', description: 'Wire segment between two points.' },
-  { tag: 'junction', description: 'Electrical junction joining multiple wires.' },
+  {
+    tag: 'junction',
+    description: 'Electrical junction joining multiple wires.'
+  },
   { tag: 'label', description: 'Local net label.' },
   { tag: 'global_label', description: 'Global net label across sheets.' },
-  { tag: 'hierarchical_label', description: 'Hierarchical label crossing sheet boundaries.' },
+  {
+    tag: 'hierarchical_label',
+    description: 'Hierarchical label crossing sheet boundaries.'
+  },
   { tag: 'sheet', description: 'Hierarchical sheet instance.' },
-  { tag: 'sheet_instances', description: 'Expanded instances for hierarchical sheets.' },
-  { tag: 'symbol_instances', description: 'Expanded instances for placed symbols.' },
+  {
+    tag: 'sheet_instances',
+    description: 'Expanded instances for hierarchical sheets.'
+  },
+  {
+    tag: 'symbol_instances',
+    description: 'Expanded instances for placed symbols.'
+  },
   { tag: 'lib_id', description: 'Symbol library identifier.' },
   { tag: 'reference', description: 'Reference designator property.' },
   { tag: 'value', description: 'Component value property.' },
@@ -56,7 +77,10 @@ export const PCB_SCHEMA: SchemaNodeDefinition[] = [
 ];
 
 export const SYMBOL_SCHEMA: SchemaNodeDefinition[] = [
-  { tag: 'kicad_symbol_lib', description: 'Root node for symbol library files.' },
+  {
+    tag: 'kicad_symbol_lib',
+    description: 'Root node for symbol library files.'
+  },
   { tag: 'symbol', description: 'Symbol definition.' },
   { tag: 'pin', description: 'Pin definition inside a symbol.' },
   { tag: 'property', description: 'Symbol property definition.' },
@@ -83,13 +107,73 @@ export const PROJECT_SCHEMA: SchemaNodeDefinition[] = [
 ];
 
 export const DRC_SCHEMA: SchemaNodeDefinition[] = [
-  { tag: 'design_rules', description: 'Root node for KiCad custom DRC rule files.' },
+  {
+    tag: 'design_rules',
+    description: 'Root node for KiCad custom DRC rule files.'
+  },
   { tag: 'version', description: 'DRC rule file format version.' },
   { tag: 'rule', description: 'Named graphical design rule.' },
-  { tag: 'condition', description: 'Boolean condition that determines when the rule applies.' },
-  { tag: 'constraint', description: 'Constraint payload enforced by the rule.' },
+  {
+    tag: 'condition',
+    description: 'Boolean condition that determines when the rule applies.'
+  },
+  {
+    tag: 'constraint',
+    description: 'Constraint payload enforced by the rule.'
+  },
   { tag: 'severity', description: 'Severity of the rule outcome.' },
   { tag: 'layer', description: 'Specific board layer targeted by the rule.' },
+  // Constraint value qualifiers: (constraint clearance (min 0.2mm) (max 1mm) (opt 0.5mm))
+  { tag: 'min', description: 'Minimum value for a constraint range.' },
+  { tag: 'max', description: 'Maximum value for a constraint range.' },
+  { tag: 'opt', description: 'Optimal (target) value for a constraint range.' },
+  // Constraint type identifiers
+  { tag: 'clearance', description: 'Electrical clearance constraint type.' },
+  {
+    tag: 'courtyard_clearance',
+    description: 'Courtyard clearance constraint type.'
+  },
+  {
+    tag: 'silk_clearance',
+    description: 'Silkscreen clearance constraint type.'
+  },
+  {
+    tag: 'edge_clearance',
+    description: 'Board-edge clearance constraint type.'
+  },
+  {
+    tag: 'hole_clearance',
+    description: 'Hole-to-copper clearance constraint type.'
+  },
+  { tag: 'hole_to_hole', description: 'Hole-to-hole spacing constraint type.' },
+  {
+    tag: 'via_clearance',
+    description: 'Via-to-copper clearance constraint type.'
+  },
+  { tag: 'track_width', description: 'Track width constraint type.' },
+  { tag: 'annular_width', description: 'Annular ring width constraint type.' },
+  { tag: 'via_diameter', description: 'Via diameter constraint type.' },
+  { tag: 'via_hole', description: 'Via drill hole constraint type.' },
+  { tag: 'hole_size', description: 'Drill hole size constraint type.' },
+  { tag: 'length', description: 'Net length constraint type.' },
+  { tag: 'skew', description: 'Differential-pair skew constraint type.' },
+  {
+    tag: 'diff_pair_gap',
+    description: 'Differential-pair gap constraint type.'
+  },
+  {
+    tag: 'diff_pair_uncoupled',
+    description: 'Differential-pair uncoupled-length constraint type.'
+  },
+  { tag: 'impedance', description: 'Impedance constraint type.' },
+  {
+    tag: 'physical_clearance',
+    description: 'Physical (non-electrical) clearance constraint type.'
+  },
+  {
+    tag: 'physical_hole_clearance',
+    description: 'Physical hole clearance constraint type.'
+  },
   ...commonNodes
 ];
 
@@ -110,5 +194,8 @@ export const KEYWORD_DESCRIPTIONS = Object.fromEntries(
 );
 
 export const LANGUAGE_COMPLETIONS = Object.fromEntries(
-  Object.entries(LANGUAGE_SCHEMAS).map(([language, items]) => [language, items.map((item) => item.tag)])
+  Object.entries(LANGUAGE_SCHEMAS).map(([language, items]) => [
+    language,
+    items.map((item) => item.tag)
+  ])
 );

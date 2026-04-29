@@ -91,9 +91,14 @@ export class KiCadDiagnosticsProvider {
 
   private isSafeTag(tag: string): boolean {
     return (
+      // Pure numbers or decimals: 0.20, 1, -0.5
       /^[0-9.-]+$/.test(tag) ||
+      // Dimension values with units: 0.20mm, 1.00mil, 45deg, 50ohm
+      /^[0-9.-]+(?:mm|mil|in|deg|ohm|ns|ps|MHz|GHz|kHz)$/.test(tag) ||
+      // Layer references: F.Cu, B.Silkscreen, In1.Cu
       /^[FB]\.[A-Za-z0-9_.]+$/.test(tag) ||
       /^In\d+\.Cu$/.test(tag) ||
+      // Template expressions: ${variable}
       tag.startsWith('${')
     );
   }
