@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.7.6] - 2026-04-29
+
+### Fixed
+
+- **AI Fix Queue empty-state message** — `viewsWelcome` condition split into
+  `!mcpConnected` ("Connect kicad-mcp-pro…") and `mcpConnected` ("No pending AI fixes…")
+  so the panel no longer shows a misleading "Connect" prompt when the HTTP server is already
+  running but there are no queued fixes. Same fix applied to the Quality Gates panel.
+
 ## [2.7.5] - 2026-04-29
 
 ### Added
