@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.7.5] - 2026-04-29
+
+### Added
+
+- **HTTP transport mode for kicad-mcp-pro** — the MCP setup wizard now asks _how_ the server
+  should run: **stdio** (existing behaviour, managed by VS Code) or **HTTP** (port 27185, enables
+  Quality Gates and AI Fix Queue in KiCad Studio).  
+  Choosing HTTP writes a background VS Code task (`Start kicad-mcp-pro (HTTP)`) to
+  `.vscode/tasks.json` and updates `.vscode/mcp.json` with an SSE entry for Copilot/Claude Code.
+  A "Run Task Now" prompt lets you start the server immediately without leaving VS Code.
+- **`KiCad: Launch kicad-mcp-pro (HTTP mode)`** command — standalone command palette entry
+  (`kicadstudio.mcp.launchHttp`) for quickly switching to HTTP transport from any workspace.
+- **"Switch to HTTP Mode" link in Fix Queue / Quality Gates** — when kicad-mcp-pro is detected in
+  VS Code stdio mode the welcome panel now shows a clickable
+  `[Switch to HTTP Mode](command:kicadstudio.mcp.launchHttp)` link instead of a plain text hint.
+
 ## [2.7.4] - 2026-04-29
 
 ### Fixed

@@ -47,6 +47,33 @@ export function registerMcpCommands(
           );
           return;
         }
+
+        // ── Step 1: transport ─────────────────────────────────────────────────
+        const transport = await vscode.window.showQuickPick(
+          [
+            {
+              label: '$(plug) stdio — VS Code MCP (default)',
+              description:
+                'Managed by VS Code; works with Copilot, Claude Code, Cursor. Quality Gates and Fix Queue require HTTP.',
+              value: 'stdio'
+            },
+            {
+              label: '$(server) HTTP — port 27185',
+              description:
+                'Starts kicad-mcp-pro as a standalone HTTP server. Enables Quality Gates and AI Fix Queue in KiCad Studio.',
+              value: 'http'
+            }
+          ],
+          {
+            title: 'Select kicad-mcp-pro transport',
+            placeHolder: 'How should kicad-mcp-pro run?'
+          }
+        );
+        if (!transport) {
+          return;
+        }
+
+        // ── Step 2: profile ───────────────────────────────────────────────────
         const detector = new McpDetector();
         const profile = await vscode.window.showQuickPick(
           [
@@ -63,16 +90,71 @@ export function registerMcpCommands(
           ],
           {
             title: 'Select kicad-mcp-pro profile',
-            placeHolder: 'Choose the MCP profile to write into .vscode/mcp.json'
+            placeHolder: 'Choose the MCP tool profile'
           }
         );
         if (!profile) {
           return;
         }
-        await detector.generateMcpJson(root, install, profile);
+
+        if (transport.value === 'http') {
+          await detector.generateHttpConfig(root, install, profile);
+        } else {
+          await detector.generateMcpJson(root, install, profile);
+        }
         await services.refreshMcpState();
       },
       'Setup MCP Integration'
+    ),
+
+    registerTrustedCommand(
+      COMMANDS.launchMcpHttp,
+      async () => {
+        const install = await services.mcpClient.detectInstall();
+        if (!install.found) {
+          const choice = await vscode.window.showWarningMessage(
+            'kicad-mcp-pro could not be detected. Install it first.',
+            'Install',
+            'Cancel'
+          );
+          if (choice === 'Install') {
+            await vscode.commands.executeCommand(COMMANDS.installMcp);
+          }
+          return;
+        }
+        const root =
+          vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+        const detector = new McpDetector();
+        const profile = await vscode.window.showQuickPick(
+          [
+            'full',
+            'minimal',
+            'pcb_only',
+            'schematic_only',
+            'manufacturing',
+            'high_speed',
+            'power',
+            'simulation',
+            'analysis',
+            'agent_full'
+          ],
+          {
+            title: 'Select kicad-mcp-pro profile',
+            placeHolder: 'Profile for the HTTP server'
+          }
+        );
+        if (!profile) {
+          return;
+        }
+        const port = vscode.workspace
+          .getConfiguration()
+          .get<string>('kicadstudio.mcp.endpoint', 'http://127.0.0.1:27185')
+          .match(/:(\d+)/)?.[1];
+        const portNum = port ? parseInt(port, 10) : 27185;
+        await detector.generateHttpConfig(root, install, profile, portNum);
+        await services.refreshMcpState();
+      },
+      'Launch kicad-mcp-pro (HTTP)'
     ),
 
     registerTrustedCommand(
@@ -193,8 +275,9 @@ export function registerMcpCommands(
     registerTrustedCommand(
       COMMANDS.manufacturingRelease,
       async () => {
-        const { runManufacturingReleaseWizard } =
-          await import('./manufacturingReleaseWizard');
+        const { runManufacturingReleaseWizard } = await import(
+          './manufacturingReleaseWizard'
+        );
         await runManufacturingReleaseWizard(services);
       },
       'Manufacturing Release'

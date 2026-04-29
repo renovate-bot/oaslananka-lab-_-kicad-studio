@@ -110,6 +110,7 @@ export const COMMANDS = {
   setupMcpIntegration: 'kicadstudio.setupMcpIntegration',
   installMcp: 'kicadstudio.mcp.install',
   retryMcp: 'kicadstudio.mcp.retry',
+  launchMcpHttp: 'kicadstudio.mcp.launchHttp',
   openMcpUpgradeGuide: 'kicadstudio.mcp.openUpgradeGuide',
   pickMcpProfile: 'kicadstudio.mcp.pickProfile',
   openMcpLog: 'kicadstudio.mcp.openLog',

@@ -172,6 +172,107 @@ export class McpDetector {
     );
   }
 
+  /**
+   * Generate an HTTP-transport configuration:
+   *  - .vscode/tasks.json  — background task that starts kicad-mcp-pro with --transport http
+   *  - .vscode/mcp.json    — SSE entry so Copilot / Claude Code can also connect over HTTP
+   */
+  async generateHttpConfig(
+    projectDir: string,
+    status: McpInstallStatus,
+    profile = 'full',
+    port = 27185
+  ): Promise<void> {
+    const root =
+      vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? projectDir;
+    const vscodeDirPath = path.join(root, '.vscode');
+    fs.mkdirSync(vscodeDirPath, { recursive: true });
+
+    // ── tasks.json ────────────────────────────────────────────────────────────
+    const tasksJsonPath = path.join(vscodeDirPath, 'tasks.json');
+    const newTask = buildHttpTask(status, profile, port, projectDir);
+
+    let tasksConfig: { version: string; tasks: unknown[] } = {
+      version: '2.0.0',
+      tasks: []
+    };
+    if (fs.existsSync(tasksJsonPath)) {
+      try {
+        tasksConfig = JSON.parse(
+          fs.readFileSync(tasksJsonPath, 'utf8')
+        ) as typeof tasksConfig;
+        if (!Array.isArray(tasksConfig.tasks)) {
+          tasksConfig.tasks = [];
+        }
+        // Remove stale kicad-mcp-pro HTTP task if present
+        tasksConfig.tasks = tasksConfig.tasks.filter(
+          (t) =>
+            !(
+              typeof t === 'object' &&
+              t !== null &&
+              'label' in t &&
+              (t as { label: string }).label === newTask.label
+            )
+        );
+      } catch {
+        // malformed — overwrite
+        tasksConfig = { version: '2.0.0', tasks: [] };
+      }
+    }
+    tasksConfig.tasks.push(newTask);
+    fs.writeFileSync(
+      tasksJsonPath,
+      JSON.stringify(tasksConfig, null, 2),
+      'utf8'
+    );
+
+    // ── mcp.json (SSE entry for Copilot / Claude Code) ────────────────────────
+    const mcpJsonPath = path.join(vscodeDirPath, 'mcp.json');
+    let mcpConfig: { servers: Record<string, unknown> } = { servers: {} };
+    if (fs.existsSync(mcpJsonPath)) {
+      try {
+        mcpConfig = JSON.parse(
+          fs.readFileSync(mcpJsonPath, 'utf8')
+        ) as typeof mcpConfig;
+        if (
+          typeof mcpConfig.servers !== 'object' ||
+          mcpConfig.servers === null
+        ) {
+          mcpConfig.servers = {};
+        }
+      } catch {
+        mcpConfig = { servers: {} };
+      }
+    }
+    mcpConfig.servers['kicad'] = {
+      type: 'sse',
+      url: `http://localhost:${port}/sse`
+    };
+    fs.writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2), 'utf8');
+
+    const action = await vscode.window.showInformationMessage(
+      `HTTP task added to .vscode/tasks.json and mcp.json updated with SSE entry (port ${port}). ` +
+        'Run "Start kicad-mcp-pro (HTTP)" via Terminal → Run Task to start the server.',
+      'Run Task Now'
+    );
+    if (action === 'Run Task Now') {
+      await vscode.commands.executeCommand(
+        'workbench.action.tasks.runTask',
+        newTask.label
+      );
+    }
+  }
+
+  /** Build the VS Code task definition for HTTP transport. */
+  buildHttpTaskArgs(
+    status: McpInstallStatus,
+    profile: string,
+    port: number,
+    projectDir: string
+  ): { command: string; args: string[] } {
+    return buildHttpTaskArgs(status, profile, port, projectDir);
+  }
+
   async detectInstallers(): Promise<McpInstallerCandidate[]> {
     const candidates: McpInstallerCandidate[] = [];
     if (
@@ -306,4 +407,93 @@ export class McpDetector {
 
 function extractVersion(output: string): string | undefined {
   return output.match(/(\d+\.\d+(?:\.\d+)?)/)?.[1];
+}
+
+function buildHttpTaskArgs(
+  status: McpInstallStatus,
+  profile: string,
+  port: number,
+  projectDir: string
+): { command: string; args: string[] } {
+  const httpFlags = ['--transport', 'http', '--port', String(port)];
+  const envFlags = [
+    '--env',
+    `KICAD_MCP_PROFILE=${profile}`,
+    '--env',
+    `KICAD_MCP_PROJECT_DIR=${projectDir}`
+  ];
+
+  if (status.command === 'uvx') {
+    return {
+      command: 'uvx',
+      args: ['kicad-mcp-pro', ...httpFlags]
+    };
+  }
+  if (status.command === 'docker') {
+    return {
+      command: 'docker',
+      args: [
+        'run',
+        '--rm',
+        '-p',
+        `${port}:${port}`,
+        ...envFlags,
+        'kicad-mcp-pro:latest',
+        ...httpFlags
+      ]
+    };
+  }
+  // global binary / pip / pipx
+  return {
+    command: 'kicad-mcp-pro',
+    args: [...httpFlags]
+  };
+}
+
+function buildHttpTask(
+  status: McpInstallStatus,
+  profile: string,
+  port: number,
+  projectDir: string
+): {
+  label: string;
+  type: string;
+  command: string;
+  args: string[];
+  isBackground: boolean;
+  problemMatcher: string[];
+  options?: { env: Record<string, string> };
+  presentation: { reveal: string; panel: string };
+} {
+  const { command, args } = buildHttpTaskArgs(
+    status,
+    profile,
+    port,
+    projectDir
+  );
+  const base = {
+    label: 'Start kicad-mcp-pro (HTTP)',
+    type: 'shell',
+    command,
+    args,
+    isBackground: true,
+    problemMatcher: [] as string[],
+    presentation: {
+      reveal: 'always',
+      panel: 'dedicated'
+    }
+  };
+  // For non-Docker sources, inject env vars via task options
+  if (status.command !== 'docker') {
+    return {
+      ...base,
+      options: {
+        env: {
+          KICAD_MCP_PROFILE: profile,
+          KICAD_MCP_PROJECT_DIR: projectDir
+        }
+      }
+    };
+  }
+  return base;
 }

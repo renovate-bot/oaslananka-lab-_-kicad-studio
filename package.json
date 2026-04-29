@@ -2,7 +2,7 @@
   "name": "kicadstudio",
   "displayName": "KiCad Studio",
   "description": "The complete KiCad development environment for VS Code — view schematics & PCBs, run DRC/ERC, export production files, search components, and get AI-powered design assistance.",
-  "version": "2.7.4",
+  "version": "2.7.5",
   "publisher": "oaslananka",
   "engines": {
     "vscode": "^1.99.0",
@@ -294,7 +294,7 @@
       },
       {
         "view": "kicadstudio.fixQueue",
-        "contents": "kicad-mcp-pro is connected via VS Code stdio.\n\nAI fixes require the HTTP transport. Open the **AI Chat** panel and use MCP tools there instead.",
+        "contents": "kicad-mcp-pro is connected via VS Code stdio.\n\nAI fixes require the HTTP transport.\n[Switch to HTTP Mode](command:kicadstudio.mcp.launchHttp)\n\nOr open the **AI Chat** panel and use MCP tools there instead.",
         "when": "kicadstudio.mcpVsCodeStdio"
       },
       {
@@ -304,7 +304,7 @@
       },
       {
         "view": "kicadstudio.qualityGate",
-        "contents": "kicad-mcp-pro is connected via VS Code stdio.\n\nQuality Gates require the HTTP transport (port 27185). Start kicad-mcp-pro with `--transport http` to enable this feature.",
+        "contents": "kicad-mcp-pro is connected via VS Code stdio.\n\nQuality Gates require the HTTP transport (port 27185).\n[Switch to HTTP Mode](command:kicadstudio.mcp.launchHttp)\n\nOr start kicad-mcp-pro manually with `--transport http --port 27185`.",
         "when": "kicadstudio.mcpVsCodeStdio"
       },
       {
@@ -585,6 +585,11 @@
         "command": "kicadstudio.mcp.retry",
         "title": "KiCad: Retry MCP Connection",
         "category": "KiCad"
+      },
+      {
+        "command": "kicadstudio.mcp.launchHttp",
+        "title": "KiCad: Launch kicad-mcp-pro (HTTP mode)",
+        "category": "KiCad Setup"
       },
       {
         "command": "kicadstudio.mcp.openUpgradeGuide",
@@ -909,6 +914,10 @@
         },
         {
           "command": "kicadstudio.setupMcpIntegration"
+        },
+        {
+          "command": "kicadstudio.mcp.launchHttp",
+          "when": "kicadstudio.workspaceTrusted"
         },
         {
           "command": "kicadstudio.mcp.install",

@@ -339,3 +339,230 @@ describe('McpDetector.generateMcpJson', () => {
     ]);
   });
 });
+
+describe('McpDetector.generateHttpConfig', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kicadstudio-http-'));
+    workspace.workspaceFolders = [{ uri: { fsPath: tempDir } }];
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('writes a tasks.json task and an SSE mcp.json for uvx installs', async () => {
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+    const detector = new McpDetector();
+
+    await detector.generateHttpConfig(
+      tempDir,
+      { found: true, command: 'uvx', version: '0.5.0', source: 'uvx' },
+      'full',
+      27185
+    );
+
+    const tasksPath = path.join(tempDir, '.vscode', 'tasks.json');
+    const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8')) as {
+      tasks: Array<{ label: string; command: string; args: string[] }>;
+    };
+    const task = tasks.tasks.find(
+      (t) => t.label === 'Start kicad-mcp-pro (HTTP)'
+    );
+    expect(task).toBeDefined();
+    expect(task?.command).toBe('uvx');
+    expect(task?.args).toContain('--transport');
+    expect(task?.args).toContain('http');
+    expect(task?.args).toContain('--port');
+    expect(task?.args).toContain('27185');
+
+    const mcpPath = path.join(tempDir, '.vscode', 'mcp.json');
+    const mcp = JSON.parse(fs.readFileSync(mcpPath, 'utf8')) as {
+      servers: { kicad: { type: string; url: string } };
+    };
+    expect(mcp.servers.kicad.type).toBe('sse');
+    expect(mcp.servers.kicad.url).toBe('http://localhost:27185/sse');
+  });
+
+  it('writes a docker task with port mapping for docker installs', async () => {
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+    const detector = new McpDetector();
+
+    await detector.generateHttpConfig(
+      tempDir,
+      { found: true, command: 'docker', source: 'docker' },
+      'minimal',
+      27185
+    );
+
+    const tasksPath = path.join(tempDir, '.vscode', 'tasks.json');
+    const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8')) as {
+      tasks: Array<{ label: string; command: string; args: string[] }>;
+    };
+    const task = tasks.tasks.find(
+      (t) => t.label === 'Start kicad-mcp-pro (HTTP)'
+    );
+    expect(task?.command).toBe('docker');
+    expect(task?.args).toContain('-p');
+    expect(task?.args).toContain('27185:27185');
+  });
+
+  it('merges into an existing tasks.json and replaces a stale task', async () => {
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+    const vscodeDir = path.join(tempDir, '.vscode');
+    fs.mkdirSync(vscodeDir, { recursive: true });
+    const tasksPath = path.join(vscodeDir, 'tasks.json');
+    fs.writeFileSync(
+      tasksPath,
+      JSON.stringify({
+        version: '2.0.0',
+        tasks: [
+          { label: 'Start kicad-mcp-pro (HTTP)', command: 'old', args: [] },
+          { label: 'other-task', command: 'other', args: [] }
+        ]
+      }),
+      'utf8'
+    );
+
+    await new McpDetector().generateHttpConfig(
+      tempDir,
+      {
+        found: true,
+        command: 'kicad-mcp-pro',
+        version: '1.0.0',
+        source: 'global'
+      },
+      'pcb_only'
+    );
+
+    const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8')) as {
+      tasks: Array<{ label: string; command: string }>;
+    };
+    // stale entry replaced, other-task preserved
+    const httpTasks = tasks.tasks.filter(
+      (t) => t.label === 'Start kicad-mcp-pro (HTTP)'
+    );
+    expect(httpTasks).toHaveLength(1);
+    expect(httpTasks[0]?.command).toBe('kicad-mcp-pro');
+    const otherTask = tasks.tasks.find((t) => t.label === 'other-task');
+    expect(otherTask).toBeDefined();
+  });
+
+  it('offers to run the task immediately when user clicks "Run Task Now"', async () => {
+    const commands = await import('./vscodeMock');
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(
+      'Run Task Now'
+    );
+
+    await new McpDetector().generateHttpConfig(
+      tempDir,
+      { found: true, command: 'uvx', version: '0.5.0', source: 'uvx' },
+      'full'
+    );
+
+    expect(commands.commands.executeCommand).toHaveBeenCalledWith(
+      'workbench.action.tasks.runTask',
+      'Start kicad-mcp-pro (HTTP)'
+    );
+  });
+
+  it('recovers from a malformed tasks.json by overwriting it', async () => {
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+    const vscodeDir = path.join(tempDir, '.vscode');
+    fs.mkdirSync(vscodeDir, { recursive: true });
+    fs.writeFileSync(path.join(vscodeDir, 'tasks.json'), 'NOT JSON{{', 'utf8');
+
+    await new McpDetector().generateHttpConfig(
+      tempDir,
+      {
+        found: true,
+        command: 'kicad-mcp-pro',
+        version: '1.0.0',
+        source: 'global'
+      },
+      'full'
+    );
+
+    const tasks = JSON.parse(
+      fs.readFileSync(path.join(vscodeDir, 'tasks.json'), 'utf8')
+    ) as { tasks: Array<{ label: string }> };
+    expect(
+      tasks.tasks.some((t) => t.label === 'Start kicad-mcp-pro (HTTP)')
+    ).toBe(true);
+  });
+
+  it('recovers when tasks field is not an array', async () => {
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+    const vscodeDir = path.join(tempDir, '.vscode');
+    fs.mkdirSync(vscodeDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(vscodeDir, 'tasks.json'),
+      JSON.stringify({ version: '2.0.0', tasks: 'bad' }),
+      'utf8'
+    );
+
+    await new McpDetector().generateHttpConfig(
+      tempDir,
+      {
+        found: true,
+        command: 'kicad-mcp-pro',
+        version: '1.0.0',
+        source: 'global'
+      },
+      'full'
+    );
+
+    const tasks = JSON.parse(
+      fs.readFileSync(path.join(vscodeDir, 'tasks.json'), 'utf8')
+    ) as { tasks: Array<{ label: string }> };
+    expect(Array.isArray(tasks.tasks)).toBe(true);
+    expect(
+      tasks.tasks.some((t) => t.label === 'Start kicad-mcp-pro (HTTP)')
+    ).toBe(true);
+  });
+
+  it('merges into an existing mcp.json preserving other servers', async () => {
+    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+    const vscodeDir = path.join(tempDir, '.vscode');
+    fs.mkdirSync(vscodeDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(vscodeDir, 'mcp.json'),
+      JSON.stringify({
+        servers: { other: { type: 'stdio', command: 'other' } }
+      }),
+      'utf8'
+    );
+
+    await new McpDetector().generateHttpConfig(
+      tempDir,
+      { found: true, command: 'uvx', version: '0.5.0', source: 'uvx' },
+      'full'
+    );
+
+    const mcp = JSON.parse(
+      fs.readFileSync(path.join(vscodeDir, 'mcp.json'), 'utf8')
+    ) as { servers: Record<string, unknown> };
+    expect(mcp.servers['other']).toBeDefined();
+    expect((mcp.servers['kicad'] as { type: string })?.type).toBe('sse');
+  });
+
+  it('buildHttpTaskArgs returns global binary args for pip installs', () => {
+    const detector = new McpDetector();
+    const { command, args } = detector.buildHttpTaskArgs(
+      {
+        found: true,
+        command: 'kicad-mcp-pro',
+        version: '1.0.0',
+        source: 'pip'
+      },
+      'full',
+      27185,
+      tempDir
+    );
+    expect(command).toBe('kicad-mcp-pro');
+    expect(args).toContain('--transport');
+    expect(args).toContain('http');
+  });
+});
