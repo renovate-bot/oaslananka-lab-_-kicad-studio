@@ -30,6 +30,7 @@ The extension checks:
 - `/usr/bin/kicad-cli`
 - `/usr/local/bin/kicad-cli`
 - `/snap/bin/kicad-cli`
+- `flatpak run --command=kicad-cli org.kicad.KiCad`
 - `~/.local/bin/kicad-cli`
 
 ## MCP Setup

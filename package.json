@@ -13,7 +13,7 @@
     "runtime": {
       "name": "node",
       "version": "24.x",
-      "onFail": "error"
+      "onFail": "warn"
     },
     "packageManager": {
       "name": "npm",
@@ -1057,7 +1057,7 @@
         "kicadstudio.kicadCliPath": {
           "type": "string",
           "default": "",
-          "description": "Path to kicad-cli executable. Leave empty for auto-detection."
+          "description": "Path to kicad-cli executable or a Flatpak command (e.g. 'flatpak run --command=kicad-cli org.kicad.KiCad'). Leave empty for auto-detection."
         },
         "kicadstudio.kicadPath": {
           "type": "string",

@@ -68,6 +68,7 @@ export function getCliCandidates(
       '/usr/bin/kicad-cli',
       '/usr/local/bin/kicad-cli',
       '/snap/bin/kicad-cli',
+      'flatpak run --command=kicad-cli org.kicad.KiCad',
       path.join(os.homedir(), '.local', 'bin', 'kicad-cli'),
       path.join(
         os.homedir(),
@@ -178,7 +179,11 @@ export class KiCadCliDetector {
       return this.capabilityCache.get(command) ?? false;
     }
 
-    const args = [...CLI_CAPABILITY_COMMANDS[command], '--help'];
+    const args = [
+      ...(detected.args ?? []),
+      ...CLI_CAPABILITY_COMMANDS[command],
+      '--help'
+    ];
     const result = spawnSync(detected.path, args, { encoding: 'utf8' });
     const supported =
       result.status === 0 ||
@@ -208,9 +213,13 @@ export class KiCadCliDetector {
       return this.helpCache.get(key);
     }
 
-    const result = spawnSync(detected.path, [...command, '--help'], {
-      encoding: 'utf8'
-    });
+    const result = spawnSync(
+      detected.path,
+      [...(detected.args ?? []), ...command, '--help'],
+      {
+        encoding: 'utf8'
+      }
+    );
     const help = `${result.stdout}\n${result.stderr}`;
     const supported = result.status === 0 || /Usage:/i.test(help);
     const normalized = supported ? help : undefined;
@@ -226,27 +235,45 @@ export class KiCadCliDetector {
       return undefined;
     }
 
-    const resolvedCandidate = this.normalizeCandidate(candidate);
-    if (!fs.existsSync(resolvedCandidate)) {
-      return undefined;
+    let resolvedPath: string;
+    let extraArgs: string[] | undefined;
+
+    const trimmed = candidate.trim();
+    if (
+      (trimmed.includes(' ') || trimmed.includes('"') || trimmed.includes("'")) &&
+      !fs.existsSync(trimmed)
+    ) {
+      const parts = this.splitCommand(trimmed);
+      resolvedPath = parts[0] ?? '';
+      extraArgs = parts.slice(1);
+    } else {
+      resolvedPath = this.normalizeCandidate(trimmed);
+      if (!fs.existsSync(resolvedPath)) {
+        return undefined;
+      }
     }
 
-    const result = spawnSync(resolvedCandidate, ['--version'], {
-      encoding: 'utf8'
-    });
+    const result = spawnSync(
+      resolvedPath,
+      [...(extraArgs ?? []), '--version'],
+      {
+        encoding: 'utf8'
+      }
+    );
     if (result.status !== 0) {
       return undefined;
     }
 
     const output = `${result.stdout}\n${result.stderr}`.trim();
-    if (!this.looksLikeKiCadCli(output, resolvedCandidate)) {
+    if (!this.looksLikeKiCadCli(output, resolvedPath)) {
       return undefined;
     }
 
     const versionMatch = output.match(/(\d+\.\d+(?:\.\d+)?)/);
     const version = versionMatch?.[1] ?? 'unknown';
     return {
-      path: resolvedCandidate,
+      path: resolvedPath,
+      ...(extraArgs ? { args: extraArgs } : {}),
       version,
       versionLabel: `KiCad ${version}`,
       source
@@ -279,6 +306,39 @@ export class KiCadCliDetector {
       /\bkicad(?:-cli)?\b/i.test(versionOutput) ||
       /kicad-cli(?:\.exe)?$/i.test(path.basename(candidate))
     );
+  }
+
+  private splitCommand(cmd: string): string[] {
+    const args: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '';
+
+    for (const char of cmd) {
+      if (inQuotes) {
+        if (char === quoteChar) {
+          inQuotes = false;
+        } else {
+          current += char;
+        }
+      } else {
+        if (char === '"' || char === "'") {
+          inQuotes = true;
+          quoteChar = char;
+        } else if (/\s/.test(char)) {
+          if (current.length > 0) {
+            args.push(current);
+            current = '';
+          }
+        } else {
+          current += char;
+        }
+      }
+    }
+    if (current.length > 0) {
+      args.push(current);
+    }
+    return args;
   }
 
   private warnIfWorkspaceConfiguredPath(configuredPath: string): void {
