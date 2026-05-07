@@ -1,4 +1,4 @@
-name: KiCad Studio CI
+name: CI
 
 on:
   push:
@@ -45,21 +45,19 @@ jobs:
         uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86
         with:
           paths: '**/junit.xml'
-      - name: Install Doppler CLI
-        if: matrix.os == 'ubuntu-latest' && github.actor != 'dependabot[bot]'
-        uses: dopplerhq/cli-action@4819d808ab99e5cde19a0637a16536a4038fad73
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && github.actor != 'dependabot[bot]'
-        env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-        run: |
-          if [ -z "${DOPPLER_TOKEN}" ]; then
-            echo "DOPPLER_TOKEN is required for Codecov upload on trusted CI runs." >&2
-            exit 1
-          fi
-          doppler run --project all --config main -- bash -euo pipefail -c "
-            curl -Os https://uploader.codecov.io/latest/linux/codecov
-            chmod +x codecov
-            ./codecov -f coverage/lcov.info -t \"\$CODECOV_TOKEN\"
-          "
-        shell: bash
+        if: >-
+          matrix.os == 'ubuntu-latest' &&
+          github.actor != 'dependabot[bot]' &&
+          (
+            github.event_name != 'pull_request' ||
+            github.event.pull_request.head.repo.full_name == github.repository
+          )
+        # codecov/codecov-action@v6
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2
+        continue-on-error: true
+        with:
+          files: coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
