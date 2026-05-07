@@ -9,15 +9,32 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Show what would be mirrored without pushing.
+        description: Show the mirror ref plan without pushing.
         required: true
         default: true
         type: boolean
       force_mirror:
-        description: Force-update the personal mirror ref. Manual use only.
+        description: Force-update divergent personal refs. Manual use only.
         required: true
         default: false
         type: boolean
+      ref_scope:
+        description: Refs to mirror during manual dispatch.
+        required: true
+        default: main-and-tags
+        type: choice
+        options:
+          - main
+          - tags
+          - main-and-tags
+      tag_name:
+        description: Optional v*.*.* tag to mirror when ref_scope includes tags.
+        required: false
+        type: string
+      approval:
+        description: Type MIRROR_CANONICAL_TO_PERSONAL when force_mirror=true.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -28,60 +45,222 @@ concurrency:
 
 jobs:
   mirror:
-    name: Mirror main or release tag to personal showcase
+    name: Mirror canonical refs to personal showcase
     if: github.repository == 'oaslananka-lab/kicad-studio'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - name: Checkout canonical repository
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Mirror selected ref
+      - name: Preflight and mirror refs
         shell: bash
         env:
           PERSONAL_REPO_PUSH_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
-          FORCE_MIRROR: ${{ github.event_name == 'workflow_dispatch' && inputs.force_mirror == true }}
+          DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+          DISPATCH_FORCE_MIRROR: ${{ inputs.force_mirror }}
+          DISPATCH_REF_SCOPE: ${{ inputs.ref_scope }}
+          DISPATCH_TAG_NAME: ${{ inputs.tag_name }}
+          DISPATCH_APPROVAL: ${{ inputs.approval }}
         run: |
           set -euo pipefail
 
-          case "${GITHUB_REF}" in
-            refs/heads/main)
-              source_ref="HEAD"
-              target_ref="refs/heads/main"
-              ;;
-            refs/tags/v*.*.*)
-              source_ref="${GITHUB_REF}"
-              target_ref="${GITHUB_REF}"
-              ;;
-            *)
-              echo "Skipping unsupported ref ${GITHUB_REF}."
-              exit 0
-              ;;
-          esac
+          readonly personal_url="https://github.com/oaslananka/kicad-studio.git"
+          readonly approval_required="MIRROR_CANONICAL_TO_PERSONAL"
+          dry_run="false"
+          force_mirror="false"
+          ref_scope=""
+          tag_name=""
 
-          if [ "${DRY_RUN}" = "true" ]; then
-            echo "Dry run: would mirror ${source_ref} to oaslananka/kicad-studio:${target_ref}."
-            git log -1 --oneline
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            dry_run="${DISPATCH_DRY_RUN}"
+            force_mirror="${DISPATCH_FORCE_MIRROR}"
+            ref_scope="${DISPATCH_REF_SCOPE}"
+            tag_name="${DISPATCH_TAG_NAME}"
+          elif [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            ref_scope="main"
+          elif [[ "${GITHUB_REF}" == refs/tags/v*.*.* ]]; then
+            ref_scope="tags"
+            tag_name="${GITHUB_REF_NAME}"
+          else
+            echo "Skipping unsupported ref ${GITHUB_REF}."
             exit 0
           fi
 
-          if [ -z "${PERSONAL_REPO_PUSH_TOKEN}" ]; then
-            echo "PERSONAL_REPO_PUSH_TOKEN is required for personal mirror push." >&2
+          if [ "${force_mirror}" = "true" ]; then
+            if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+              echo "force_mirror is available only through workflow_dispatch." >&2
+              exit 1
+            fi
+            if [ "${DISPATCH_APPROVAL}" != "${approval_required}" ]; then
+              echo "Set approval=${approval_required} before force mirroring." >&2
+              exit 1
+            fi
+          fi
+
+          : > mirror-plan.txt
+          echo "Canonical repository: ${GITHUB_REPOSITORY}" >> mirror-plan.txt
+          echo "Personal showcase mirror: oaslananka/kicad-studio" >> mirror-plan.txt
+          echo "Scope: ${ref_scope}" >> mirror-plan.txt
+          echo "Dry run: ${dry_run}" >> mirror-plan.txt
+          echo "Force mirror: ${force_mirror}" >> mirror-plan.txt
+          echo >> mirror-plan.txt
+
+          push_options=()
+          push_refspecs=()
+          fail_plan=0
+
+          add_push_refspec() {
+            push_refspecs+=("$1")
+            echo "PLAN push $1" >> mirror-plan.txt
+          }
+
+          add_push_option() {
+            push_options+=("$1")
+            echo "PLAN option $1" >> mirror-plan.txt
+          }
+
+          require_token_for_push() {
+            if [ "${dry_run}" = "true" ]; then
+              return
+            fi
+            if [ -z "${PERSONAL_REPO_PUSH_TOKEN}" ]; then
+              echo "PERSONAL_REPO_PUSH_TOKEN is required for personal mirror push." >&2
+              exit 1
+            fi
+          }
+
+          mirror_main() {
+            local canonical_main
+            local personal_main
+            canonical_main="$(git rev-parse HEAD)"
+            personal_main="$(
+              git ls-remote "${personal_url}" refs/heads/main | awk '{print $1}'
+            )"
+
+            echo "main canonical: ${canonical_main}" >> mirror-plan.txt
+            echo "main personal: ${personal_main:-missing}" >> mirror-plan.txt
+
+            if [ "${personal_main}" = "${canonical_main}" ]; then
+              echo "SKIP main already synced" >> mirror-plan.txt
+              return
+            fi
+
+            if [ -n "${personal_main}" ]; then
+              git fetch --no-tags "${personal_url}" \
+                refs/heads/main:refs/remotes/personal/main
+              if git merge-base --is-ancestor refs/remotes/personal/main HEAD; then
+                add_push_refspec "HEAD:refs/heads/main"
+              elif [ "${force_mirror}" = "true" ]; then
+                add_push_option "--force-with-lease=refs/heads/main:${personal_main}"
+                add_push_refspec "HEAD:refs/heads/main"
+              else
+                echo "Personal showcase main diverges from canonical. Run mirror-personal.yml with force_mirror=true, ref_scope=main, approval=${approval_required}." >&2
+                echo "BLOCK main diverges" >> mirror-plan.txt
+                fail_plan=1
+              fi
+            else
+              add_push_refspec "HEAD:refs/heads/main"
+            fi
+          }
+
+          mirror_tags() {
+            local tags
+            if [ -n "${tag_name}" ]; then
+              if [[ ! "${tag_name}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                echo "tag_name must match v*.*.*, got ${tag_name}." >&2
+                exit 1
+              fi
+              tags="${tag_name}"
+            else
+              tags="$(git tag -l 'v*.*.*' | sort -V)"
+            fi
+
+            declare -A personal_tags=()
+            while read -r sha ref; do
+              [ -n "${sha:-}" ] || continue
+              personal_tags["${ref#refs/tags/}"]="${sha}"
+            done < <(git ls-remote --tags --refs "${personal_url}" 'v*.*.*')
+
+            for tag in ${tags}; do
+              if ! git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+                echo "Canonical tag ${tag} does not exist." >&2
+                exit 1
+              fi
+
+              local canonical_tag
+              local personal_tag
+              canonical_tag="$(git rev-parse "refs/tags/${tag}")"
+              personal_tag="${personal_tags[${tag}]:-}"
+
+              echo "tag ${tag} canonical: ${canonical_tag}" >> mirror-plan.txt
+              echo "tag ${tag} personal: ${personal_tag:-missing}" >> mirror-plan.txt
+
+              if [ -z "${personal_tag}" ]; then
+                add_push_refspec "refs/tags/${tag}:refs/tags/${tag}"
+              elif [ "${personal_tag}" = "${canonical_tag}" ]; then
+                echo "SKIP ${tag} already synced" >> mirror-plan.txt
+              elif [ "${force_mirror}" = "true" ]; then
+                add_push_option "--force-with-lease=refs/tags/${tag}:${personal_tag}"
+                add_push_refspec "refs/tags/${tag}:refs/tags/${tag}"
+              else
+                echo "Personal showcase tag ${tag} diverges from canonical. Run mirror-personal.yml with force_mirror=true, ref_scope=tags, tag_name=${tag}, approval=${approval_required}." >&2
+                echo "BLOCK ${tag} diverges" >> mirror-plan.txt
+                fail_plan=1
+              fi
+            done
+
+            for personal_tag in "${!personal_tags[@]}"; do
+              if ! git rev-parse --verify --quiet "refs/tags/${personal_tag}" >/dev/null; then
+                echo "ADVISORY personal has extra tag ${personal_tag}; no deletion will be attempted." >> mirror-plan.txt
+              fi
+            done
+          }
+
+          case "${ref_scope}" in
+            main)
+              mirror_main
+              ;;
+            tags)
+              mirror_tags
+              ;;
+            main-and-tags)
+              mirror_main
+              mirror_tags
+              ;;
+            *)
+              echo "Unsupported ref_scope ${ref_scope}." >&2
+              exit 1
+              ;;
+          esac
+
+          echo "## Mirror Personal Ref Plan" >> "${GITHUB_STEP_SUMMARY}"
+          echo >> "${GITHUB_STEP_SUMMARY}"
+          echo '```' >> "${GITHUB_STEP_SUMMARY}"
+          cat mirror-plan.txt >> "${GITHUB_STEP_SUMMARY}"
+          echo '```' >> "${GITHUB_STEP_SUMMARY}"
+
+          cat mirror-plan.txt
+
+          if [ "${fail_plan}" -ne 0 ]; then
             exit 1
           fi
 
-          git config user.name "oaslananka-lab[bot]"
-          git config user.email "oaslananka-lab@users.noreply.github.com"
-          git remote add personal "https://x-access-token:${PERSONAL_REPO_PUSH_TOKEN}@github.com/oaslananka/kicad-studio.git"
-
-          if [ "${FORCE_MIRROR}" = "true" ]; then
-            git push personal "+${source_ref}:${target_ref}"
-          else
-            git push personal "${source_ref}:${target_ref}"
+          if [ "${#push_refspecs[@]}" -eq 0 ]; then
+            echo "Nothing to mirror."
+            exit 0
           fi
+
+          if [ "${dry_run}" = "true" ]; then
+            echo "Dry run only; no personal refs were changed."
+            exit 0
+          fi
+
+          require_token_for_push
+          git -c "http.https://github.com/oaslananka/kicad-studio.git.extraheader=AUTHORIZATION: bearer ${PERSONAL_REPO_PUSH_TOKEN}" \
+            push "${push_options[@]}" "${personal_url}" "${push_refspecs[@]}"

@@ -39,7 +39,10 @@ export class DesignIntentPanel {
       }
 
       if (message.type === 'load') {
-        const intent = await mcpClient.callTool('project_get_design_intent', {});
+        const intent = await mcpClient.callTool(
+          'project_get_design_intent',
+          {}
+        );
         await panel.webview.postMessage({
           type: 'loaded',
           data: intent ?? {}
@@ -49,7 +52,10 @@ export class DesignIntentPanel {
 
       if (message.type === 'save') {
         const record = asRecord(message);
-        await mcpClient.callTool('project_set_design_intent', asRecord(record?.['data']) ?? {});
+        await mcpClient.callTool(
+          'project_set_design_intent',
+          asRecord(record?.['data']) ?? {}
+        );
         void vscode.window.showInformationMessage(
           'Design intent saved. AI can now use your project intent as context.'
         );

@@ -34,9 +34,7 @@ interface ClaudeLikeProvider {
   ): Promise<void>;
 }
 
-export class KiCadStudioLanguageModelChatProvider
-  implements LanguageModelChatProvider<LanguageModelChatInformation>
-{
+export class KiCadStudioLanguageModelChatProvider implements LanguageModelChatProvider<LanguageModelChatInformation> {
   constructor(
     private readonly extensionContext: vscode.ExtensionContext,
     private readonly logger: Logger,

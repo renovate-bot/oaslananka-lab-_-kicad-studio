@@ -8,7 +8,9 @@ import { KiCadCliRunner } from '../cli/kicadCliRunner';
 import { Logger } from '../utils/logger';
 import { createNonce } from '../utils/nonce';
 
-export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
+export class NetlistViewProvider
+  implements vscode.WebviewViewProvider, vscode.Disposable
+{
   private readonly disposables: vscode.Disposable[] = [];
   private view?: vscode.WebviewView;
 
@@ -32,7 +34,9 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
     this.view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'media')]
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.context.extensionUri, 'media')
+      ]
     };
     webviewView.webview.html = this.getHtml(webviewView.webview);
     void this.refresh();
@@ -48,11 +52,17 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
       return;
     }
     if (!this.runner) {
-      await this.postNetlist([], 'kicad-cli is not configured, so real net/node extraction is unavailable.');
+      await this.postNetlist(
+        [],
+        'kicad-cli is not configured, so real net/node extraction is unavailable.'
+      );
       return;
     }
     try {
-      await this.postNetlist(await this.buildNetlistFromCli(file), `Netlist from ${path.basename(file)}`);
+      await this.postNetlist(
+        await this.buildNetlistFromCli(file),
+        `Netlist from ${path.basename(file)}`
+      );
     } catch (error) {
       this.logger?.warn(
         `Netlist extraction failed: ${error instanceof Error ? error.message : String(error)}`
@@ -66,7 +76,10 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
     }
   }
 
-  private async postNetlist(nets: NetlistNode[], status: string): Promise<void> {
+  private async postNetlist(
+    nets: NetlistNode[],
+    status: string
+  ): Promise<void> {
     await this.view?.webview.postMessage({
       type: 'setNetlist',
       payload: { nets, status }
@@ -74,10 +87,22 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
   }
 
   private async buildNetlistFromCli(file: string): Promise<NetlistNode[]> {
-    const outputFile = path.join(os.tmpdir(), `kicadstudio-netlist-${Date.now()}.net`);
+    const outputFile = path.join(
+      os.tmpdir(),
+      `kicadstudio-netlist-${Date.now()}.net`
+    );
     try {
       await this.runner?.runWithProgress<string>({
-        command: ['sch', 'export', 'netlist', '--output', outputFile, '--format', 'kicadsexpr', file],
+        command: [
+          'sch',
+          'export',
+          'netlist',
+          '--output',
+          outputFile,
+          '--format',
+          'kicadsexpr',
+          file
+        ],
         cwd: path.dirname(file),
         progressTitle: 'Exporting KiCad netlist'
       });
@@ -104,9 +129,15 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
   }
 
   private getChildAtomValue(node: SNode, tag: string): string | undefined {
-    const child = node.children?.find((candidate) => this.getListTag(candidate) === tag);
+    const child = node.children?.find(
+      (candidate) => this.getListTag(candidate) === tag
+    );
     const valueNode = child?.children?.[1];
-    if (valueNode?.type === 'string' || valueNode?.type === 'atom' || valueNode?.type === 'number') {
+    if (
+      valueNode?.type === 'string' ||
+      valueNode?.type === 'atom' ||
+      valueNode?.type === 'number'
+    ) {
       return String(valueNode.value ?? '');
     }
     return undefined;
@@ -114,7 +145,10 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   private getListTag(node: SNode): string | undefined {
     const first = node.children?.[0];
-    if (node.type === 'list' && (first?.type === 'atom' || first?.type === 'string')) {
+    if (
+      node.type === 'list' &&
+      (first?.type === 'atom' || first?.type === 'string')
+    ) {
       return String(first.value ?? '');
     }
     return undefined;
@@ -123,14 +157,43 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
   private getHtml(webview: vscode.Webview): string {
     const nonce = createNonce();
     const template = fs.readFileSync(
-      path.join(this.context.extensionUri.fsPath, 'media', 'viewer', 'netlist.html'),
+      path.join(
+        this.context.extensionUri.fsPath,
+        'media',
+        'viewer',
+        'netlist.html'
+      ),
       'utf8'
     );
     return template
       .replaceAll('{{cspSource}}', webview.cspSource)
       .replaceAll('{{scriptNonce}}', nonce)
-      .replaceAll('{{bomCssUri}}', webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'styles', 'bom.css')).toString())
-      .replaceAll('{{scriptUri}}', webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'viewer', 'netlist.js')).toString());
+      .replaceAll(
+        '{{bomCssUri}}',
+        webview
+          .asWebviewUri(
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              'media',
+              'styles',
+              'bom.css'
+            )
+          )
+          .toString()
+      )
+      .replaceAll(
+        '{{scriptUri}}',
+        webview
+          .asWebviewUri(
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              'media',
+              'viewer',
+              'netlist.js'
+            )
+          )
+          .toString()
+      );
   }
 
   private async findSchematicFile(): Promise<string | undefined> {
@@ -138,7 +201,11 @@ export class NetlistViewProvider implements vscode.WebviewViewProvider, vscode.D
     if (active?.fileName.endsWith('.kicad_sch')) {
       return active.fileName;
     }
-    const files = await vscode.workspace.findFiles('**/*.kicad_sch', '**/node_modules/**', 1);
+    const files = await vscode.workspace.findFiles(
+      '**/*.kicad_sch',
+      '**/node_modules/**',
+      1
+    );
     return files[0]?.fsPath;
   }
 }

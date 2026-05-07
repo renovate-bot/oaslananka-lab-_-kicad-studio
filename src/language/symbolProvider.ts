@@ -15,7 +15,9 @@ const SYMBOL_TAGS = new Set([
 export class KiCadSymbolProvider implements vscode.DocumentSymbolProvider {
   constructor(private readonly parser: SExpressionParser) {}
 
-  provideDocumentSymbols(document: vscode.TextDocument): vscode.ProviderResult<vscode.DocumentSymbol[]> {
+  provideDocumentSymbols(
+    document: vscode.TextDocument
+  ): vscode.ProviderResult<vscode.DocumentSymbol[]> {
     const ast = this.parser.parse(document.getText());
     const symbols: vscode.DocumentSymbol[] = [];
 
@@ -47,13 +49,20 @@ export class KiCadSymbolProvider implements vscode.DocumentSymbolProvider {
     if (!first) {
       return undefined;
     }
-    return first.type === 'atom' || first.type === 'string' ? String(first.value ?? '') : undefined;
+    return first.type === 'atom' || first.type === 'string'
+      ? String(first.value ?? '')
+      : undefined;
   }
 
   private getLabel(tag: string, node: SNode): string {
     const maybeName = node.children
       ?.slice(1)
-      .find((child) => child.type === 'string' || child.type === 'atom' || child.type === 'number');
+      .find(
+        (child) =>
+          child.type === 'string' ||
+          child.type === 'atom' ||
+          child.type === 'number'
+      );
     return maybeName ? `${tag} ${String(maybeName.value)}` : tag;
   }
 

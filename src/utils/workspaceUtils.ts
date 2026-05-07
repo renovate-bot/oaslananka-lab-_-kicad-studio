@@ -34,7 +34,11 @@ export async function resolveTargetFile(
   if (active?.fsPath.endsWith(extname)) {
     return active.fsPath;
   }
-  const files = await vscode.workspace.findFiles(`**/*${extname}`, '**/node_modules/**', 1);
+  const files = await vscode.workspace.findFiles(
+    `**/*${extname}`,
+    '**/node_modules/**',
+    1
+  );
   return files[0]?.fsPath;
 }
 
@@ -54,7 +58,8 @@ export async function workspaceHasVariants(): Promise<boolean> {
     };
     return (
       (Array.isArray(parsed.variants) && parsed.variants.length > 0) ||
-      (Array.isArray(parsed.design_variants) && parsed.design_variants.length > 0)
+      (Array.isArray(parsed.design_variants) &&
+        parsed.design_variants.length > 0)
     );
   } catch {
     return false;

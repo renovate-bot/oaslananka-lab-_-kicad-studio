@@ -24,7 +24,10 @@ export async function fetchWithTimeout(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error(`Component search request timed out after ${timeoutMs}ms.`, { cause: error });
+      throw new Error(
+        `Component search request timed out after ${timeoutMs}ms.`,
+        { cause: error }
+      );
     }
     throw error;
   } finally {

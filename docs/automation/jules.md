@@ -141,6 +141,22 @@ This workflow runs only for issue label events when:
 
 No fork code is checked out or executed.
 
+### Review Fix Loop
+
+Workflow: `.github/workflows/agent-review-fix-loop.yml`
+
+This workflow is not unconditional automation. It runs only for an allowlisted
+actor, a same-repository PR branch, and one of these triggers:
+
+- manual dispatch
+- `/agent-review-fix`
+- `agent:fix-review`
+
+The workflow refuses fork PRs, caps review-fix iterations, inspects review
+threads first, and invokes Jules only when the guardrails pass.
+
+See [agent-review-fix-loop.md](agent-review-fix-loop.md).
+
 ## Auto-Merge Decision
 
 No Jules auto-approve or auto-merge workflow is implemented. Jules PRs require human review. This avoids accidental merges that touch protected workflow, release, package metadata, security policy, `.vscodeignore`, or credential documentation paths.
@@ -154,6 +170,7 @@ gh workflow disable jules-manual.yml --repo oaslananka-lab/kicad-studio
 gh workflow disable jules-ci-fixer.yml --repo oaslananka-lab/kicad-studio
 gh workflow disable jules-dependency-fixer.yml --repo oaslananka-lab/kicad-studio
 gh workflow disable jules-issue-agent.yml --repo oaslananka-lab/kicad-studio
+gh workflow disable agent-review-fix-loop.yml --repo oaslananka-lab/kicad-studio
 ```
 
 Do not disable or edit workflows in the personal showcase mirror as an operational workaround. The organization repository is the only CI/CD and automation authority.

@@ -1,16 +1,45 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Publishing to VS Code Marketplace..."
-if [ -n "${VSCE_PAT:-}" ]; then
-  npx vsce publish --pat "$VSCE_PAT" --no-dependencies
-else
-  echo "VSCE_PAT not set; skipping Marketplace."
+target="${PUBLISH_TARGET:-all}"
+vsix="$(find . -maxdepth 1 -type f -name 'kicadstudio-*.vsix' | sort | head -n 1)"
+
+if [ -z "${vsix}" ]; then
+  echo "No kicadstudio-*.vsix artifact found. Run npm run package first." >&2
+  exit 1
 fi
 
-echo "Publishing to Open VSX..."
-if [ -n "${OVSX_PAT:-}" ]; then
-  npx ovsx publish --pat "$OVSX_PAT"
-else
-  echo "OVSX_PAT not set; skipping Open VSX."
-fi
+publish_marketplace() {
+  if [ -z "${VSCE_PAT:-}" ]; then
+    echo "VSCE_PAT is required for Visual Studio Marketplace publish." >&2
+    exit 1
+  fi
+  echo "Publishing ${vsix} to Visual Studio Marketplace..."
+  npx @vscode/vsce publish --packagePath "${vsix}" --pat "${VSCE_PAT}"
+}
+
+publish_open_vsx() {
+  if [ -z "${OVSX_PAT:-}" ]; then
+    echo "OVSX_PAT is required for Open VSX publish." >&2
+    exit 1
+  fi
+  echo "Publishing ${vsix} to Open VSX..."
+  npx ovsx publish "${vsix}" --pat "${OVSX_PAT}"
+}
+
+case "${target}" in
+  vs-marketplace)
+    publish_marketplace
+    ;;
+  open-vsx)
+    publish_open_vsx
+    ;;
+  all)
+    publish_marketplace
+    publish_open_vsx
+    ;;
+  *)
+    echo "Unsupported PUBLISH_TARGET=${target}. Use vs-marketplace, open-vsx, or all." >&2
+    exit 1
+    ;;
+esac

@@ -47,7 +47,9 @@ describe('ClaudeProvider streaming', () => {
     const provider = new ClaudeProvider('key', 'claude-sonnet-4-6');
     const chunks: string[] = [];
 
-    await provider.analyzeStream?.('Explain', 'context', 'system', (text) => chunks.push(text));
+    await provider.analyzeStream?.('Explain', 'context', 'system', (text) =>
+      chunks.push(text)
+    );
 
     expect(chunks).toEqual(['Hello ', 'world']);
   });
@@ -58,9 +60,15 @@ describe('ClaudeProvider streaming', () => {
       return new Response(
         new ReadableStream({
           start(controller) {
-            controller.enqueue(encoder.encode('event: content_block_delta\ndata: {"delta":{"text":"Hello"}}\n\n'));
+            controller.enqueue(
+              encoder.encode(
+                'event: content_block_delta\ndata: {"delta":{"text":"Hello"}}\n\n'
+              )
+            );
             init?.signal?.addEventListener('abort', () => {
-              controller.error(init.signal?.reason ?? new AIStreamAbortedError());
+              controller.error(
+                init.signal?.reason ?? new AIStreamAbortedError()
+              );
             });
           }
         }),
@@ -83,25 +91,31 @@ describe('ClaudeProvider streaming', () => {
   });
 
   it('throws on 401 with auth message', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ error: { message: 'bad key' } }, 401));
-    const provider = new ClaudeProvider('key', 'claude-sonnet-4-6');
-    await expect(provider.analyze('Explain', 'context', 'system')).rejects.toThrow(
-      'Claude authentication failed'
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: { message: 'bad key' } }, 401)
     );
+    const provider = new ClaudeProvider('key', 'claude-sonnet-4-6');
+    await expect(
+      provider.analyze('Explain', 'context', 'system')
+    ).rejects.toThrow('Claude authentication failed');
   });
 
   it('throws on 429 with rate limit message', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ error: { message: 'slow down' } }, 429));
-    const provider = new ClaudeProvider('key', 'claude-sonnet-4-6');
-    await expect(provider.analyze('Explain', 'context', 'system')).rejects.toThrow(
-      'Claude rate limit reached'
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: { message: 'slow down' } }, 429)
     );
+    const provider = new ClaudeProvider('key', 'claude-sonnet-4-6');
+    await expect(
+      provider.analyze('Explain', 'context', 'system')
+    ).rejects.toThrow('Claude rate limit reached');
   });
 
   it('handles empty content array gracefully', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ content: [] }));
     const provider = new ClaudeProvider('key', 'claude-sonnet-4-6');
-    await expect(provider.analyze('Explain', 'context', 'system')).resolves.toBe('No response from Claude.');
+    await expect(
+      provider.analyze('Explain', 'context', 'system')
+    ).resolves.toBe('No response from Claude.');
   });
 
   it('uses AI_MAX_TOKENS=4096 in request body', async () => {

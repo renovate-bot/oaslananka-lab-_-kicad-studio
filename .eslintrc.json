@@ -11,18 +11,9 @@
     "jest": true,
     "mocha": true
   },
-  "plugins": [
-    "@typescript-eslint"
-  ],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
-  "ignorePatterns": [
-    "dist",
-    "out",
-    "node_modules"
-  ],
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "ignorePatterns": ["dist", "out", "node_modules"],
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
@@ -36,11 +27,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "scripts/**/*.js",
-        "jest.config.js",
-        "webpack.config.js"
-      ],
+      "files": ["scripts/**/*.js", "jest.config.js", "webpack.config.js"],
       "rules": {
         "@typescript-eslint/no-var-requires": "off",
         "@typescript-eslint/no-require-imports": "off"

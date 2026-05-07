@@ -13,7 +13,9 @@ export class OctopartClient {
   async search(query: string): Promise<ComponentSearchResult[]> {
     const apiKey = await this.getApiKey();
     if (!apiKey) {
-      throw new Error('Octopart/Nexar API key is not configured. Run "KiCad: Set Octopart/Nexar API Key".');
+      throw new Error(
+        'Octopart/Nexar API key is not configured. Run "KiCad: Set Octopart/Nexar API Key".'
+      );
     }
 
     const response = await fetchWithTimeout('https://api.nexar.com/graphql', {

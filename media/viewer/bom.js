@@ -36,9 +36,16 @@
       .filter((entry) => !hideDnp || !entry.dnp)
       .filter((entry) => rowMatches(entry, query))
       .sort((left, right) => {
-        const a = sortKey === 'references' ? left.references.join(',') : left[sortKey];
-        const b = sortKey === 'references' ? right.references.join(',') : right[sortKey];
-        return String(a).localeCompare(String(b), undefined, { numeric: true }) * sortDir;
+        const a =
+          sortKey === 'references' ? left.references.join(',') : left[sortKey];
+        const b =
+          sortKey === 'references'
+            ? right.references.join(',')
+            : right[sortKey];
+        return (
+          String(a).localeCompare(String(b), undefined, { numeric: true }) *
+          sortDir
+        );
       });
 
     const fragment = document.createDocumentFragment();
@@ -50,7 +57,10 @@
     for (const row of rowsEl.querySelectorAll('tr')) {
       row.setAttribute('tabindex', '0');
       row.setAttribute('role', 'button');
-      row.setAttribute('aria-label', `Select component ${row.dataset.reference || ''}`);
+      row.setAttribute(
+        'aria-label',
+        `Select component ${row.dataset.reference || ''}`
+      );
 
       const selectRow = () => {
         vscode.postMessage({
@@ -151,7 +161,10 @@
     if (message.type === 'setData') {
       setLoading(false);
       entries = message.payload.entries || [];
-      const summary = message.payload.summary || { totalComponents: 0, uniqueValues: 0 };
+      const summary = message.payload.summary || {
+        totalComponents: 0,
+        uniqueValues: 0
+      };
       if (entries.length === 0) {
         summaryText.textContent = 'No components found.';
       } else {
@@ -160,7 +173,9 @@
       render();
     }
     if (message.type === 'highlight') {
-      const target = rowsEl.querySelector(`[data-reference="${message.payload.reference}"]`);
+      const target = rowsEl.querySelector(
+        `[data-reference="${message.payload.reference}"]`
+      );
       target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   });

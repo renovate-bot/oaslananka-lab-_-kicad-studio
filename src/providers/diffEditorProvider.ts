@@ -6,7 +6,6 @@ import { GitDiffDetector } from '../git/gitDiffDetector';
 import { asRecord, asString, hasType } from '../utils/webviewMessages';
 import { createNonce } from '../utils/nonce';
 
-
 /**
  * Panel manager for visual schematic/PCB Git diffs. Panels are keyed by
  * document URI so re-opening the same file reveals the existing panel.
@@ -93,7 +92,10 @@ export class DiffEditorProvider {
     };
   }
 
-  private async postDiffContent(webview: vscode.Webview, filePath: string): Promise<void> {
+  private async postDiffContent(
+    webview: vscode.Webview,
+    filePath: string
+  ): Promise<void> {
     // Show loading state immediately
     await webview.postMessage({ type: 'loading' });
 
@@ -101,15 +103,17 @@ export class DiffEditorProvider {
       const versions = this.detector.readFileVersions(filePath);
       const components = await this.detector.getChangedComponents(filePath);
 
-      const added   = components.filter((c) => c.type === 'added').length;
+      const added = components.filter((c) => c.type === 'added').length;
       const removed = components.filter((c) => c.type === 'removed').length;
       const changed = components.filter((c) => c.type === 'changed').length;
 
       await webview.postMessage({
         type: 'setDiff',
         payload: {
-          beforeBase64: bufferToBase64(Buffer.from(versions.beforeText, 'utf8')),
-          afterBase64:  bufferToBase64(Buffer.from(versions.afterText,  'utf8')),
+          beforeBase64: bufferToBase64(
+            Buffer.from(versions.beforeText, 'utf8')
+          ),
+          afterBase64: bufferToBase64(Buffer.from(versions.afterText, 'utf8')),
           components,
           summary: `Showing diff: HEAD vs Working Tree — ${added} added, ${removed} removed, ${changed} changed`,
           fileName: path.basename(filePath),
@@ -125,7 +129,10 @@ export class DiffEditorProvider {
     }
   }
 
-  private handleMessage(message: { type: string; payload?: unknown }, _uri: vscode.Uri): void {
+  private handleMessage(
+    message: { type: string; payload?: unknown },
+    _uri: vscode.Uri
+  ): void {
     if (message.type === 'navigate') {
       const payload = asRecord(message.payload);
       const reference = asString(payload?.['reference']);
@@ -154,7 +161,9 @@ export class DiffEditorProvider {
     const nonce = createNonce();
     const templatePath = path.join(
       this.context.extensionUri.fsPath,
-      'media', 'viewer', 'diff.html'
+      'media',
+      'viewer',
+      'diff.html'
     );
 
     if (!fs.existsSync(templatePath)) {
@@ -163,17 +172,47 @@ export class DiffEditorProvider {
 
     const template = fs.readFileSync(templatePath, 'utf8');
     return template
-      .replaceAll('{{cspSource}}',    webview.cspSource)
-      .replaceAll('{{scriptNonce}}',  nonce)
-      .replaceAll('{{viewerCssUri}}', webview.asWebviewUri(
-        vscode.Uri.joinPath(this.context.extensionUri, 'media', 'styles', 'viewer.css')
-      ).toString())
-      .replaceAll('{{kicanvasUri}}',  webview.asWebviewUri(
-        vscode.Uri.joinPath(this.context.extensionUri, 'media', 'kicanvas', 'kicanvas.js')
-      ).toString())
-      .replaceAll('{{scriptUri}}',    webview.asWebviewUri(
-        vscode.Uri.joinPath(this.context.extensionUri, 'media', 'viewer', 'diff.js')
-      ).toString());
+      .replaceAll('{{cspSource}}', webview.cspSource)
+      .replaceAll('{{scriptNonce}}', nonce)
+      .replaceAll(
+        '{{viewerCssUri}}',
+        webview
+          .asWebviewUri(
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              'media',
+              'styles',
+              'viewer.css'
+            )
+          )
+          .toString()
+      )
+      .replaceAll(
+        '{{kicanvasUri}}',
+        webview
+          .asWebviewUri(
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              'media',
+              'kicanvas',
+              'kicanvas.js'
+            )
+          )
+          .toString()
+      )
+      .replaceAll(
+        '{{scriptUri}}',
+        webview
+          .asWebviewUri(
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              'media',
+              'viewer',
+              'diff.js'
+            )
+          )
+          .toString()
+      );
   }
 
   /** Minimal inline fallback if the external HTML template is missing. */
@@ -232,15 +271,28 @@ export class DiffEditorProvider {
 </html>`;
   }
 
-  private async resolveTarget(resource?: vscode.Uri): Promise<string | undefined> {
-    if (resource && (resource.fsPath.endsWith('.kicad_sch') || resource.fsPath.endsWith('.kicad_pcb'))) {
+  private async resolveTarget(
+    resource?: vscode.Uri
+  ): Promise<string | undefined> {
+    if (
+      resource &&
+      (resource.fsPath.endsWith('.kicad_sch') ||
+        resource.fsPath.endsWith('.kicad_pcb'))
+    ) {
       return resource.fsPath;
     }
     const active = vscode.window.activeTextEditor?.document.fileName;
-    if (active && (active.endsWith('.kicad_sch') || active.endsWith('.kicad_pcb'))) {
+    if (
+      active &&
+      (active.endsWith('.kicad_sch') || active.endsWith('.kicad_pcb'))
+    ) {
       return active;
     }
-    const files = await vscode.workspace.findFiles('**/*.kicad_sch', '**/node_modules/**', 1);
+    const files = await vscode.workspace.findFiles(
+      '**/*.kicad_sch',
+      '**/node_modules/**',
+      1
+    );
     return files[0]?.fsPath;
   }
 }

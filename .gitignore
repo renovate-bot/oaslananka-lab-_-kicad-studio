@@ -39,6 +39,10 @@ SHA256SUMS.txt
 requirements-audit.txt
 requirements-build.txt
 .scan-results/
+review-thread-summary.json
+failure-classification.json
+release-state.json
+mirror-plan.txt
 
 # Agent-local notes; never commit these
 reports/autonomy_setup/

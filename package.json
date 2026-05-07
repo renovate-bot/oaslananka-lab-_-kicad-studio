@@ -1791,9 +1791,9 @@
     "build": "npm run prepare:media && webpack --mode production",
     "build:prod": "npm run build",
     "watch": "webpack --mode development --watch",
-    "format": "prettier --ignore-unknown --write package.json package-lock.json README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js",
-    "format:check": "prettier --ignore-unknown --check package.json package-lock.json README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js",
-    "lint": "eslint src test scripts --ext .ts,.js",
+    "format": "prettier --ignore-unknown --write package.json package-lock.json README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml scripts/**/*.{js,mjs} azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js",
+    "format:check": "prettier --ignore-unknown --check package.json package-lock.json README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml scripts/**/*.{js,mjs} azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js",
+    "lint": "eslint src test scripts --ext .ts,.js,.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "audit:ci": "npm audit --audit-level=high",
     "check:staged": "lint-staged",
@@ -1817,7 +1817,7 @@
     "release:assets": "node scripts/create-release-assets.js",
     "docs:check": "node scripts/validate-docs.js",
     "workflows:lint": "node scripts/lint-workflows.js",
-    "publish": "vsce publish",
+    "publish": "node scripts/refuse-direct-publish.mjs",
     "pretest": "npm run build && npm run compile-tests"
   },
   "c8": {

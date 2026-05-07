@@ -8,9 +8,11 @@ import { createExtensionContextMock, lm, workspace } from './vscodeMock';
 describe('language model MCP server definition provider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (lm.registerMcpServerDefinitionProvider as jest.Mock).mockImplementation(() => ({
-      dispose: jest.fn()
-    }));
+    (lm.registerMcpServerDefinitionProvider as jest.Mock).mockImplementation(
+      () => ({
+        dispose: jest.fn()
+      })
+    );
   });
 
   it('creates a stdio MCP server definition for uvx installs', async () => {
@@ -24,7 +26,9 @@ describe('language model MCP server definition provider', () => {
         version: '0.8.0',
         source: 'uvx'
       }
-    )) as { value: { command: string; args: string[]; env: Record<string, string> } };
+    )) as {
+      value: { command: string; args: string[]; env: Record<string, string> };
+    };
 
     expect(definition.value.command).toBe('uvx');
     expect(definition.value.args).toEqual(['kicad-mcp-pro']);
@@ -32,7 +36,8 @@ describe('language model MCP server definition provider', () => {
   });
 
   it('registers the provider when the VS Code API is available', () => {
-    const context = createExtensionContextMock() as unknown as vscode.ExtensionContext;
+    const context =
+      createExtensionContextMock() as unknown as vscode.ExtensionContext;
     registerMcpServerDefinitionProvider(
       context,
       {
@@ -58,7 +63,8 @@ describe('language model MCP server definition provider', () => {
   });
 
   it('resolves provider callbacks into a concrete stdio definition', async () => {
-    const context = createExtensionContextMock() as unknown as vscode.ExtensionContext;
+    const context =
+      createExtensionContextMock() as unknown as vscode.ExtensionContext;
     registerMcpServerDefinitionProvider(
       context,
       {
@@ -74,40 +80,43 @@ describe('language model MCP server definition provider', () => {
       } as never
     );
 
-    const provider = (lm.registerMcpServerDefinitionProvider as jest.Mock).mock.calls[0]?.[1] as {
-      provideMcpServerDefinitions(): Promise<Array<{ value: { command: string } }>>;
-      resolveMcpServerDefinition(server: { value: { command: string } }): Promise<{ value: { command: string } }>;
+    const provider = (lm.registerMcpServerDefinitionProvider as jest.Mock).mock
+      .calls[0]?.[1] as {
+      provideMcpServerDefinitions(): Promise<
+        Array<{ value: { command: string } }>
+      >;
+      resolveMcpServerDefinition(server: {
+        value: { command: string };
+      }): Promise<{ value: { command: string } }>;
     };
     const [definition] = await provider.provideMcpServerDefinitions();
 
     expect(definition?.value.command).toBe('kicad-mcp-pro');
-    await expect(provider.resolveMcpServerDefinition(definition as never)).resolves.toBe(definition);
+    await expect(
+      provider.resolveMcpServerDefinition(definition as never)
+    ).resolves.toBe(definition);
   });
 
   it('returns undefined when the install is missing or no workspace is open', async () => {
     await expect(
-      createKicadMcpServerDefinition(
-        {
-          detectKicadMcpPro: jest.fn().mockResolvedValue({
-            found: false,
-            source: 'none'
-          })
-        } as never
-      )
+      createKicadMcpServerDefinition({
+        detectKicadMcpPro: jest.fn().mockResolvedValue({
+          found: false,
+          source: 'none'
+        })
+      } as never)
     ).resolves.toBeUndefined();
 
     const originalFolders = workspace.workspaceFolders;
     workspace.workspaceFolders = [];
     await expect(
-      createKicadMcpServerDefinition(
-        {
-          detectKicadMcpPro: jest.fn().mockResolvedValue({
-            found: true,
-            command: 'kicad-mcp-pro',
-            source: 'global'
-          })
-        } as never
-      )
+      createKicadMcpServerDefinition({
+        detectKicadMcpPro: jest.fn().mockResolvedValue({
+          found: true,
+          command: 'kicad-mcp-pro',
+          source: 'global'
+        })
+      } as never)
     ).resolves.toBeUndefined();
     workspace.workspaceFolders = originalFolders;
   });
@@ -115,8 +124,9 @@ describe('language model MCP server definition provider', () => {
   it('logs and skips registration when the VS Code API is unavailable', () => {
     const originalRegister = lm.registerMcpServerDefinitionProvider;
     const logger = { debug: jest.fn() };
-    (lm as { registerMcpServerDefinitionProvider?: unknown }).registerMcpServerDefinitionProvider =
-      undefined;
+    (
+      lm as { registerMcpServerDefinitionProvider?: unknown }
+    ).registerMcpServerDefinitionProvider = undefined;
 
     registerMcpServerDefinitionProvider(
       createExtensionContextMock() as unknown as vscode.ExtensionContext,
@@ -129,7 +139,8 @@ describe('language model MCP server definition provider', () => {
     expect(logger.debug).toHaveBeenCalledWith(
       'VS Code MCP server definition provider API is unavailable on this host.'
     );
-    (lm as { registerMcpServerDefinitionProvider?: unknown }).registerMcpServerDefinitionProvider =
-      originalRegister;
+    (
+      lm as { registerMcpServerDefinitionProvider?: unknown }
+    ).registerMcpServerDefinitionProvider = originalRegister;
   });
 });

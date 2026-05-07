@@ -17,7 +17,10 @@ export class BomWebviewManager {
   }
 
   setStatus(text: string): void {
-    this.postMessage({ type: 'setStatus', payload: { status: 'message', text } });
+    this.postMessage({
+      type: 'setStatus',
+      payload: { status: 'message', text }
+    });
   }
 
   setEntries(entries: BomEntry[]): void {
@@ -26,7 +29,10 @@ export class BomWebviewManager {
       payload: {
         entries,
         summary: {
-          totalComponents: entries.reduce((sum, entry) => sum + entry.quantity, 0),
+          totalComponents: entries.reduce(
+            (sum, entry) => sum + entry.quantity,
+            0
+          ),
           uniqueValues: entries.length
         }
       }

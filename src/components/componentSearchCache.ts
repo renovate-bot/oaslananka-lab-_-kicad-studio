@@ -50,7 +50,8 @@ export class ComponentSearchCache {
   }
 
   private async evictOldEntries(): Promise<void> {
-    const keys = typeof this.storage.keys === 'function' ? this.storage.keys() : [];
+    const keys =
+      typeof this.storage.keys === 'function' ? this.storage.keys() : [];
     const cacheKeys = keys.filter((key) => key.startsWith(CACHE_PREFIX));
     if (cacheKeys.length < MAX_CACHE_ENTRIES) {
       return;
@@ -61,7 +62,9 @@ export class ComponentSearchCache {
         key,
         entry: this.storage.get<CacheEntry>(key)
       }))
-      .filter((item): item is { key: string; entry: CacheEntry } => Boolean(item.entry))
+      .filter((item): item is { key: string; entry: CacheEntry } =>
+        Boolean(item.entry)
+      )
       .sort((left, right) => left.entry.timestamp - right.entry.timestamp);
 
     const deleteCount = entries.length - MAX_CACHE_ENTRIES + 1;

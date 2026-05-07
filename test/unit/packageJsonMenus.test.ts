@@ -4,7 +4,9 @@ import * as path from 'node:path';
 describe('package.json menus', () => {
   it('scopes every view/title contribution with a when-clause instead of an unsupported view field', () => {
     const packageJsonPath = path.resolve(__dirname, '..', '..', 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+    const packageJson = JSON.parse(
+      fs.readFileSync(packageJsonPath, 'utf8')
+    ) as {
       contributes?: {
         menus?: {
           'view/title'?: Array<Record<string, unknown>>;

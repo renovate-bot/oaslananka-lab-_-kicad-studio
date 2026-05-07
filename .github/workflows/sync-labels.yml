@@ -13,8 +13,58 @@ jobs:
     if: github.repository == 'oaslananka-lab/kicad-studio'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-      - uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          config-file: .github/labels.yml
-          delete-other-labels: false
+          persist-credentials: false
+      - name: Sync labels
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            const fs = require('fs');
+            const scalar = (value) => value.trim().replace(/^['"]|['"]$/g, '');
+            const labels = [];
+            let current;
+
+            for (const line of fs.readFileSync('.github/labels.yml', 'utf8').split(/\r?\n/)) {
+              const name = line.match(/^-\s+name:\s*(.+)$/);
+              if (name) {
+                current = { name: scalar(name[1]), description: '' };
+                labels.push(current);
+                continue;
+              }
+
+              const property = line.match(/^\s+(color|description):\s*(.+)$/);
+              if (property && current) {
+                current[property[1]] = scalar(property[2]);
+              }
+            }
+
+            const { owner, repo } = context.repo;
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, {
+              owner,
+              repo,
+              per_page: 100
+            });
+            const byName = new Map(existing.map((label) => [label.name.toLowerCase(), label]));
+
+            for (const label of labels) {
+              const match = byName.get(label.name.toLowerCase());
+              if (match) {
+                await github.rest.issues.updateLabel({
+                  owner,
+                  repo,
+                  name: match.name,
+                  new_name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+              } else {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+              }
+            }

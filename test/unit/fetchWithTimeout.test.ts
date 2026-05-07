@@ -24,17 +24,20 @@ describe('fetchWithTimeout', () => {
 
   it('turns aborts into a timeout error', async () => {
     jest.useFakeTimers();
-    fetchMock.mockImplementation((_input, init) =>
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener('abort', () => {
-          reject(new DOMException('Aborted', 'AbortError'));
-        });
-      })
+    fetchMock.mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        })
     );
 
     const promise = fetchWithTimeout('https://example.com/search', {}, 25);
     jest.advanceTimersByTime(25);
 
-    await expect(promise).rejects.toThrow('Component search request timed out after 25ms.');
+    await expect(promise).rejects.toThrow(
+      'Component search request timed out after 25ms.'
+    );
   });
 });

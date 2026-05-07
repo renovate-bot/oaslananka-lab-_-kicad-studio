@@ -28,10 +28,7 @@
           "type": "string"
         },
         "version": {
-          "type": [
-            "integer",
-            "string"
-          ]
+          "type": ["integer", "string"]
         }
       },
       "additionalProperties": true

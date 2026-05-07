@@ -21,6 +21,13 @@ Closes #
 
 <!-- Commands run + brief result -->
 
+## Automation evidence
+
+- [ ] Review-thread gate checked or not applicable
+- [ ] Draft PR kept draft until cheap gates are clean
+- [ ] No publish workflow was triggered
+- [ ] No secrets were printed or changed
+
 ## Checklist
 
 - [ ] Tests pass locally

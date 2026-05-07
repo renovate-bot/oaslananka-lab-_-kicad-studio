@@ -1,9 +1,18 @@
 import * as vscode from 'vscode';
 import { registerLanguageModelTools } from '../../src/lm/languageModelTools';
-import { __setConfiguration, createExtensionContextMock, lm, workspace, window } from './vscodeMock';
+import {
+  __setConfiguration,
+  createExtensionContextMock,
+  lm,
+  workspace,
+  window
+} from './vscodeMock';
 
 interface RegisteredTool {
-  invoke(options: { input: Record<string, unknown> }, token: vscode.CancellationToken): Promise<unknown>;
+  invoke(
+    options: { input: Record<string, unknown> },
+    token: vscode.CancellationToken
+  ): Promise<unknown>;
 }
 
 interface RegisteredPreparedTool extends RegisteredTool {
@@ -16,7 +25,9 @@ interface RegisteredPreparedTool extends RegisteredTool {
 describe('language model tools', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (lm.registerTool as jest.Mock).mockImplementation(() => ({ dispose: jest.fn() }));
+    (lm.registerTool as jest.Mock).mockImplementation(() => ({
+      dispose: jest.fn()
+    }));
     __setConfiguration({
       'kicadstudio.ai.allowTools': true,
       'kicadstudio.defaultOutputDir': 'fab'
@@ -24,34 +35,39 @@ describe('language model tools', () => {
   });
 
   it('registers KiCad Studio language model tools when enabled', () => {
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, {
-      logger: { debug: jest.fn() } as never,
-      checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
-      cliDetector: { detect: jest.fn() } as never,
-      cliRunner: { run: jest.fn() } as never,
-      componentSearch: { searchQuery: jest.fn() } as never,
-      libraryIndexer: {
-        isIndexed: jest.fn().mockReturnValue(true),
-        isStale: jest.fn().mockReturnValue(false),
-        searchSymbols: jest.fn().mockReturnValue([]),
-        searchFootprints: jest.fn().mockReturnValue([])
-      } as never,
-      variantProvider: {
-        getActiveVariantName: jest.fn(),
-        listVariants: jest.fn().mockResolvedValue([]),
-        getVariantByName: jest.fn(),
-        setActive: jest.fn()
-      } as never,
-      diagnosticsCollection: { set: jest.fn() } as never,
-      getStudioContext: jest.fn().mockResolvedValue({
-        activeFile: '/workspace/sample.kicad_pcb',
-        fileType: 'pcb',
-        drcErrors: []
-      }),
-      setLatestDrcRun: jest.fn()
-    });
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      {
+        logger: { debug: jest.fn() } as never,
+        checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
+        cliDetector: { detect: jest.fn() } as never,
+        cliRunner: { run: jest.fn() } as never,
+        componentSearch: { searchQuery: jest.fn() } as never,
+        libraryIndexer: {
+          isIndexed: jest.fn().mockReturnValue(true),
+          isStale: jest.fn().mockReturnValue(false),
+          searchSymbols: jest.fn().mockReturnValue([]),
+          searchFootprints: jest.fn().mockReturnValue([])
+        } as never,
+        variantProvider: {
+          getActiveVariantName: jest.fn(),
+          listVariants: jest.fn().mockResolvedValue([]),
+          getVariantByName: jest.fn(),
+          setActive: jest.fn()
+        } as never,
+        diagnosticsCollection: { set: jest.fn() } as never,
+        getStudioContext: jest.fn().mockResolvedValue({
+          activeFile: '/workspace/sample.kicad_pcb',
+          fileType: 'pcb',
+          drcErrors: []
+        }),
+        setLatestDrcRun: jest.fn()
+      }
+    );
 
-    const names = (lm.registerTool as jest.Mock).mock.calls.map((call) => call[0]);
+    const names = (lm.registerTool as jest.Mock).mock.calls.map(
+      (call) => call[0]
+    );
     expect(names).toEqual(
       expect.arrayContaining([
         'kicadstudio_runDrc',
@@ -74,68 +90,78 @@ describe('language model tools', () => {
       'kicadstudio.ai.allowTools': false
     });
 
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, {
-      logger: logger as never,
-      checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
-      cliDetector: { detect: jest.fn() } as never,
-      cliRunner: { run: jest.fn() } as never,
-      componentSearch: { searchQuery: jest.fn() } as never,
-      libraryIndexer: {
-        isIndexed: jest.fn().mockReturnValue(true),
-        isStale: jest.fn().mockReturnValue(false),
-        searchSymbols: jest.fn().mockReturnValue([]),
-        searchFootprints: jest.fn().mockReturnValue([])
-      } as never,
-      variantProvider: {
-        getActiveVariantName: jest.fn(),
-        listVariants: jest.fn().mockResolvedValue([]),
-        getVariantByName: jest.fn(),
-        setActive: jest.fn()
-      } as never,
-      diagnosticsCollection: { set: jest.fn() } as never,
-      getStudioContext: jest.fn().mockResolvedValue({
-        activeFile: undefined,
-        fileType: 'other',
-        drcErrors: []
-      }),
-      setLatestDrcRun: jest.fn()
-    });
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      {
+        logger: logger as never,
+        checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
+        cliDetector: { detect: jest.fn() } as never,
+        cliRunner: { run: jest.fn() } as never,
+        componentSearch: { searchQuery: jest.fn() } as never,
+        libraryIndexer: {
+          isIndexed: jest.fn().mockReturnValue(true),
+          isStale: jest.fn().mockReturnValue(false),
+          searchSymbols: jest.fn().mockReturnValue([]),
+          searchFootprints: jest.fn().mockReturnValue([])
+        } as never,
+        variantProvider: {
+          getActiveVariantName: jest.fn(),
+          listVariants: jest.fn().mockResolvedValue([]),
+          getVariantByName: jest.fn(),
+          setActive: jest.fn()
+        } as never,
+        diagnosticsCollection: { set: jest.fn() } as never,
+        getStudioContext: jest.fn().mockResolvedValue({
+          activeFile: undefined,
+          fileType: 'other',
+          drcErrors: []
+        }),
+        setLatestDrcRun: jest.fn()
+      }
+    );
 
     expect(lm.registerTool).not.toHaveBeenCalled();
-    expect(logger.debug).toHaveBeenCalledWith('Language model tools are disabled by configuration.');
+    expect(logger.debug).toHaveBeenCalledWith(
+      'Language model tools are disabled by configuration.'
+    );
 
     const originalRegisterTool = lm.registerTool;
     (lm as { registerTool?: unknown }).registerTool = undefined;
     __setConfiguration({
       'kicadstudio.ai.allowTools': true
     });
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, {
-      logger: logger as never,
-      checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
-      cliDetector: { detect: jest.fn() } as never,
-      cliRunner: { run: jest.fn() } as never,
-      componentSearch: { searchQuery: jest.fn() } as never,
-      libraryIndexer: {
-        isIndexed: jest.fn().mockReturnValue(true),
-        isStale: jest.fn().mockReturnValue(false),
-        searchSymbols: jest.fn().mockReturnValue([]),
-        searchFootprints: jest.fn().mockReturnValue([])
-      } as never,
-      variantProvider: {
-        getActiveVariantName: jest.fn(),
-        listVariants: jest.fn().mockResolvedValue([]),
-        getVariantByName: jest.fn(),
-        setActive: jest.fn()
-      } as never,
-      diagnosticsCollection: { set: jest.fn() } as never,
-      getStudioContext: jest.fn().mockResolvedValue({
-        activeFile: undefined,
-        fileType: 'other',
-        drcErrors: []
-      }),
-      setLatestDrcRun: jest.fn()
-    });
-    expect(logger.debug).toHaveBeenCalledWith('VS Code language model tool API is unavailable on this host.');
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      {
+        logger: logger as never,
+        checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
+        cliDetector: { detect: jest.fn() } as never,
+        cliRunner: { run: jest.fn() } as never,
+        componentSearch: { searchQuery: jest.fn() } as never,
+        libraryIndexer: {
+          isIndexed: jest.fn().mockReturnValue(true),
+          isStale: jest.fn().mockReturnValue(false),
+          searchSymbols: jest.fn().mockReturnValue([]),
+          searchFootprints: jest.fn().mockReturnValue([])
+        } as never,
+        variantProvider: {
+          getActiveVariantName: jest.fn(),
+          listVariants: jest.fn().mockResolvedValue([]),
+          getVariantByName: jest.fn(),
+          setActive: jest.fn()
+        } as never,
+        diagnosticsCollection: { set: jest.fn() } as never,
+        getStudioContext: jest.fn().mockResolvedValue({
+          activeFile: undefined,
+          fileType: 'other',
+          drcErrors: []
+        }),
+        setLatestDrcRun: jest.fn()
+      }
+    );
+    expect(logger.debug).toHaveBeenCalledWith(
+      'VS Code language model tool API is unavailable on this host.'
+    );
     (lm as { registerTool?: unknown }).registerTool = originalRegisterTool;
   });
 
@@ -183,7 +209,11 @@ describe('language model tools', () => {
 
   it('invokes DRC, search, context, and variant tools with structured results', async () => {
     const diagnostics = [
-      new vscode.Diagnostic(new vscode.Range(0, 0, 0, 10), 'Clearance violation', 0)
+      new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, 10),
+        'Clearance violation',
+        0
+      )
     ];
     const variantProvider = {
       getActiveVariantName: jest.fn().mockResolvedValue('Assembly-A'),
@@ -223,7 +253,9 @@ describe('language model tools', () => {
     const services = {
       logger: { debug: jest.fn() } as never,
       checkService: checkService as never,
-      cliDetector: { detect: jest.fn().mockResolvedValue({ version: '10.0.1' }) } as never,
+      cliDetector: {
+        detect: jest.fn().mockResolvedValue({ version: '10.0.1' })
+      } as never,
       cliRunner: { run: jest.fn().mockResolvedValue({}) } as never,
       componentSearch: {
         searchQuery: jest.fn().mockResolvedValue([
@@ -240,8 +272,12 @@ describe('language model tools', () => {
       libraryIndexer: {
         isIndexed: jest.fn().mockReturnValue(true),
         isStale: jest.fn().mockReturnValue(false),
-        searchSymbols: jest.fn().mockReturnValue([{ name: 'STM32', description: 'MCU' }]),
-        searchFootprints: jest.fn().mockReturnValue([{ name: 'QFN-48', description: 'Package' }])
+        searchSymbols: jest
+          .fn()
+          .mockReturnValue([{ name: 'STM32', description: 'MCU' }]),
+        searchFootprints: jest
+          .fn()
+          .mockReturnValue([{ name: 'QFN-48', description: 'Package' }])
       } as never,
       variantProvider: variantProvider as never,
       diagnosticsCollection: { set: jest.fn() } as never,
@@ -253,9 +289,15 @@ describe('language model tools', () => {
       setLatestDrcRun: jest.fn()
     };
 
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, services);
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      services
+    );
     const registrations = new Map<string, RegisteredTool>(
-      (lm.registerTool as jest.Mock).mock.calls.map((call) => [call[0] as string, call[1] as RegisteredTool])
+      (lm.registerTool as jest.Mock).mock.calls.map((call) => [
+        call[0] as string,
+        call[1] as RegisteredTool
+      ])
     );
 
     const drcResult = (await registrations
@@ -266,7 +308,10 @@ describe('language model tools', () => {
       )) as { content: Array<{ value: string }> };
     const searchResult = (await registrations
       .get('kicadstudio_searchComponent')
-      ?.invoke({ input: { query: 'STM32F4' } }, {} as vscode.CancellationToken)) as {
+      ?.invoke(
+        { input: { query: 'STM32F4' } },
+        {} as vscode.CancellationToken
+      )) as {
       content: Array<{ value: string }>;
     };
     const contextResult = (await registrations
@@ -276,14 +321,25 @@ describe('language model tools', () => {
     };
     await registrations
       .get('kicadstudio_switchVariant')
-      ?.invoke({ input: { variant: 'Assembly-B' } }, {} as vscode.CancellationToken);
+      ?.invoke(
+        { input: { variant: 'Assembly-B' } },
+        {} as vscode.CancellationToken
+      );
 
-    expect(drcResult.content[0]).toEqual(expect.objectContaining({ value: expect.stringContaining('DRC completed') }));
+    expect(drcResult.content[0]).toEqual(
+      expect.objectContaining({
+        value: expect.stringContaining('DRC completed')
+      })
+    );
     expect(searchResult.content[0]).toEqual(
-      expect.objectContaining({ value: expect.stringContaining('Found 1 component matches') })
+      expect.objectContaining({
+        value: expect.stringContaining('Found 1 component matches')
+      })
     );
     expect(contextResult.content[1]).toEqual(
-      expect.objectContaining({ value: expect.stringContaining('sample.kicad_pcb') })
+      expect.objectContaining({
+        value: expect.stringContaining('sample.kicad_pcb')
+      })
     );
     expect(variantProvider.setActive).toHaveBeenCalled();
   });
@@ -296,44 +352,62 @@ describe('language model tools', () => {
       getVariantByName: jest.fn(),
       setActive: jest.fn()
     };
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, {
-      logger: { debug: jest.fn() } as never,
-      checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
-      cliDetector: { detect: jest.fn().mockResolvedValue({ version: '10.0.0' }) } as never,
-      cliRunner: cliRunner as never,
-      componentSearch: { searchQuery: jest.fn().mockResolvedValue([]) } as never,
-      libraryIndexer: {
-        isIndexed: jest.fn().mockReturnValue(true),
-        isStale: jest.fn().mockReturnValue(false),
-        searchSymbols: jest.fn().mockReturnValue([]),
-        searchFootprints: jest.fn().mockReturnValue([])
-      } as never,
-      variantProvider: variantProvider as never,
-      diagnosticsCollection: { set: jest.fn() } as never,
-      getStudioContext: jest.fn().mockResolvedValue({
-        activeFile: '/workspace/sample.kicad_pcb',
-        fileType: 'pcb',
-        drcErrors: []
-      }),
-      setLatestDrcRun: jest.fn()
-    });
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      {
+        logger: { debug: jest.fn() } as never,
+        checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
+        cliDetector: {
+          detect: jest.fn().mockResolvedValue({ version: '10.0.0' })
+        } as never,
+        cliRunner: cliRunner as never,
+        componentSearch: {
+          searchQuery: jest.fn().mockResolvedValue([])
+        } as never,
+        libraryIndexer: {
+          isIndexed: jest.fn().mockReturnValue(true),
+          isStale: jest.fn().mockReturnValue(false),
+          searchSymbols: jest.fn().mockReturnValue([]),
+          searchFootprints: jest.fn().mockReturnValue([])
+        } as never,
+        variantProvider: variantProvider as never,
+        diagnosticsCollection: { set: jest.fn() } as never,
+        getStudioContext: jest.fn().mockResolvedValue({
+          activeFile: '/workspace/sample.kicad_pcb',
+          fileType: 'pcb',
+          drcErrors: []
+        }),
+        setLatestDrcRun: jest.fn()
+      }
+    );
 
     const registrations = new Map<string, RegisteredTool>(
-      (lm.registerTool as jest.Mock).mock.calls.map((call) => [call[0] as string, call[1] as RegisteredTool])
+      (lm.registerTool as jest.Mock).mock.calls.map((call) => [
+        call[0] as string,
+        call[1] as RegisteredTool
+      ])
     );
-    (workspace.openTextDocument as jest.Mock).mockResolvedValue({ uri: vscode.Uri.file('/workspace/readme.md') });
+    (workspace.openTextDocument as jest.Mock).mockResolvedValue({
+      uri: vscode.Uri.file('/workspace/readme.md')
+    });
 
     await registrations
       .get('kicadstudio_openFile')
-      ?.invoke({ input: { uri: '/workspace/readme.md' } }, {} as vscode.CancellationToken);
-    await registrations
-      .get('kicadstudio_exportGerbers')
       ?.invoke(
-        { input: { pcbPath: '/workspace/sample.kicad_pcb', variant: 'Assembly-A' } },
-        {
-          isCancellationRequested: false
-        } as vscode.CancellationToken
+        { input: { uri: '/workspace/readme.md' } },
+        {} as vscode.CancellationToken
       );
+    await registrations.get('kicadstudio_exportGerbers')?.invoke(
+      {
+        input: {
+          pcbPath: '/workspace/sample.kicad_pcb',
+          variant: 'Assembly-A'
+        }
+      },
+      {
+        isCancellationRequested: false
+      } as vscode.CancellationToken
+    );
 
     expect(workspace.openTextDocument).toHaveBeenCalled();
     expect(window.showTextDocument).toHaveBeenCalled();
@@ -355,37 +429,47 @@ describe('language model tools', () => {
       getVariantByName: jest.fn().mockResolvedValue(undefined),
       setActive: jest.fn()
     };
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, {
-      logger: { debug: jest.fn() } as never,
-      checkService: {
-        runDRC: jest.fn(),
-        runERC: jest.fn().mockResolvedValue({
-          diagnostics: [],
-          summary: {
-            file: '/workspace/sample.kicad_sch',
-            errors: 0,
-            warnings: 0,
-            infos: 0,
-            source: 'erc'
-          }
-        })
-      } as never,
-      cliDetector: { detect: jest.fn().mockResolvedValue({ version: '9.0.0' }) } as never,
-      cliRunner: { run: jest.fn().mockResolvedValue({}) } as never,
-      componentSearch: { searchQuery: jest.fn().mockResolvedValue([]) } as never,
-      libraryIndexer: libraryIndexer as never,
-      variantProvider: variantProvider as never,
-      diagnosticsCollection: { set: jest.fn() } as never,
-      getStudioContext: jest.fn().mockResolvedValue({
-        activeFile: undefined,
-        fileType: 'other',
-        drcErrors: []
-      }),
-      setLatestDrcRun: jest.fn()
-    });
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      {
+        logger: { debug: jest.fn() } as never,
+        checkService: {
+          runDRC: jest.fn(),
+          runERC: jest.fn().mockResolvedValue({
+            diagnostics: [],
+            summary: {
+              file: '/workspace/sample.kicad_sch',
+              errors: 0,
+              warnings: 0,
+              infos: 0,
+              source: 'erc'
+            }
+          })
+        } as never,
+        cliDetector: {
+          detect: jest.fn().mockResolvedValue({ version: '9.0.0' })
+        } as never,
+        cliRunner: { run: jest.fn().mockResolvedValue({}) } as never,
+        componentSearch: {
+          searchQuery: jest.fn().mockResolvedValue([])
+        } as never,
+        libraryIndexer: libraryIndexer as never,
+        variantProvider: variantProvider as never,
+        diagnosticsCollection: { set: jest.fn() } as never,
+        getStudioContext: jest.fn().mockResolvedValue({
+          activeFile: undefined,
+          fileType: 'other',
+          drcErrors: []
+        }),
+        setLatestDrcRun: jest.fn()
+      }
+    );
 
     const registrations = new Map<string, RegisteredTool>(
-      (lm.registerTool as jest.Mock).mock.calls.map((call) => [call[0] as string, call[1] as RegisteredTool])
+      (lm.registerTool as jest.Mock).mock.calls.map((call) => [
+        call[0] as string,
+        call[1] as RegisteredTool
+      ])
     );
     (workspace.findFiles as jest.Mock)
       .mockResolvedValueOnce([])
@@ -410,7 +494,10 @@ describe('language model tools', () => {
     await expect(
       registrations
         .get('kicadstudio_switchVariant')
-        ?.invoke({ input: { variant: 'Missing' } }, {} as vscode.CancellationToken)
+        ?.invoke(
+          { input: { variant: 'Missing' } },
+          {} as vscode.CancellationToken
+        )
     ).rejects.toThrow('Variant "Missing" was not found.');
 
     window.activeTextEditor = {
@@ -426,12 +513,18 @@ describe('language model tools', () => {
     };
     const symbolResult = (await registrations
       .get('kicadstudio_searchSymbol')
-      ?.invoke({ input: { query: 'STM32' } }, {} as vscode.CancellationToken)) as {
+      ?.invoke(
+        { input: { query: 'STM32' } },
+        {} as vscode.CancellationToken
+      )) as {
       content: Array<{ value: string }>;
     };
     const footprintResult = (await registrations
       .get('kicadstudio_searchFootprint')
-      ?.invoke({ input: { query: 'QFN' } }, {} as vscode.CancellationToken)) as {
+      ?.invoke(
+        { input: { query: 'QFN' } },
+        {} as vscode.CancellationToken
+      )) as {
       content: Array<{ value: string }>;
     };
     const variantResult = (await registrations
@@ -441,20 +534,35 @@ describe('language model tools', () => {
     };
     await registrations
       .get('kicadstudio_openFile')
-      ?.invoke({ input: { uri: 'https://example.com/file' } }, {} as vscode.CancellationToken);
+      ?.invoke(
+        { input: { uri: 'https://example.com/file' } },
+        {} as vscode.CancellationToken
+      );
     await registrations
       .get('kicadstudio_exportGerbers')
-      ?.invoke({ input: {} }, { isCancellationRequested: false } as vscode.CancellationToken);
+      ?.invoke({ input: {} }, {
+        isCancellationRequested: false
+      } as vscode.CancellationToken);
 
-    expect(ercResult.content[0]).toEqual(expect.objectContaining({ value: expect.stringContaining('ERC completed') }));
+    expect(ercResult.content[0]).toEqual(
+      expect.objectContaining({
+        value: expect.stringContaining('ERC completed')
+      })
+    );
     expect(symbolResult.content[0]).toEqual(
-      expect.objectContaining({ value: expect.stringContaining('No symbol matches') })
+      expect.objectContaining({
+        value: expect.stringContaining('No symbol matches')
+      })
     );
     expect(footprintResult.content[0]).toEqual(
-      expect.objectContaining({ value: expect.stringContaining('No footprint matches') })
+      expect.objectContaining({
+        value: expect.stringContaining('No footprint matches')
+      })
     );
     expect(variantResult.content[0]).toEqual(
-      expect.objectContaining({ value: expect.stringContaining('No design variants') })
+      expect.objectContaining({
+        value: expect.stringContaining('No design variants')
+      })
     );
     expect(libraryIndexer.indexAll).toHaveBeenCalled();
     expect(workspace.openTextDocument).toHaveBeenCalledWith(
@@ -465,33 +573,42 @@ describe('language model tools', () => {
   it('covers tool preparation messages and validation branches', async () => {
     const variantProvider = {
       getActiveVariantName: jest.fn().mockResolvedValue(undefined),
-      listVariants: jest.fn().mockResolvedValue([
-        { name: 'Assembly-A', isDefault: true, componentOverrides: [] }
-      ]),
+      listVariants: jest
+        .fn()
+        .mockResolvedValue([
+          { name: 'Assembly-A', isDefault: true, componentOverrides: [] }
+        ]),
       getVariantByName: jest.fn().mockResolvedValue(undefined),
       setActive: jest.fn()
     };
-    registerLanguageModelTools(createExtensionContextMock() as unknown as vscode.ExtensionContext, {
-      logger: { debug: jest.fn() } as never,
-      checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
-      cliDetector: { detect: jest.fn().mockResolvedValue({ version: '10.0.0' }) } as never,
-      cliRunner: { run: jest.fn().mockResolvedValue({}) } as never,
-      componentSearch: { searchQuery: jest.fn().mockResolvedValue([]) } as never,
-      libraryIndexer: {
-        isIndexed: jest.fn().mockReturnValue(true),
-        isStale: jest.fn().mockReturnValue(false),
-        searchSymbols: jest.fn().mockReturnValue([]),
-        searchFootprints: jest.fn().mockReturnValue([])
-      } as never,
-      variantProvider: variantProvider as never,
-      diagnosticsCollection: { set: jest.fn() } as never,
-      getStudioContext: jest.fn().mockResolvedValue({
-        activeFile: undefined,
-        fileType: 'other',
-        drcErrors: []
-      }),
-      setLatestDrcRun: jest.fn()
-    });
+    registerLanguageModelTools(
+      createExtensionContextMock() as unknown as vscode.ExtensionContext,
+      {
+        logger: { debug: jest.fn() } as never,
+        checkService: { runDRC: jest.fn(), runERC: jest.fn() } as never,
+        cliDetector: {
+          detect: jest.fn().mockResolvedValue({ version: '10.0.0' })
+        } as never,
+        cliRunner: { run: jest.fn().mockResolvedValue({}) } as never,
+        componentSearch: {
+          searchQuery: jest.fn().mockResolvedValue([])
+        } as never,
+        libraryIndexer: {
+          isIndexed: jest.fn().mockReturnValue(true),
+          isStale: jest.fn().mockReturnValue(false),
+          searchSymbols: jest.fn().mockReturnValue([]),
+          searchFootprints: jest.fn().mockReturnValue([])
+        } as never,
+        variantProvider: variantProvider as never,
+        diagnosticsCollection: { set: jest.fn() } as never,
+        getStudioContext: jest.fn().mockResolvedValue({
+          activeFile: undefined,
+          fileType: 'other',
+          drcErrors: []
+        }),
+        setLatestDrcRun: jest.fn()
+      }
+    );
 
     const registrations = new Map<string, RegisteredPreparedTool>(
       (lm.registerTool as jest.Mock).mock.calls.map((call) => [
@@ -537,17 +654,27 @@ describe('language model tools', () => {
       content: Array<{ value: string }>;
     };
 
-    expect(runDrcPreparation).toEqual(expect.objectContaining({ invocationMessage: 'Running KiCad DRC' }));
-    expect(runErcPreparation).toEqual(expect.objectContaining({ invocationMessage: 'Running KiCad ERC' }));
+    expect(runDrcPreparation).toEqual(
+      expect.objectContaining({ invocationMessage: 'Running KiCad DRC' })
+    );
+    expect(runErcPreparation).toEqual(
+      expect.objectContaining({ invocationMessage: 'Running KiCad ERC' })
+    );
     expect(exportPreparation).toEqual(
       expect.objectContaining({ invocationMessage: 'Exporting KiCad Gerbers' })
     );
-    expect(openPreparation).toEqual(expect.objectContaining({ invocationMessage: 'Opening KiCad file' }));
+    expect(openPreparation).toEqual(
+      expect.objectContaining({ invocationMessage: 'Opening KiCad file' })
+    );
     expect(switchPreparation).toEqual(
-      expect.objectContaining({ invocationMessage: 'Switching KiCad design variant' })
+      expect.objectContaining({
+        invocationMessage: 'Switching KiCad design variant'
+      })
     );
     expect(variantListResult.content[0]).toEqual(
-      expect.objectContaining({ value: expect.stringContaining('Found 1 design variants') })
+      expect.objectContaining({
+        value: expect.stringContaining('Found 1 design variants')
+      })
     );
   });
 });

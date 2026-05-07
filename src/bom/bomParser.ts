@@ -19,10 +19,15 @@ export class BomParser {
   constructor(private readonly parser: SExpressionParser) {}
 
   parse(textOrNode: string | SNode, groupIdentical?: boolean): BomEntry[] {
-    const root = typeof textOrNode === 'string' ? this.parser.parse(textOrNode) : textOrNode;
+    const root =
+      typeof textOrNode === 'string'
+        ? this.parser.parse(textOrNode)
+        : textOrNode;
     const shouldGroup =
       groupIdentical ??
-      vscode.workspace.getConfiguration().get<boolean>(SETTINGS.bomGroupIdentical, true);
+      vscode.workspace
+        .getConfiguration()
+        .get<boolean>(SETTINGS.bomGroupIdentical, true);
 
     const rows = this.extractSymbols(root)
       .map((symbol) => this.toEntry(symbol))
@@ -89,21 +94,31 @@ export class BomParser {
 
   private toEntry(symbol: SNode): RawBomRow | null {
     const propertyMap = this.getPropertyMap(symbol);
-    const reference = propertyMap.get('Reference') ?? this.parser.getAtomValue(symbol, 'reference') ?? '';
+    const reference =
+      propertyMap.get('Reference') ??
+      this.parser.getAtomValue(symbol, 'reference') ??
+      '';
     if (!reference) {
       return null;
     }
 
     const dnp =
-      ['yes', 'true', '1'].includes((propertyMap.get('DNP') ?? '').toLowerCase()) ||
+      ['yes', 'true', '1'].includes(
+        (propertyMap.get('DNP') ?? '').toLowerCase()
+      ) ||
       (this.parser.getAtomValue(symbol, 'in_bom') ?? 'yes') === 'no' ||
       (this.parser.getAtomValue(symbol, 'on_board') ?? 'yes') === 'no';
 
     return {
       reference,
-      value: this.getProperty(propertyMap, 'Value') ?? this.parser.getAtomValue(symbol, 'value') ?? '',
+      value:
+        this.getProperty(propertyMap, 'Value') ??
+        this.parser.getAtomValue(symbol, 'value') ??
+        '',
       footprint:
-        this.getProperty(propertyMap, 'Footprint') ?? this.parser.getAtomValue(symbol, 'footprint') ?? '',
+        this.getProperty(propertyMap, 'Footprint') ??
+        this.parser.getAtomValue(symbol, 'footprint') ??
+        '',
       mpn: this.getProperty(propertyMap, 'MPN', 'Part Number') ?? '',
       manufacturer: this.getProperty(propertyMap, 'Manufacturer') ?? '',
       lcsc: this.getProperty(propertyMap, 'LCSC', 'LCSC Part', 'lcsc') ?? '',
@@ -115,7 +130,9 @@ export class BomParser {
 
   private getPropertyMap(symbol: SNode): Map<string, string> {
     const result = new Map<string, string>();
-    for (const property of symbol.children?.filter((node) => this.getTag(node) === 'property') ?? []) {
+    for (const property of symbol.children?.filter(
+      (node) => this.getTag(node) === 'property'
+    ) ?? []) {
       const name = property.children?.[1];
       const value = property.children?.[2];
       if (!name || !value) {
@@ -128,7 +145,10 @@ export class BomParser {
     return result;
   }
 
-  private getProperty(propertyMap: Map<string, string>, ...keys: string[]): string | undefined {
+  private getProperty(
+    propertyMap: Map<string, string>,
+    ...keys: string[]
+  ): string | undefined {
     for (const key of keys) {
       const value = propertyMap.get(key) ?? propertyMap.get(key.toLowerCase());
       if (value) {
@@ -140,6 +160,8 @@ export class BomParser {
 
   private getTag(node: SNode): string | undefined {
     const head = node.children?.[0];
-    return head && (head.type === 'atom' || head.type === 'string') ? String(head.value ?? '') : undefined;
+    return head && (head.type === 'atom' || head.type === 'string')
+      ? String(head.value ?? '')
+      : undefined;
   }
 }

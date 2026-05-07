@@ -95,10 +95,15 @@ export class BomExporter {
     return outputFile;
   }
 
-  async exportInteractiveHtml(entries: BomEntry[], outputFile: string): Promise<string> {
+  async exportInteractiveHtml(
+    entries: BomEntry[],
+    outputFile: string
+  ): Promise<string> {
     const rows = entries
       .map(
-        (entry) => `<tr data-reference="${escapeHtml(entry.references[0] ?? '')}">
+        (
+          entry
+        ) => `<tr data-reference="${escapeHtml(entry.references[0] ?? '')}">
   <td>${escapeHtml(entry.references.join(', '))}</td>
   <td>${entry.quantity}</td>
   <td>${escapeHtml(entry.value)}</td>

@@ -23,10 +23,13 @@ export function extractMcpToolCalls(markdown: string): McpToolCall[] {
         toolCalls.push({
           name: record['name'],
           arguments:
-            typeof record['arguments'] === 'object' && record['arguments'] !== null
+            typeof record['arguments'] === 'object' &&
+            record['arguments'] !== null
               ? (record['arguments'] as Record<string, unknown>)
               : {},
-          ...(typeof record['preview'] === 'string' ? { preview: record['preview'] } : {})
+          ...(typeof record['preview'] === 'string'
+            ? { preview: record['preview'] }
+            : {})
         });
       }
     } catch {

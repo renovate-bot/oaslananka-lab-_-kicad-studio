@@ -13,6 +13,14 @@ type:docs:
   - changed-files:
       - any-glob-to-any-file: ['docs/**', '*.md']
 
+docs-only:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', '*.md']
+
+workflows-only:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/workflows/**', '.github/actions/**']
+
 type:refactor:
   - changed-files:
       - any-glob-to-any-file: ['src/**', 'test/**']
@@ -32,3 +40,15 @@ type:chore:
 area:js:
   - changed-files:
       - any-glob-to-any-file: ['**/*.js', '**/*.ts', '**/*.cjs']
+
+marketplace:blocking:
+  - changed-files:
+      - any-glob-to-any-file:
+          [
+            '.vscodeignore',
+            'package.json',
+            'package-lock.json',
+            'scripts/package-extension.js',
+            'scripts/publish.sh',
+            '.github/workflows/release.yml'
+          ]

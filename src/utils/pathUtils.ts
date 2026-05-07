@@ -5,11 +5,17 @@ import * as vscode from 'vscode';
 import { KICAD_FILE_EXTENSIONS } from '../constants';
 
 export function isKiCadFile(uriOrPath: vscode.Uri | string): boolean {
-  const extname = path.extname(uriOrPath instanceof vscode.Uri ? uriOrPath.fsPath : uriOrPath);
-  return KICAD_FILE_EXTENSIONS.includes(extname as (typeof KICAD_FILE_EXTENSIONS)[number]);
+  const extname = path.extname(
+    uriOrPath instanceof vscode.Uri ? uriOrPath.fsPath : uriOrPath
+  );
+  return KICAD_FILE_EXTENSIONS.includes(
+    extname as (typeof KICAD_FILE_EXTENSIONS)[number]
+  );
 }
 
-export function getWorkspaceFolderForUri(uri: vscode.Uri): vscode.WorkspaceFolder | undefined {
+export function getWorkspaceFolderForUri(
+  uri: vscode.Uri
+): vscode.WorkspaceFolder | undefined {
   return vscode.workspace.getWorkspaceFolder(uri);
 }
 
@@ -24,7 +30,10 @@ export function toPosixPath(value: string): string {
   return value.split(path.sep).join(path.posix.sep);
 }
 
-export function relativeToWorkspace(filePath: string, root = getWorkspaceRoot()): string {
+export function relativeToWorkspace(
+  filePath: string,
+  root = getWorkspaceRoot()
+): string {
   if (!root) {
     return filePath;
   }
@@ -47,7 +56,10 @@ export function normalizeUserPath(targetPath: string): string {
 }
 
 export function findSiblingProjectFile(filePath: string): string | undefined {
-  const sibling = path.join(path.dirname(filePath), `${path.parse(filePath).name}.kicad_pro`);
+  const sibling = path.join(
+    path.dirname(filePath),
+    `${path.parse(filePath).name}.kicad_pro`
+  );
   if (fs.existsSync(sibling)) {
     return sibling;
   }
@@ -55,7 +67,9 @@ export function findSiblingProjectFile(filePath: string): string | undefined {
   try {
     const entries = fs.readdirSync(path.dirname(filePath));
     const projectEntry = entries.find((entry) => entry.endsWith('.kicad_pro'));
-    return projectEntry ? path.join(path.dirname(filePath), projectEntry) : undefined;
+    return projectEntry
+      ? path.join(path.dirname(filePath), projectEntry)
+      : undefined;
   } catch {
     return undefined;
   }

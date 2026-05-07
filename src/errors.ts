@@ -19,10 +19,16 @@ export class CliExitError extends Error {
   readonly stdout: string;
   readonly stderr: string;
 
-  constructor(args: { command: string; code: number; stdout: string; stderr: string }) {
+  constructor(args: {
+    command: string;
+    code: number;
+    stdout: string;
+    stderr: string;
+  }) {
     super(
       `kicad-cli command '${args.command}' failed with exit code ${args.code}. ${
-        (args.stderr || args.stdout).trim() || 'No diagnostic output was produced.'
+        (args.stderr || args.stdout).trim() ||
+        'No diagnostic output was produced.'
       }`
     );
     this.name = 'CliExitError';
@@ -34,7 +40,9 @@ export class CliExitError extends Error {
 
 export class AIProviderNotConfiguredError extends Error {
   constructor() {
-    super('AI provider not configured. Set a provider and API key in settings.');
+    super(
+      'AI provider not configured. Set a provider and API key in settings.'
+    );
     this.name = 'AIProviderNotConfiguredError';
   }
 }
@@ -48,7 +56,9 @@ export class AIStreamAbortedError extends Error {
 
 export class AIRequestTimeoutError extends Error {
   constructor(providerName: string, timeoutMs: number) {
-    super(`${providerName} request timed out after ${timeoutMs}ms. Check your connection and try again.`);
+    super(
+      `${providerName} request timed out after ${timeoutMs}ms. Check your connection and try again.`
+    );
     this.name = 'AIRequestTimeoutError';
   }
 }

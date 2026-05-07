@@ -62,7 +62,9 @@
           html.push('<ul>');
           inList = true;
         }
-        html.push('<li>' + renderInline(line.replace(/^\s*[-*]\s+/, '')) + '</li>');
+        html.push(
+          '<li>' + renderInline(line.replace(/^\s*[-*]\s+/, '')) + '</li>'
+        );
         continue;
       }
 

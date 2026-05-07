@@ -15,7 +15,9 @@ suite('Editor Flows Integration', () => {
 
   test('opens schematic files with the custom schematic viewer', async () => {
     assert.ok(workspaceRoot, 'Expected test workspace root to be available.');
-    const resource = vscode.Uri.file(path.join(workspaceRoot, 'sample.kicad_sch'));
+    const resource = vscode.Uri.file(
+      path.join(workspaceRoot, 'sample.kicad_sch')
+    );
 
     await vscode.commands.executeCommand(
       'vscode.openWith',
@@ -24,12 +26,17 @@ suite('Editor Flows Integration', () => {
     );
 
     const tab = await waitForCustomTab(resource, 'kicadstudio.schematicViewer');
-    assert.ok(tab.isActive, 'Expected the schematic custom editor tab to become active.');
+    assert.ok(
+      tab.isActive,
+      'Expected the schematic custom editor tab to become active.'
+    );
   });
 
   test('opens PCB files with the custom PCB viewer', async () => {
     assert.ok(workspaceRoot, 'Expected test workspace root to be available.');
-    const resource = vscode.Uri.file(path.join(workspaceRoot, 'sample.kicad_pcb'));
+    const resource = vscode.Uri.file(
+      path.join(workspaceRoot, 'sample.kicad_pcb')
+    );
 
     await vscode.commands.executeCommand(
       'vscode.openWith',
@@ -38,7 +45,10 @@ suite('Editor Flows Integration', () => {
     );
 
     const tab = await waitForCustomTab(resource, 'kicadstudio.pcbViewer');
-    assert.ok(tab.isActive, 'Expected the PCB custom editor tab to become active.');
+    assert.ok(
+      tab.isActive,
+      'Expected the PCB custom editor tab to become active.'
+    );
   });
 
   test('assigns the KiCad DRC language to .kicad_dru files', async () => {
@@ -74,5 +84,7 @@ async function waitForCustomTab(
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Timed out waiting for custom editor ${viewType} (${resource.fsPath}).`);
+  throw new Error(
+    `Timed out waiting for custom editor ${viewType} (${resource.fsPath}).`
+  );
 }

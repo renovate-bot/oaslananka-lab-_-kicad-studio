@@ -33,17 +33,36 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Validate approval
+        env:
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+          RELEASE_APPROVAL: ${{ inputs.approval }}
         run: |
-          if [ "${{ inputs.publish }}" = "true" ] && [ "${{ inputs.approval }}" != "APPROVE_RELEASE" ]; then
+          if [ "${PUBLISH_REQUESTED}" = "true" ] && [ "${RELEASE_APPROVAL}" != "APPROVE_RELEASE" ]; then
             echo "Set approval=APPROVE_RELEASE to publish" >&2; exit 1
           fi
 
-      - uses: actions/setup-node@670825a89dc0abd596e7a3abd0f5e3f6e5faf37c
+      - name: Validate version and package metadata
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/check-release-inputs.js
+
+      - name: Validate release tag exists
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! git rev-parse --verify --quiet "refs/tags/${RELEASE_VERSION}" >/dev/null; then
+            echo "Release tag ${RELEASE_VERSION} must exist before Release runs." >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version-file: .node-version
 
@@ -56,38 +75,44 @@ jobs:
       - name: Package
         run: npm exec -- task package
 
+      - name: Validate VSIX package inputs
+        run: npm run package:validate
+
+      - name: Create checksums and SBOM
+        run: npm run release:assets
+
       - name: Build provenance attestation
         if: hashFiles('*.vsix') != ''
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
         with:
-          subject-path: '*.vsix'
-
-      - name: Install Doppler CLI
-        uses: dopplerhq/cli-action@4819d808ab99e5cde19a0637a16536a4038fad73
-
-      - name: Verify required Doppler secrets
-        env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-        run: bash scripts/verify_doppler_secrets.sh
+          subject-path: |
+            *.vsix
+            SHA256SUMS.txt
+            sbom.cdx.json
 
       - name: Publish
         if: inputs.publish == 'true'
         env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-        run: |
-          doppler run --project all --config main -- bash scripts/publish.sh
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          PUBLISH_TARGET: all
+        run: bash scripts/publish.sh
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          gh_args=(--repo "${{ github.repository }}" \
-                   --title "${{ inputs.version }}" \
+          gh_args=(--repo "${GITHUB_REPOSITORY}" \
+                   --title "${RELEASE_VERSION}" \
                    --generate-notes)
-          if [ "${{ inputs.publish }}" != "true" ]; then
+          if [ "${PUBLISH_REQUESTED}" != "true" ]; then
             gh_args+=(--draft)
           fi
           assets=()
           if compgen -G "*.vsix" > /dev/null; then assets+=(*.vsix); fi
-          gh release create "${{ inputs.version }}" "${gh_args[@]}" "${assets[@]}"
+          if [ -f SHA256SUMS.txt ]; then assets+=(SHA256SUMS.txt); fi
+          if [ -f sbom.cdx.json ]; then assets+=(sbom.cdx.json); fi
+          gh release create "${RELEASE_VERSION}" "${gh_args[@]}" "${assets[@]}"

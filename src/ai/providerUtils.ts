@@ -27,7 +27,9 @@ export function createManagedAbortSignal(
     if (externalSignal.aborted) {
       abortFromExternal();
     } else {
-      externalSignal.addEventListener('abort', abortFromExternal, { once: true });
+      externalSignal.addEventListener('abort', abortFromExternal, {
+        once: true
+      });
     }
   }
 

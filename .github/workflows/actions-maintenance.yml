@@ -1,0 +1,184 @@
+name: Actions Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Maintenance mode.
+        required: true
+        default: list-failed-runs
+        type: choice
+        options:
+          - list-failed-runs
+          - classify-run
+          - cancel-superseded-pr-runs
+          - rerun-infra-only-failure
+          - release-summary
+          - detect-stale-drafts
+      run_id:
+        description: Run id for classify-run or rerun-infra-only-failure.
+        required: false
+        type: string
+      target_branch:
+        description: Optional branch filter.
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: Show the plan without mutating runs.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: actions-maintenance-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Inspect Actions state
+    if: github.repository == 'oaslananka-lab/kicad-studio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .node-version
+
+      - name: List failed runs
+        if: inputs.mode == 'list-failed-runs'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        run: |
+          set -euo pipefail
+          args=(--repo "${GITHUB_REPOSITORY}" --status failure --limit 30)
+          if [ -n "${TARGET_BRANCH}" ]; then
+            args+=(--branch "${TARGET_BRANCH}")
+          fi
+          gh run list "${args[@]}" | tee failed-runs.txt
+          {
+            echo "## Failed Runs"
+            echo
+            echo '```'
+            cat failed-runs.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Classify failed run
+        if: inputs.mode == 'classify-run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RUN_ID}" ]; then
+            echo "run_id is required for classify-run." >&2
+            exit 1
+          fi
+          gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log-failed > failed-run.log
+          node scripts/classify-gh-failure.mjs --log-file failed-run.log --json --summary-file failure-classification.json
+
+      - name: Release summary
+        if: inputs.mode == 'release-summary'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/release-state.mjs --repo "${GITHUB_REPOSITORY}" --json --summary-file release-state.json
+          gh run list --repo "${GITHUB_REPOSITORY}" --workflow release.yml --limit 10 | tee release-runs.txt
+          {
+            echo "## Latest Release Runs"
+            echo
+            echo '```'
+            cat release-runs.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Detect stale drafts
+        if: inputs.mode == 'detect-stale-drafts'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh pr list --repo "${GITHUB_REPOSITORY}" --state open --json number,title,isDraft,updatedAt,url \
+            --jq '.[] | select(.isDraft == true) | [.number, .updatedAt, .title, .url] | @tsv' \
+            | tee stale-drafts.tsv
+          gh release list --repo "${GITHUB_REPOSITORY}" --limit 20 | tee releases.txt
+          {
+            echo "## Draft Pull Requests"
+            echo
+            echo '```'
+            cat stale-drafts.tsv
+            echo '```'
+            echo
+            echo "## Recent Releases"
+            echo
+            echo '```'
+            cat releases.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  mutate:
+    name: Guarded Actions mutation
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      inputs.dry_run == false &&
+      (
+        inputs.mode == 'cancel-superseded-pr-runs' ||
+        inputs.mode == 'rerun-infra-only-failure'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Cancel superseded PR runs
+        if: inputs.mode == 'cancel-superseded-pr-runs'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TARGET_BRANCH}" ]; then
+            echo "target_branch is required before cancelling runs." >&2
+            exit 1
+          fi
+          gh run list --repo "${GITHUB_REPOSITORY}" --branch "${TARGET_BRANCH}" --status in_progress --json databaseId,event,name \
+            --jq '.[] | select(.event == "pull_request") | [.databaseId, .name] | @tsv' \
+            | while IFS=$'\t' read -r run_id run_name; do
+                echo "Cancelling superseded PR run ${run_id} (${run_name}) on ${TARGET_BRANCH}."
+                gh run cancel "${run_id}" --repo "${GITHUB_REPOSITORY}"
+              done
+
+      - name: Rerun failed jobs for infra-only failure
+        if: inputs.mode == 'rerun-infra-only-failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RUN_ID}" ]; then
+            echo "run_id is required for rerun-infra-only-failure." >&2
+            exit 1
+          fi
+          echo "Rerunning failed jobs for ${RUN_ID}. Verify classifier output before using this mode."
+          gh run rerun "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --failed

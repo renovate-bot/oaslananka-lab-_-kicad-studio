@@ -15,14 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
       - name: Generate report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           {
-            echo "# Branch hygiene report — $(date -u +%F)"
+            echo "# Branch hygiene report - $(date -u +%F)"
             echo
             echo "## Branches older than 90 days (no open PR)"
             gh api -X GET "/repos/${{ github.repository }}/branches?per_page=100" --jq '.[].name' \
@@ -43,7 +45,7 @@ jobs:
             echo "## Open PRs older than 60 days"
             gh pr list --repo "${{ github.repository }}" --state open --limit 100 \
               --json number,title,updatedAt,author \
-              --jq '.[] | select(.updatedAt < (now - 60*86400 | todate)) | "- #\(.number) \(.title) — last: \(.updatedAt) by @\(.author.login)"'
+              --jq '.[] | select(.updatedAt < (now - 60*86400 | todate)) | "- #\(.number) \(.title) - last: \(.updatedAt) by @\(.author.login)"'
           } > hygiene-report.md
 
       - name: Open or update tracking issue
@@ -51,7 +53,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          title="Monthly branch hygiene — $(date -u +%Y-%m)"
+          title="Monthly branch hygiene - $(date -u +%Y-%m)"
           body="$(cat hygiene-report.md)"
           existing=""
           if result=$(gh issue list --repo "${{ github.repository }}" --search "in:title \"$title\"" --json number --jq '.[0].number' 2>/dev/null); then

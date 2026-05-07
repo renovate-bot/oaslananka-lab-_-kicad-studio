@@ -24,9 +24,15 @@ export class GitDiffDetector {
   ): Promise<ComponentDiff[]> {
     const workspaceRoot = getWorkspaceRoot(undefined) ?? path.dirname(schFile);
     const relativePath = relativeToWorkspace(schFile, workspaceRoot);
-    const beforeText = this.readGitVersion(workspaceRoot, fromRef, relativePath);
+    const beforeText = this.readGitVersion(
+      workspaceRoot,
+      fromRef,
+      relativePath
+    );
     const afterText =
-      toRef === 'working' ? fs.readFileSync(schFile, 'utf8') : this.readGitVersion(workspaceRoot, toRef, relativePath);
+      toRef === 'working'
+        ? fs.readFileSync(schFile, 'utf8')
+        : this.readGitVersion(workspaceRoot, toRef, relativePath);
 
     const beforeMap = this.extractComponents(beforeText);
     const afterMap = this.extractComponents(afterText);
@@ -35,21 +41,39 @@ export class GitDiffDetector {
     for (const [key, before] of beforeMap) {
       const after = afterMap.get(key);
       if (!after) {
-        diffs.push({ uuid: key, reference: before.reference, type: 'removed', before });
+        diffs.push({
+          uuid: key,
+          reference: before.reference,
+          type: 'removed',
+          before
+        });
         continue;
       }
       if (JSON.stringify(before) !== JSON.stringify(after)) {
-        diffs.push({ uuid: key, reference: after.reference, type: 'changed', before, after });
+        diffs.push({
+          uuid: key,
+          reference: after.reference,
+          type: 'changed',
+          before,
+          after
+        });
       }
     }
 
     for (const [key, after] of afterMap) {
       if (!beforeMap.has(key)) {
-        diffs.push({ uuid: key, reference: after.reference, type: 'added', after });
+        diffs.push({
+          uuid: key,
+          reference: after.reference,
+          type: 'added',
+          after
+        });
       }
     }
 
-    return diffs.sort((left, right) => left.reference.localeCompare(right.reference));
+    return diffs.sort((left, right) =>
+      left.reference.localeCompare(right.reference)
+    );
   }
 
   readFileVersions(
@@ -64,7 +88,11 @@ export class GitDiffDetector {
     };
   }
 
-  private readGitVersion(workspaceRoot: string, ref: string, relativePath: string): string {
+  private readGitVersion(
+    workspaceRoot: string,
+    ref: string,
+    relativePath: string
+  ): string {
     const result = spawnSync('git', ['show', `${ref}:${relativePath}`], {
       cwd: workspaceRoot,
       encoding: 'utf8'
@@ -95,9 +123,18 @@ export class GitDiffDetector {
   }
 
   private toComponent(node: SNode): DiffComponentRecord {
-    const reference = this.findProperty(node, 'Reference') ?? this.findProperty(node, 'reference') ?? '';
-    const value = this.findProperty(node, 'Value') ?? this.findProperty(node, 'value') ?? '';
-    const footprint = this.findProperty(node, 'Footprint') ?? this.findProperty(node, 'footprint') ?? '';
+    const reference =
+      this.findProperty(node, 'Reference') ??
+      this.findProperty(node, 'reference') ??
+      '';
+    const value =
+      this.findProperty(node, 'Value') ??
+      this.findProperty(node, 'value') ??
+      '';
+    const footprint =
+      this.findProperty(node, 'Footprint') ??
+      this.findProperty(node, 'footprint') ??
+      '';
     const libId = this.findProperty(node, 'lib_id') ?? '';
     const uuid = this.findProperty(node, 'uuid') ?? reference;
     return { uuid, reference, value, footprint, libId };
@@ -115,7 +152,10 @@ export class GitDiffDetector {
       if (String(head.value ?? '') === key && child.children[1]) {
         return String(child.children[1].value ?? '');
       }
-      if (String(head.value ?? '') === 'property' && String(child.children[1]?.value ?? '') === key) {
+      if (
+        String(head.value ?? '') === 'property' &&
+        String(child.children[1]?.value ?? '') === key
+      ) {
         return String(child.children[2]?.value ?? '');
       }
     }

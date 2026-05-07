@@ -18,7 +18,9 @@ export function registerMcpServerDefinitionProvider(
 ): void {
   const lm = getLanguageModelApi();
   if (typeof lm?.registerMcpServerDefinitionProvider !== 'function') {
-    logger.debug('VS Code MCP server definition provider API is unavailable on this host.');
+    logger.debug(
+      'VS Code MCP server definition provider API is unavailable on this host.'
+    );
     return;
   }
 
@@ -34,7 +36,10 @@ export function registerMcpServerDefinitionProvider(
 
   context.subscriptions.push(
     emitter,
-    lm.registerMcpServerDefinitionProvider(KICAD_MCP_SERVER_PROVIDER_ID, provider)
+    lm.registerMcpServerDefinitionProvider(
+      KICAD_MCP_SERVER_PROVIDER_ID,
+      provider
+    )
   );
 }
 

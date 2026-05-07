@@ -27,7 +27,10 @@ export function asNumber(value: unknown): number | undefined {
   return isNumber(value) ? value : undefined;
 }
 
-export function hasType(value: unknown, allowedTypes: string[]): value is WebviewEnvelope {
+export function hasType(
+  value: unknown,
+  allowedTypes: string[]
+): value is WebviewEnvelope {
   if (!isRecord(value)) {
     return false;
   }

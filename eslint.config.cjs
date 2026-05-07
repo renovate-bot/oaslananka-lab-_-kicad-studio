@@ -6,6 +6,7 @@ const baseGlobals = {
   console: 'readonly',
   process: 'readonly',
   Buffer: 'readonly',
+  fetch: 'readonly',
   module: 'readonly',
   require: 'readonly',
   __dirname: 'readonly',
@@ -24,6 +25,12 @@ const testGlobals = {
   suite: 'readonly',
   setup: 'readonly',
   teardown: 'readonly'
+};
+
+const browserGlobals = {
+  acquireVsCodeApi: 'readonly',
+  document: 'readonly',
+  window: 'readonly'
 };
 
 module.exports = [
@@ -67,6 +74,22 @@ module.exports = [
       ecmaVersion: 2022,
       sourceType: 'commonjs',
       globals: baseGlobals
+    }
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: baseGlobals
+    }
+  },
+  {
+    files: ['media/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: browserGlobals
     }
   }
 ];

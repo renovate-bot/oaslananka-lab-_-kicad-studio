@@ -28,9 +28,13 @@ describe('fileUtils', () => {
   });
 
   it('reads text files via VS Code workspace fs', async () => {
-    (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValueOnce(Uint8Array.from(Buffer.from('hello')));
+    (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValueOnce(
+      Uint8Array.from(Buffer.from('hello'))
+    );
 
-    await expect(readTextFile(vscode.Uri.file('/tmp/file.txt'))).resolves.toBe('hello');
+    await expect(readTextFile(vscode.Uri.file('/tmp/file.txt'))).resolves.toBe(
+      'hello'
+    );
   });
 
   it('reads text files synchronously and detects file existence', async () => {
@@ -39,7 +43,9 @@ describe('fileUtils', () => {
 
     expect(readTextFileSync(filePath)).toBe('sync read');
     await expect(fileExists(filePath)).resolves.toBe(true);
-    await expect(fileExists(path.join(tempDir, 'missing.txt'))).resolves.toBe(false);
+    await expect(fileExists(path.join(tempDir, 'missing.txt'))).resolves.toBe(
+      false
+    );
   });
 
   it('creates directories recursively', () => {
@@ -57,10 +63,16 @@ describe('fileUtils', () => {
       .mockResolvedValueOnce(found);
 
     await expect(listWorkspaceKiCadFiles()).resolves.toEqual(found);
-    await expect(findWorkspaceFileByExtension('.kicad_sch')).resolves.toEqual(found[0]);
+    await expect(findWorkspaceFileByExtension('.kicad_sch')).resolves.toEqual(
+      found[0]
+    );
 
-    expect((vscode.workspace.findFiles as jest.Mock).mock.calls[0]?.[0]).toContain('kicad_pcb');
-    expect((vscode.workspace.findFiles as jest.Mock).mock.calls[1]?.[0]).toBe('**/*.kicad_sch');
+    expect(
+      (vscode.workspace.findFiles as jest.Mock).mock.calls[0]?.[0]
+    ).toContain('kicad_pcb');
+    expect((vscode.workspace.findFiles as jest.Mock).mock.calls[1]?.[0]).toBe(
+      '**/*.kicad_sch'
+    );
   });
 
   it('reads JSON safely and handles invalid files', () => {
@@ -78,7 +90,12 @@ describe('fileUtils', () => {
 
     expect(decodeBase64ToUtf8(encoded)).toBe('KiCad');
     expect(
-      inferOutputPath('/workspace/project/board.kicad_pcb', '/workspace/out', '-fab', '.zip')
+      inferOutputPath(
+        '/workspace/project/board.kicad_pcb',
+        '/workspace/out',
+        '-fab',
+        '.zip'
+      )
     ).toBe(path.join('/workspace/out', 'board-fab.zip'));
   });
 });

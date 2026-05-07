@@ -33,7 +33,10 @@
         const netName = document.createElement('td');
         const nodes = document.createElement('td');
         netName.textContent = net.netName || '';
-        nodes.textContent = (net.nodes || []).map((node) => `${node.reference}:${node.pin}`).join(', ') || '—';
+        nodes.textContent =
+          (net.nodes || [])
+            .map((node) => `${node.reference}:${node.pin}`)
+            .join(', ') || '—';
         row.append(netName, nodes);
         fragment.appendChild(row);
       }

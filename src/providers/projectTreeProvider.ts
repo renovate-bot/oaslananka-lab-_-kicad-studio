@@ -38,9 +38,7 @@ class KiCadTreeItem extends vscode.TreeItem {
   }
 }
 
-export class KiCadProjectTreeProvider
-  implements vscode.TreeDataProvider<ProjectTreeNode>
-{
+export class KiCadProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeNode> {
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<
     ProjectTreeNode | undefined
   >();

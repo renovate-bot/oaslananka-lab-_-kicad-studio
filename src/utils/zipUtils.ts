@@ -17,7 +17,10 @@ for (let i = 0; i < CRC_TABLE.length; i++) {
   CRC_TABLE[i] = value >>> 0;
 }
 
-export async function zipDirectory(sourceDir: string, outputFile: string): Promise<string> {
+export async function zipDirectory(
+  sourceDir: string,
+  outputFile: string
+): Promise<string> {
   const files = await collectFiles(sourceDir);
   const entries: ZipEntry[] = [];
   const localParts: Buffer[] = [];
@@ -38,12 +41,21 @@ export async function zipDirectory(sourceDir: string, outputFile: string): Promi
     entries.push(entry);
   }
 
-  const centralParts = entries.map((entry) => createCentralDirectoryHeader(entry));
+  const centralParts = entries.map((entry) =>
+    createCentralDirectoryHeader(entry)
+  );
   const centralDirectory = Buffer.concat(centralParts);
-  const end = createEndOfCentralDirectory(entries.length, centralDirectory.length, offset);
+  const end = createEndOfCentralDirectory(
+    entries.length,
+    centralDirectory.length,
+    offset
+  );
 
   await fs.mkdir(path.dirname(outputFile), { recursive: true });
-  await fs.writeFile(outputFile, Buffer.concat([...localParts, centralDirectory, end]));
+  await fs.writeFile(
+    outputFile,
+    Buffer.concat([...localParts, centralDirectory, end])
+  );
   return outputFile;
 }
 
@@ -106,7 +118,11 @@ function createCentralDirectoryHeader(entry: ZipEntry): Buffer {
   return header;
 }
 
-function createEndOfCentralDirectory(entryCount: number, centralSize: number, centralOffset: number): Buffer {
+function createEndOfCentralDirectory(
+  entryCount: number,
+  centralSize: number,
+  centralOffset: number
+): Buffer {
   const header = Buffer.alloc(22);
   header.writeUInt32LE(0x06054b50, 0);
   header.writeUInt16LE(0, 4);

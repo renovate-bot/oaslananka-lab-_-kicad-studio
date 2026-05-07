@@ -9,7 +9,9 @@ import {
 describe('language model API helpers', () => {
   it('creates VS Code-compatible wrapper objects when constructors are available', () => {
     const textPart = createLanguageModelTextPart('hello') as { value: string };
-    const result = createLanguageModelToolResult([textPart]) as { content: unknown[] };
+    const result = createLanguageModelToolResult([textPart]) as {
+      content: unknown[];
+    };
     const markdown = createMarkdownString('**hello**') as { value: string };
 
     expect(textPart.value).toBe('hello');

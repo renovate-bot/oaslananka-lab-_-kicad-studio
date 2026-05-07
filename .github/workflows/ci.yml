@@ -2,9 +2,14 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: ['main']
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,15 +17,22 @@ permissions:
 jobs:
   ci:
     name: Full CI Pipeline
-    if: github.repository == 'oaslananka-lab/kicad-studio'
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      (
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.draft == false
+      )
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-      - uses: actions/setup-node@670825a89dc0abd596e7a3abd0f5e3f6e5faf37c
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version-file: .node-version
       - name: Install dependencies
@@ -40,11 +52,6 @@ jobs:
           files: |
             **/junit.xml
             **/test-results.xml
-      - name: Test summary
-        if: always() && hashFiles('**/junit.xml') != ''
-        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86
-        with:
-          paths: '**/junit.xml'
       - name: Upload coverage to Codecov
         if: >-
           matrix.os == 'ubuntu-latest' &&

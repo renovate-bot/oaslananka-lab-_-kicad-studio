@@ -23,10 +23,8 @@ function run(command, args, cwd) {
   });
   if (result.status !== 0) {
     throw new Error(
-      [result.stdout, result.stderr]
-        .filter(Boolean)
-        .join('\n')
-        .trim() || `${command} ${args.join(' ')} failed`
+      [result.stdout, result.stderr].filter(Boolean).join('\n').trim() ||
+        `${command} ${args.join(' ')} failed`
     );
   }
   return result.stdout.trim();
@@ -37,7 +35,11 @@ function resolveRequestedRef(repoUrl) {
     return upstreamRef;
   }
 
-  const tags = run('git', ['ls-remote', '--tags', '--sort=-version:refname', repoUrl], root)
+  const tags = run(
+    'git',
+    ['ls-remote', '--tags', '--sort=-version:refname', repoUrl],
+    root
+  )
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
@@ -165,7 +167,9 @@ if (!fs.existsSync(outputFile)) {
 
     const builtFile = path.join(repoDir, 'build', 'kicanvas.js');
     if (!fs.existsSync(builtFile)) {
-      throw new Error('KiCanvas build completed without producing build/kicanvas.js');
+      throw new Error(
+        'KiCanvas build completed without producing build/kicanvas.js'
+      );
     }
     const resolvedRef = run('git', ['rev-parse', 'HEAD'], repoDir);
     fs.copyFileSync(builtFile, outputFile);

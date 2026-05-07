@@ -12,9 +12,13 @@ const inputVersion =
   process.env.RELEASE_VERSION || process.env.GITHUB_REF_NAME || '';
 const normalized = inputVersion.replace(/^v/, '');
 
-if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(normalized)) {
+if (
+  !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(
+    inputVersion
+  )
+) {
   throw new Error(
-    `Release version must be a semver tag or input, got: ${inputVersion}`
+    `Release version must be a v-prefixed semver tag or input, got: ${inputVersion}`
   );
 }
 

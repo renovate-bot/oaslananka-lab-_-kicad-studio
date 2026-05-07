@@ -7,7 +7,10 @@ export class PcbEditorProvider extends BaseKiCanvasEditorProvider {
   protected override readonly fileType = 'board' as const;
   protected override readonly viewerTitle = 'KiCad Studio PCB Viewer';
 
-  protected override buildViewerMetadata(_uri: vscode.Uri, text: string): ViewerMetadata | undefined {
+  protected override buildViewerMetadata(
+    _uri: vscode.Uri,
+    text: string
+  ): ViewerMetadata | undefined {
     return {
       layers: this.extractLayers(text),
       tuningProfiles: this.extractTuningProfiles(text)
@@ -47,7 +50,9 @@ export class PcbEditorProvider extends BaseKiCanvasEditorProvider {
   }
 
   private extractTuningProfiles(pcbContent: string): TuningProfile[] {
-    const profiles = [...pcbContent.matchAll(/\(\s*tuning_profile([\s\S]*?)\)\s*\)/g)];
+    const profiles = [
+      ...pcbContent.matchAll(/\(\s*tuning_profile([\s\S]*?)\)\s*\)/g)
+    ];
     return profiles.map((match, index) => {
       const block = match[1] ?? '';
       return {
@@ -63,5 +68,7 @@ export class PcbEditorProvider extends BaseKiCanvasEditorProvider {
 }
 
 function readToken(block: string, key: string): string | undefined {
-  return block.match(new RegExp(`\\(\\s*${key}\\s+"?([^\\)"]+)"?\\s*\\)`))?.[1]?.trim();
+  return block
+    .match(new RegExp(`\\(\\s*${key}\\s+"?([^\\)"]+)"?\\s*\\)`))?.[1]
+    ?.trim();
 }

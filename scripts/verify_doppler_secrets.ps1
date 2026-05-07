@@ -10,7 +10,7 @@ $missing = @()
 Get-Content ".doppler/secrets.txt" | ForEach-Object {
     $line = $_.Trim()
     if ($line -eq "" -or $line -like "#*") { return }
-    
+
     $val = & doppler secrets get $line --plain --project $DopplerProject --config $DopplerConfig 2>$null
     if ($LASTEXITCODE -ne 0) {
         $missing += $line

@@ -45,14 +45,27 @@ describe('KiCadChatPanel', () => {
     const provider = {
       name: 'Claude',
       isConfigured: () => true,
-      analyze: jest.fn(async (prompt: string) => analyzeImpl ? analyzeImpl(prompt) : `reply:${prompt}`),
-      analyzeStream: jest.fn(async (prompt: string, _context: string, _systemPrompt: string | undefined, onChunk: (text: string) => void) => {
-        onChunk(`reply:${prompt}`);
-      }),
+      analyze: jest.fn(async (prompt: string) =>
+        analyzeImpl ? analyzeImpl(prompt) : `reply:${prompt}`
+      ),
+      analyzeStream: jest.fn(
+        async (
+          prompt: string,
+          _context: string,
+          _systemPrompt: string | undefined,
+          onChunk: (text: string) => void
+        ) => {
+          onChunk(`reply:${prompt}`);
+        }
+      ),
       testConnection: jest.fn(async () => ({ ok: true, latencyMs: 10 }))
     };
     const registry = {
-      getSelection: () => ({ provider: 'claude', model: '', openAIApiMode: 'responses' }),
+      getSelection: () => ({
+        provider: 'claude',
+        model: '',
+        openAIApiMode: 'responses'
+      }),
       getProviderForSelection: jest.fn(async () => provider)
     };
     return { provider, registry };
@@ -73,7 +86,9 @@ describe('KiCadChatPanel', () => {
   it('maintains conversation history across turns', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const { registry } = createProviders();
     const chat = KiCadChatPanel.createOrShow(
       context as never,
@@ -97,7 +112,9 @@ describe('KiCadChatPanel', () => {
   it('truncates history to AI_CHAT_MAX_HISTORY turns', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const { registry } = createProviders();
     const chat = KiCadChatPanel.createOrShow(
       context as never,
@@ -116,33 +133,55 @@ describe('KiCadChatPanel', () => {
   it('serializes and deserializes history from workspaceState', async () => {
     const context = createExtensionContextMock();
     const firstPanel = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(firstPanel.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      firstPanel.panel
+    );
     const { registry } = createProviders();
     const logger = createLogger();
-    const chat = KiCadChatPanel.createOrShow(context as never, registry as never, logger as never);
+    const chat = KiCadChatPanel.createOrShow(
+      context as never,
+      registry as never,
+      logger as never
+    );
     await chat.submitPrompt('persist me', 'ctx');
     chat.dispose();
 
     const secondPanel = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(secondPanel.panel);
-    const reopened = KiCadChatPanel.createOrShow(context as never, registry as never, logger as never);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      secondPanel.panel
+    );
+    const reopened = KiCadChatPanel.createOrShow(
+      context as never,
+      registry as never,
+      logger as never
+    );
 
     const history = (reopened as any).history as Array<{ role: string }>;
     expect(history.length).toBeGreaterThan(0);
-    expect(context.workspaceState.get('kicadstudio.aiChat.history', [])).toHaveLength(history.length);
+    expect(
+      context.workspaceState.get('kicadstudio.aiChat.history', [])
+    ).toHaveLength(history.length);
   });
 
   it('aborts in-flight stream on cancel message', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     let aborted = false;
     const provider = {
       name: 'Claude',
       isConfigured: () => true,
       analyze: jest.fn(),
       analyzeStream: jest.fn(
-        (_prompt: string, _context: string, _systemPrompt: string | undefined, _onChunk: (text: string) => void, signal?: AbortSignal) =>
+        (
+          _prompt: string,
+          _context: string,
+          _systemPrompt: string | undefined,
+          _onChunk: (text: string) => void,
+          signal?: AbortSignal
+        ) =>
           new Promise<void>((resolve, reject) => {
             if (signal?.aborted) {
               aborted = true;
@@ -158,7 +197,11 @@ describe('KiCadChatPanel', () => {
       testConnection: jest.fn(async () => ({ ok: true, latencyMs: 10 }))
     };
     const registry = {
-      getSelection: () => ({ provider: 'claude', model: '', openAIApiMode: 'responses' }),
+      getSelection: () => ({
+        provider: 'claude',
+        model: '',
+        openAIApiMode: 'responses'
+      }),
       getProviderForSelection: jest.fn(async () => provider)
     };
     const chat = KiCadChatPanel.createOrShow(
@@ -180,12 +223,22 @@ describe('KiCadChatPanel', () => {
   it('reuses the existing singleton panel and hydrates on ready', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const { registry } = createProviders();
     const logger = createLogger();
 
-    const first = KiCadChatPanel.createOrShow(context as never, registry as never, logger as never);
-    const second = KiCadChatPanel.createOrShow(context as never, registry as never, logger as never);
+    const first = KiCadChatPanel.createOrShow(
+      context as never,
+      registry as never,
+      logger as never
+    );
+    const second = KiCadChatPanel.createOrShow(
+      context as never,
+      registry as never,
+      logger as never
+    );
 
     await panelMock.send({ type: 'ready' });
 
@@ -199,7 +252,9 @@ describe('KiCadChatPanel', () => {
   it('updates provider selection and clears history from webview messages', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const { registry } = createProviders();
     const chat = KiCadChatPanel.createOrShow(
       context as never,
@@ -208,7 +263,11 @@ describe('KiCadChatPanel', () => {
     );
 
     await chat.submitPrompt('turn', 'ctx');
-    await panelMock.send({ type: 'selectionChanged', provider: 'openai', model: 'gpt-4.1' });
+    await panelMock.send({
+      type: 'selectionChanged',
+      provider: 'openai',
+      model: 'gpt-4.1'
+    });
     await panelMock.send({ type: 'clear' });
 
     expect((chat as any).selectedProvider).toBe('openai');
@@ -219,14 +278,24 @@ describe('KiCadChatPanel', () => {
   it('warns when the selected provider is not configured', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const registry = {
-      getSelection: () => ({ provider: 'claude', model: '', openAIApiMode: 'responses' }),
+      getSelection: () => ({
+        provider: 'claude',
+        model: '',
+        openAIApiMode: 'responses'
+      }),
       getProviderForSelection: jest.fn(async () => ({
         name: 'Claude',
         isConfigured: () => false,
         analyze: jest.fn(),
-        testConnection: jest.fn(async () => ({ ok: false, latencyMs: 0, error: 'missing key' }))
+        testConnection: jest.fn(async () => ({
+          ok: false,
+          latencyMs: 0,
+          error: 'missing key'
+        }))
       }))
     };
 
@@ -246,10 +315,16 @@ describe('KiCadChatPanel', () => {
   it('falls back to non-streaming analyze and reports provider errors', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const logger = createLogger();
     const registry = {
-      getSelection: () => ({ provider: 'openai', model: 'gpt-4.1', openAIApiMode: 'responses' }),
+      getSelection: () => ({
+        provider: 'openai',
+        model: 'gpt-4.1',
+        openAIApiMode: 'responses'
+      }),
       getProviderForSelection: jest
         .fn()
         .mockResolvedValueOnce({
@@ -283,21 +358,32 @@ describe('KiCadChatPanel', () => {
         message: expect.objectContaining({ content: 'fallback reply' })
       })
     );
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith('provider exploded');
+    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+      'provider exploded'
+    );
     expect(logger.error).toHaveBeenCalled();
   });
 
   it('applies and ignores suggested MCP tool calls from assistant replies', async () => {
     const context = createExtensionContextMock();
     const panelMock = createPanelMock();
-    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(panelMock.panel);
+    (vscode.window.createWebviewPanel as jest.Mock).mockReturnValue(
+      panelMock.panel
+    );
     const mcpClient = {
-      testConnection: jest.fn(async () => ({ available: true, connected: true })),
+      testConnection: jest.fn(async () => ({
+        available: true,
+        connected: true
+      })),
       previewToolCall: jest.fn(async () => 'Update fabrication profile'),
       callTool: jest.fn(async () => ({}))
     };
     const registry = {
-      getSelection: () => ({ provider: 'openai', model: 'gpt-5.4', openAIApiMode: 'responses' }),
+      getSelection: () => ({
+        provider: 'openai',
+        model: 'gpt-5.4',
+        openAIApiMode: 'responses'
+      }),
       getProviderForSelection: jest.fn(async () => ({
         name: 'OpenAI',
         isConfigured: () => true,
@@ -312,7 +398,9 @@ describe('KiCadChatPanel', () => {
       }))
     };
     (vscode.window.showInformationMessage as jest.Mock).mockReset();
-    (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Apply');
+    (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(
+      'Apply'
+    );
 
     const chat = KiCadChatPanel.createOrShow(
       context as never,
@@ -328,15 +416,26 @@ describe('KiCadChatPanel', () => {
       toolCalls?: Array<{ name: string }>;
       applied?: boolean;
     }>;
-    const assistantMessage = history.find((entry) => entry.role === 'assistant' && entry.toolCalls?.length);
-    expect(assistantMessage?.toolCalls?.[0]?.name).toBe('project_set_design_intent');
+    const assistantMessage = history.find(
+      (entry) => entry.role === 'assistant' && entry.toolCalls?.length
+    );
+    expect(assistantMessage?.toolCalls?.[0]?.name).toBe(
+      'project_set_design_intent'
+    );
 
-    await panelMock.send({ type: 'applyToolCalls', timestamp: assistantMessage?.timestamp });
+    await panelMock.send({
+      type: 'applyToolCalls',
+      timestamp: assistantMessage?.timestamp
+    });
     expect(mcpClient.previewToolCall).toHaveBeenCalled();
 
-    await panelMock.send({ type: 'ignoreToolCalls', timestamp: assistantMessage?.timestamp });
+    await panelMock.send({
+      type: 'ignoreToolCalls',
+      timestamp: assistantMessage?.timestamp
+    });
     expect(
-      history.find((entry) => entry.timestamp === assistantMessage?.timestamp)?.applied
+      history.find((entry) => entry.timestamp === assistantMessage?.timestamp)
+        ?.applied
     ).toBe(true);
   });
 });

@@ -40,7 +40,10 @@ export class Logger implements vscode.Disposable {
     if (!this.shouldLog('error')) {
       return;
     }
-    const detail = error instanceof Error ? `${error.message}\n${error.stack ?? ''}` : `${error ?? ''}`;
+    const detail =
+      error instanceof Error
+        ? `${error.message}\n${error.stack ?? ''}`
+        : `${error ?? ''}`;
     this.channel.error(detail ? `${message}\n${detail}` : message);
   }
 
@@ -65,7 +68,9 @@ export class Logger implements vscode.Disposable {
   }
 
   private readLevel(): LogLevel {
-    return vscode.workspace.getConfiguration().get<LogLevel>(SETTINGS.logLevel, 'info');
+    return vscode.workspace
+      .getConfiguration()
+      .get<LogLevel>(SETTINGS.logLevel, 'info');
   }
 
   private shouldLog(level: LogLevel): boolean {

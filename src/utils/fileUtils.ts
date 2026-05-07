@@ -33,7 +33,11 @@ export async function listWorkspaceKiCadFiles(): Promise<vscode.Uri[]> {
 export async function findWorkspaceFileByExtension(
   extname: string
 ): Promise<vscode.Uri | undefined> {
-  const files = await vscode.workspace.findFiles(`**/*${extname}`, '**/node_modules/**', 1);
+  const files = await vscode.workspace.findFiles(
+    `**/*${extname}`,
+    '**/node_modules/**',
+    1
+  );
   return files[0];
 }
 

@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
 
 export interface LanguageModelNamespace {
-  registerTool?(name: string, tool: LanguageModelTool<unknown>): vscode.Disposable;
+  registerTool?(
+    name: string,
+    tool: LanguageModelTool<unknown>
+  ): vscode.Disposable;
   registerMcpServerDefinitionProvider?(
     id: string,
     provider: McpServerDefinitionProvider<unknown>
@@ -63,7 +66,9 @@ export interface LanguageModelChatRequestMessage {
   name?: string | undefined;
 }
 
-export interface LanguageModelChatProvider<TModel extends LanguageModelChatInformation> {
+export interface LanguageModelChatProvider<
+  TModel extends LanguageModelChatInformation
+> {
   provideLanguageModelChatInformation(
     options: { silent: boolean },
     token: vscode.CancellationToken
@@ -84,7 +89,9 @@ export interface LanguageModelChatProvider<TModel extends LanguageModelChatInfor
 
 export interface McpServerDefinitionProvider<TServer> {
   onDidChangeMcpServerDefinitions?: vscode.Event<void>;
-  provideMcpServerDefinitions(token?: vscode.CancellationToken): Promise<TServer[]>;
+  provideMcpServerDefinitions(
+    token?: vscode.CancellationToken
+  ): Promise<TServer[]>;
   resolveMcpServerDefinition?(
     server: TServer,
     token?: vscode.CancellationToken
@@ -97,14 +104,18 @@ export function getLanguageModelApi(): LanguageModelNamespace | undefined {
 
 export function createLanguageModelTextPart(value: string): unknown {
   const ctor = (
-    vscode as unknown as { LanguageModelTextPart?: new (text: string) => unknown }
+    vscode as unknown as {
+      LanguageModelTextPart?: new (text: string) => unknown;
+    }
   ).LanguageModelTextPart;
   return typeof ctor === 'function' ? new ctor(value) : { value };
 }
 
 export function createLanguageModelToolResult(parts: unknown[]): unknown {
   const ctor = (
-    vscode as unknown as { LanguageModelToolResult?: new (parts: unknown[]) => unknown }
+    vscode as unknown as {
+      LanguageModelToolResult?: new (parts: unknown[]) => unknown;
+    }
   ).LanguageModelToolResult;
   return typeof ctor === 'function' ? new ctor(parts) : { content: parts };
 }
@@ -125,7 +136,9 @@ export function createMcpStdioServerDefinition(args: {
   version?: string | undefined;
 }): unknown | undefined {
   const ctor = (
-    vscode as unknown as { McpStdioServerDefinition?: new (value: unknown) => unknown }
+    vscode as unknown as {
+      McpStdioServerDefinition?: new (value: unknown) => unknown;
+    }
   ).McpStdioServerDefinition;
   return typeof ctor === 'function' ? new ctor(args) : undefined;
 }
@@ -136,7 +149,10 @@ export function flattenLanguageModelMessages(
   return messages
     .map((message) => {
       const label = normalizeRoleLabel(message.role, message.name);
-      const content = message.content.map((part) => getLanguageModelPartText(part)).join('').trim();
+      const content = message.content
+        .map((part) => getLanguageModelPartText(part))
+        .join('')
+        .trim();
       return content ? `${label}: ${content}` : undefined;
     })
     .filter((value): value is string => Boolean(value))
@@ -146,7 +162,8 @@ export function flattenLanguageModelMessages(
 export function estimateLanguageModelTokens(
   value: string | LanguageModelChatRequestMessage
 ): number {
-  const text = typeof value === 'string' ? value : flattenLanguageModelMessages([value]);
+  const text =
+    typeof value === 'string' ? value : flattenLanguageModelMessages([value]);
   return Math.max(1, Math.ceil(text.length / 4));
 }
 

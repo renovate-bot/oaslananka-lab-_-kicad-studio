@@ -40,3 +40,37 @@
   color: b60205
 - name: regression
   color: b60205
+- name: ci:hold
+  color: d93f0b
+- name: ci:ready
+  color: 0e8a16
+- name: review:blocked
+  color: b60205
+- name: review:clean
+  color: 0e8a16
+- name: agent:fix-review
+  color: 5319e7
+- name: agent:needs-human
+  color: d93f0b
+- name: release:blocking
+  color: b60205
+- name: release:dry-run-ok
+  color: 0e8a16
+- name: marketplace:blocking
+  color: b60205
+- name: marketplace:dry-run-ok
+  color: 0e8a16
+- name: mirror:blocked
+  color: b60205
+- name: mirror:stale-tag
+  color: d93f0b
+- name: security:blocking
+  color: b60205
+- name: dependency:major
+  color: d93f0b
+- name: dependency:safe-minor
+  color: 0366d6
+- name: docs-only
+  color: 0075ca
+- name: workflows-only
+  color: c5def5

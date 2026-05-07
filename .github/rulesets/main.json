@@ -23,7 +23,15 @@
       "type": "required_status_checks",
       "parameters": {
         "strict_required_status_checks_policy": true,
-        "required_status_checks": []
+        "required_status_checks": [
+          { "context": "Full CI Pipeline (ubuntu-latest)" },
+          { "context": "Full CI Pipeline (windows-latest)" },
+          { "context": "Full CI Pipeline (macos-latest)" },
+          { "context": "Trivy (filesystem scan)" },
+          { "context": "CodeQL (javascript-typescript)" },
+          { "context": "Gitleaks" },
+          { "context": "Scorecard analysis" }
+        ]
       }
     }
   ]

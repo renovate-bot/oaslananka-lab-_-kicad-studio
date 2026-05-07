@@ -8,8 +8,14 @@ import { SETTINGS } from '../constants';
  * Resolve the KiCad GUI executable for a given file type. Checks configured
  * paths, common install locations, and PATH in order.
  */
-export function resolveKiCadExecutable(filePath: string): { command: string; args: string[] } {
-  const configured = vscode.workspace.getConfiguration().get<string>(SETTINGS.kicadPath, '').trim();
+export function resolveKiCadExecutable(filePath: string): {
+  command: string;
+  args: string[];
+} {
+  const configured = vscode.workspace
+    .getConfiguration()
+    .get<string>(SETTINGS.kicadPath, '')
+    .trim();
 
   const candidates = getKiCadExecutableCandidates(filePath, configured);
   for (const candidate of candidates) {
@@ -50,7 +56,10 @@ export function launchDetached(command: string, args: string[]): Promise<void> {
 
 // ─── Internal helpers ──────────────────────────────────────────────────────
 
-function getKiCadExecutableCandidates(filePath: string, configured: string): string[] {
+function getKiCadExecutableCandidates(
+  filePath: string,
+  configured: string
+): string[] {
   const names = getPreferredKiCadExecutableNames(filePath);
   const candidates: string[] = [];
   if (configured) {
@@ -59,9 +68,21 @@ function getKiCadExecutableCandidates(filePath: string, configured: string): str
 
   if (process.platform === 'win32') {
     const programFiles = process.env['PROGRAMFILES'] ?? 'C:\\Program Files';
-    const programFilesX86 = process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)';
+    const programFilesX86 =
+      process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)';
     for (const root of [programFiles, programFilesX86]) {
-      for (const version of ['10.0', '10', '9.0', '9', '8.0', '8', '7.0', '7', '6.0', '6']) {
+      for (const version of [
+        '10.0',
+        '10',
+        '9.0',
+        '9',
+        '8.0',
+        '8',
+        '7.0',
+        '7',
+        '6.0',
+        '6'
+      ]) {
         for (const name of names) {
           candidates.push(path.join(root, 'KiCad', version, 'bin', name));
         }
@@ -86,7 +107,10 @@ function getKiCadExecutableCandidates(filePath: string, configured: string): str
   return [...new Set(candidates)];
 }
 
-function expandConfiguredKiCadPath(configured: string, names: string[]): string[] {
+function expandConfiguredKiCadPath(
+  configured: string,
+  names: string[]
+): string[] {
   if (!fs.existsSync(configured)) {
     return [configured];
   }
@@ -97,7 +121,10 @@ function expandConfiguredKiCadPath(configured: string, names: string[]): string[
   if (process.platform === 'darwin' && configured.endsWith('.app')) {
     return [path.join(configured, 'Contents', 'MacOS', 'kicad')];
   }
-  return names.flatMap((name) => [path.join(configured, name), path.join(configured, 'bin', name)]);
+  return names.flatMap((name) => [
+    path.join(configured, name),
+    path.join(configured, 'bin', name)
+  ]);
 }
 
 function getPreferredKiCadExecutableNames(filePath: string): string[] {

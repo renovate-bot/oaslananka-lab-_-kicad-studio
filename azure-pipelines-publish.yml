@@ -81,10 +81,12 @@ stages:
             displayName: Audit dependencies
           - script: npm run build:prod
             displayName: Production build
-          - script: npm run publish
+          - bash: PUBLISH_TARGET=vs-marketplace bash scripts/publish.sh
             displayName: Publish extension
             env:
               VSCE_PAT: $(VSCE_PAT)
           - ${{ if eq(parameters.publishToOpenVsx, true) }}:
-              - script: npx ovsx publish -p $(OVSX_PAT)
+              - bash: PUBLISH_TARGET=open-vsx bash scripts/publish.sh
                 displayName: Publish to Open VSX
+                env:
+                  OVSX_PAT: $(OVSX_PAT)

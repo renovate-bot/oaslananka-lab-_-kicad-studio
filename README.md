@@ -42,6 +42,12 @@ gh workflow run jules-dependency-fixer.yml --repo oaslananka-lab/kicad-studio
 
 See [docs/automation/jules.md](docs/automation/jules.md) for guardrails and disable steps.
 
+Repository operations also include a review-thread gate, guarded review-fix
+loop, failure classifier, manual Actions maintenance workflow, release state
+machine, and preflighted personal mirror policy. See
+[docs/repository-operations.md](docs/repository-operations.md) and
+[docs/automation/agent-policy.md](docs/automation/agent-policy.md).
+
 ## What's New In 2.7.0
 
 - VS Code engine raised to `^1.99.0` with matching manifest typings.

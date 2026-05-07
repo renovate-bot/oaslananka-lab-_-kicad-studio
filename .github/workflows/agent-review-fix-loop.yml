@@ -1,0 +1,253 @@
+name: Agent Review Fix Loop
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to inspect.
+        required: true
+        type: string
+      max_iterations:
+        description: Maximum loop comments allowed for this PR.
+        required: true
+        default: '3'
+        type: choice
+        options: ['1', '2', '3']
+      dry_run:
+        description: Inspect and comment without invoking Jules.
+        required: true
+        default: true
+        type: boolean
+  pull_request:
+    types:
+      - labeled
+  pull_request_review:
+    types:
+      - submitted
+      - edited
+  pull_request_review_comment:
+    types:
+      - created
+      - edited
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: agent-review-fix-loop-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  invoke:
+    name: Invoke guarded review fixer
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      contains(fromJSON('["oaslananka"]'), github.actor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    steps:
+      - name: Resolve pull request and guardrails
+        id: context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH_PR_NUMBER: ${{ inputs.pr_number }}
+          DISPATCH_MAX_ITERATIONS: ${{ inputs.max_iterations }}
+          DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          should_run=false
+          reason="event did not request agent review fixing"
+          pr_number=""
+          max_iterations="${DISPATCH_MAX_ITERATIONS:-3}"
+          dry_run="${DISPATCH_DRY_RUN:-false}"
+
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch)
+              pr_number="${DISPATCH_PR_NUMBER}"
+              should_run=true
+              reason="manual dispatch"
+              ;;
+            pull_request)
+              pr_number="$(jq -r '.pull_request.number' "${GITHUB_EVENT_PATH}")"
+              label="$(jq -r '.label.name // ""' "${GITHUB_EVENT_PATH}")"
+              if [ "${label}" = "agent:fix-review" ]; then
+                should_run=true
+                reason="agent:fix-review label"
+              fi
+              ;;
+            pull_request_review)
+              pr_number="$(jq -r '.pull_request.number' "${GITHUB_EVENT_PATH}")"
+              body="$(jq -r '.review.body // ""' "${GITHUB_EVENT_PATH}")"
+              ;;
+            pull_request_review_comment)
+              pr_number="$(jq -r '.pull_request.number' "${GITHUB_EVENT_PATH}")"
+              body="$(jq -r '.comment.body // ""' "${GITHUB_EVENT_PATH}")"
+              ;;
+            issue_comment)
+              if ! jq -e '.issue.pull_request' "${GITHUB_EVENT_PATH}" >/dev/null; then
+                echo "should_run=false" >> "${GITHUB_OUTPUT}"
+                echo "reason=issue comment is not on a pull request" >> "${GITHUB_OUTPUT}"
+                exit 0
+              fi
+              pr_number="$(jq -r '.issue.number' "${GITHUB_EVENT_PATH}")"
+              body="$(jq -r '.comment.body // ""' "${GITHUB_EVENT_PATH}")"
+              ;;
+            *)
+              echo "Unsupported event ${GITHUB_EVENT_NAME}" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "${should_run}" != "true" ] && [ -n "${body:-}" ]; then
+            if grep -Fq "/agent-review-fix" <<<"${body}"; then
+              should_run=true
+              reason="/agent-review-fix command"
+            fi
+          fi
+
+          if [ -n "${pr_number}" ]; then
+            labels="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${pr_number}" --jq '[.labels[].name] | join(",")')"
+            if grep -Fq "agent:fix-review" <<<"${labels}"; then
+              should_run=true
+              reason="agent:fix-review label"
+            fi
+          fi
+
+          if [ "${should_run}" != "true" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "reason=${reason}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          pull="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
+          head_repo="$(jq -r '.head.repo.full_name' <<<"${pull}")"
+          head_branch="$(jq -r '.head.ref' <<<"${pull}")"
+          head_sha="$(jq -r '.head.sha' <<<"${pull}")"
+          is_draft="$(jq -r '.draft' <<<"${pull}")"
+
+          if [ "${head_repo}" != "${GITHUB_REPOSITORY}" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "reason=fork pull request is not eligible" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          marker_count="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments" --paginate \
+              --jq '[.[] | select(.body | contains("[agent-review-fix-loop]"))] | length'
+          )"
+          if [ "${marker_count}" -ge "${max_iterations}" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "reason=max iterations reached" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          echo "reason=${reason}" >> "${GITHUB_OUTPUT}"
+          echo "pr_number=${pr_number}" >> "${GITHUB_OUTPUT}"
+          echo "head_branch=${head_branch}" >> "${GITHUB_OUTPUT}"
+          echo "head_sha=${head_sha}" >> "${GITHUB_OUTPUT}"
+          echo "is_draft=${is_draft}" >> "${GITHUB_OUTPUT}"
+          echo "dry_run=${dry_run}" >> "${GITHUB_OUTPUT}"
+          echo "marker_count=${marker_count}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout pull request branch
+        if: steps.context.outputs.should_run == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ steps.context.outputs.head_branch }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        if: steps.context.outputs.should_run == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .node-version
+
+      - name: Inspect review threads
+        if: steps.context.outputs.should_run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/check-review-threads.mjs \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pr "${{ steps.context.outputs.pr_number }}" \
+            --json \
+            --summary-file review-thread-summary.json
+
+      - name: Comment dry-run result
+        if: steps.context.outputs.should_run == 'true' && steps.context.outputs.dry_run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.context.outputs.pr_number }}
+        run: |
+          {
+            echo "[agent-review-fix-loop] Dry run only."
+            echo
+            echo "- Trigger reason: ${{ steps.context.outputs.reason }}"
+            echo "- Threads inspected: $(jq -r '.inspectedThreads' review-thread-summary.json)"
+            echo "- Actionable unresolved threads: $(jq -r '.actionableCount' review-thread-summary.json)"
+            echo "- No publish, merge, approve, or secret operation was attempted."
+          } > agent-review-fix-comment.md
+          gh issue comment "${PR_NUMBER}" --body-file agent-review-fix-comment.md
+
+      - name: Invoke Jules for review fixes
+        if: steps.context.outputs.should_run == 'true' && steps.context.outputs.dry_run != 'true'
+        uses: google-labs-code/jules-invoke@bff7875eaa123cac6742b7cfc51005b95ba4d566
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ steps.context.outputs.head_branch }}
+          include_last_commit: true
+          include_commit_log: true
+          prompt: |
+            Repository: oaslananka-lab/kicad-studio
+            Pull request: #${{ steps.context.outputs.pr_number }}
+            Branch: ${{ steps.context.outputs.head_branch }}
+            Head SHA: ${{ steps.context.outputs.head_sha }}
+
+            Fix actionable unresolved GitHub review threads only.
+
+            Required behavior:
+            1. Inspect unresolved, not-outdated review threads on this PR.
+            2. Prefer human review feedback over bot feedback.
+            3. Group actionable comments by path.
+            4. Parse GitHub ```suggestion blocks when present.
+            5. Apply the smallest source, test, docs, or workflow fix that addresses the thread.
+            6. Do not resolve human threads automatically.
+            7. Do not resolve bot threads unless the fix is verified and the thread is outdated or explicitly safe to resolve.
+            8. Run targeted tests and these cheap gates before pushing:
+               - corepack npm run format:check
+               - corepack npm run lint
+               - corepack npm run typecheck
+               - corepack npm run workflows:lint
+               - npm audit --audit-level=high
+               - node scripts/check-review-threads.mjs --repo oaslananka-lab/kicad-studio --pr ${{ steps.context.outputs.pr_number }} --json --fail-on-actionable
+            9. If source/runtime behavior changed, run the relevant unit tests too.
+            10. Commit and push only when validation passes.
+            11. Leave a PR comment with:
+                - threads inspected
+                - fixes applied
+                - ignored outdated threads
+                - tests run
+                - remaining unresolved threads
+                - "No publish workflow was triggered."
+
+            Hard constraints:
+            - Do not publish anything.
+            - Do not merge or approve anything.
+            - Do not print, request, or modify secrets.
+            - Do not trigger VS Marketplace publish, Open VSX publish, npm publish, Docker publish, or production GitHub Releases.
+            - Do not weaken CI, tests, security scans, Workspace Trust, AI opt-in behavior, or MCP opt-in behavior.
+            - Do not broaden GitHub token permissions.
+            - Do not change marketplace/Open VSX/release workflows unless a reviewed thread explicitly requests a minimal dry-run packaging fix.
+            - Do not touch protected release, marketplace, security policy, package identity, or mirror-force behavior without human review.

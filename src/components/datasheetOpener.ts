@@ -5,12 +5,16 @@ export async function openDatasheet(url: string): Promise<void> {
   try {
     parsed = new URL(url);
   } catch {
-    void vscode.window.showWarningMessage('Datasheet URL is invalid and was not opened.');
+    void vscode.window.showWarningMessage(
+      'Datasheet URL is invalid and was not opened.'
+    );
     return;
   }
 
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    void vscode.window.showWarningMessage('Datasheet URL must use http or https.');
+    void vscode.window.showWarningMessage(
+      'Datasheet URL must use http or https.'
+    );
     return;
   }
 

@@ -13,12 +13,17 @@ export interface ParsedKiCadDocument {
  */
 export class KiCadDocumentStore {
   private readonly cache = new Map<string, ParsedKiCadDocument>();
-  private readonly pendingParses = new Map<string, Promise<ParsedKiCadDocument>>();
+  private readonly pendingParses = new Map<
+    string,
+    Promise<ParsedKiCadDocument>
+  >();
   private readonly parseDebounce = new Map<string, NodeJS.Timeout>();
 
   constructor(private readonly parser: SExpressionParser) {}
 
-  async parseDocument(document: vscode.TextDocument): Promise<ParsedKiCadDocument> {
+  async parseDocument(
+    document: vscode.TextDocument
+  ): Promise<ParsedKiCadDocument> {
     const cacheKey = document.uri.toString();
     const cached = this.cache.get(cacheKey);
     if (cached && cached.documentVersion === document.version) {
@@ -30,21 +35,23 @@ export class KiCadDocumentStore {
       return pending;
     }
 
-    const next = Promise.resolve().then(() => {
-      const ast = this.parser.parse(document.getText());
-      const parsed: ParsedKiCadDocument = {
-        documentVersion: document.version,
-        ast,
-        errors: this.parser.getErrors(ast)
-      };
-      const current = this.cache.get(cacheKey);
-      if (!current || current.documentVersion <= document.version) {
-        this.cache.set(cacheKey, parsed);
-      }
-      return parsed;
-    }).finally(() => {
-      this.pendingParses.delete(cacheKey);
-    });
+    const next = Promise.resolve()
+      .then(() => {
+        const ast = this.parser.parse(document.getText());
+        const parsed: ParsedKiCadDocument = {
+          documentVersion: document.version,
+          ast,
+          errors: this.parser.getErrors(ast)
+        };
+        const current = this.cache.get(cacheKey);
+        if (!current || current.documentVersion <= document.version) {
+          this.cache.set(cacheKey, parsed);
+        }
+        return parsed;
+      })
+      .finally(() => {
+        this.pendingParses.delete(cacheKey);
+      });
 
     this.pendingParses.set(cacheKey, next);
     return next;

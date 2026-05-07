@@ -38,7 +38,8 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
   private readonly INDEX_STALE_MS = 5 * 60 * 1000;
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    const cached = this.context.globalState.get<SerializedLibraryIndex>(LIBRARY_INDEX_KEY);
+    const cached =
+      this.context.globalState.get<SerializedLibraryIndex>(LIBRARY_INDEX_KEY);
     if (cached) {
       this.symbols = cached.symbols;
       this.footprints = cached.footprints;
@@ -54,14 +55,20 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
     return !this.indexedAt || Date.now() - this.indexedAt > this.INDEX_STALE_MS;
   }
 
-  async indexAll(progress?: vscode.Progress<{ message: string }>): Promise<void> {
+  async indexAll(
+    progress?: vscode.Progress<{ message: string }>
+  ): Promise<void> {
     const symbolLibPaths = this.findSymbolLibraries();
     const footprintLibPaths = this.findFootprintLibraries();
 
-    progress?.report({ message: `${symbolLibPaths.length} symbol libraries are being indexed...` });
+    progress?.report({
+      message: `${symbolLibPaths.length} symbol libraries are being indexed...`
+    });
     this.symbols = this.parseSymbolLibraries(symbolLibPaths);
 
-    progress?.report({ message: `${footprintLibPaths.length} footprint libraries are being indexed...` });
+    progress?.report({
+      message: `${footprintLibPaths.length} footprint libraries are being indexed...`
+    });
     this.footprints = this.parseFootprintLibraries(footprintLibPaths);
 
     this.indexedAt = Date.now();
@@ -75,11 +82,12 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
   searchSymbols(query: string): LibrarySymbol[] {
     const q = query.toLowerCase().trim();
     return this.symbols
-      .filter((symbol) =>
-        !q ||
-        symbol.name.toLowerCase().includes(q) ||
-        symbol.description.toLowerCase().includes(q) ||
-        symbol.keywords.some((keyword) => keyword.toLowerCase().includes(q))
+      .filter(
+        (symbol) =>
+          !q ||
+          symbol.name.toLowerCase().includes(q) ||
+          symbol.description.toLowerCase().includes(q) ||
+          symbol.keywords.some((keyword) => keyword.toLowerCase().includes(q))
       )
       .slice(0, 50);
   }
@@ -87,11 +95,12 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
   searchFootprints(query: string): LibraryFootprint[] {
     const q = query.toLowerCase().trim();
     return this.footprints
-      .filter((footprint) =>
-        !q ||
-        footprint.name.toLowerCase().includes(q) ||
-        footprint.description.toLowerCase().includes(q) ||
-        footprint.tags.some((tag) => tag.toLowerCase().includes(q))
+      .filter(
+        (footprint) =>
+          !q ||
+          footprint.name.toLowerCase().includes(q) ||
+          footprint.description.toLowerCase().includes(q) ||
+          footprint.tags.some((tag) => tag.toLowerCase().includes(q))
       )
       .slice(0, 50);
   }
@@ -104,26 +113,37 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
   private findSymbolLibraries(): string[] {
     return this.collectFiles('.kicad_sym', [
       process.env['KICAD_SYMBOL_DIR'],
-      process.env['PROGRAMFILES'] ? path.join(process.env['PROGRAMFILES'], 'KiCad') : undefined,
+      process.env['PROGRAMFILES']
+        ? path.join(process.env['PROGRAMFILES'], 'KiCad')
+        : undefined,
       '/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols',
       '/usr/share/kicad/symbols',
       '/usr/local/share/kicad/symbols',
-      ...vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath) ?? []
+      ...(vscode.workspace.workspaceFolders?.map(
+        (folder) => folder.uri.fsPath
+      ) ?? [])
     ]);
   }
 
   private findFootprintLibraries(): string[] {
     return this.collectFiles('.kicad_mod', [
       process.env['KICAD_FOOTPRINT_DIR'],
-      process.env['PROGRAMFILES'] ? path.join(process.env['PROGRAMFILES'], 'KiCad') : undefined,
+      process.env['PROGRAMFILES']
+        ? path.join(process.env['PROGRAMFILES'], 'KiCad')
+        : undefined,
       '/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints',
       '/usr/share/kicad/footprints',
       '/usr/local/share/kicad/footprints',
-      ...vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath) ?? []
+      ...(vscode.workspace.workspaceFolders?.map(
+        (folder) => folder.uri.fsPath
+      ) ?? [])
     ]);
   }
 
-  private collectFiles(extension: string, roots: Array<string | undefined>): string[] {
+  private collectFiles(
+    extension: string,
+    roots: Array<string | undefined>
+  ): string[] {
     const results = new Set<string>();
     for (const root of roots) {
       if (!root || !fs.existsSync(root)) {
@@ -134,7 +154,12 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
     return [...results];
   }
 
-  private walk(root: string, extension: string, results: Set<string>, depth: number): void {
+  private walk(
+    root: string,
+    extension: string,
+    results: Set<string>,
+    depth: number
+  ): void {
     if (depth < 0) {
       return;
     }
@@ -205,24 +230,38 @@ export class KiCadLibraryIndexer implements vscode.Disposable {
 }
 
 function extractString(body: string, key: string): string | undefined {
-  const propertyRegex = new RegExp(`\\(\\s*property\\s+"${escapeRegExp(key)}"\\s+"([^"]*)"`, 'i');
+  const propertyRegex = new RegExp(
+    `\\(\\s*property\\s+"${escapeRegExp(key)}"\\s+"([^"]*)"`,
+    'i'
+  );
   return body.match(propertyRegex)?.[1];
 }
 
 function extractManyStrings(body: string, key: string): string[] {
-  const match = body.match(new RegExp(`\\(\\s*${escapeRegExp(key)}\\s+([^\\)]*)\\)`, 'i'));
+  const match = body.match(
+    new RegExp(`\\(\\s*${escapeRegExp(key)}\\s+([^\\)]*)\\)`, 'i')
+  );
   if (!match?.[1]) {
     return [];
   }
-  return [...match[1].matchAll(/"([^"]+)"/g)].map((item) => item[1]).filter(Boolean) as string[];
+  return [...match[1].matchAll(/"([^"]+)"/g)]
+    .map((item) => item[1])
+    .filter(Boolean) as string[];
 }
 
 function extractNodeValue(body: string, key: string): string | undefined {
-  return body.match(new RegExp(`\\(\\s*${escapeRegExp(key)}\\s+"([^"]*)"\\s*\\)`, 'i'))?.[1];
+  return body.match(
+    new RegExp(`\\(\\s*${escapeRegExp(key)}\\s+"([^"]*)"\\s*\\)`, 'i')
+  )?.[1];
 }
 
 function splitKeywords(value: string | undefined): string[] {
-  return value ? value.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean) : [];
+  return value
+    ? value
+        .split(/[,\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
 }
 
 function escapeRegExp(value: string): string {

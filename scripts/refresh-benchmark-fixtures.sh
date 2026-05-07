@@ -15,4 +15,3 @@ mkdir -p "$(dirname "$TARGET")"
 cp -R "$SOURCE" "$TARGET"
 
 echo "Refreshed benchmark fixtures from $SOURCE"
-

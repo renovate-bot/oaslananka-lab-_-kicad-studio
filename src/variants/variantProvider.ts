@@ -38,9 +38,9 @@ class VariantTreeItem extends vscode.TreeItem {
   }
 }
 
-export class VariantProvider
-  implements vscode.TreeDataProvider<KiCadVariant | VariantOverride>
-{
+export class VariantProvider implements vscode.TreeDataProvider<
+  KiCadVariant | VariantOverride
+> {
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<
     KiCadVariant | VariantOverride | undefined
   >();

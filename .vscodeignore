@@ -23,6 +23,7 @@ playwright-report/**
 SHA256SUMS.txt
 sbom.cdx.json
 sbom.spdx
+review-thread-summary*.json
 **/*.ts
 **/*.map
 *.vsix
