@@ -2,26 +2,20 @@
 set -euo pipefail
 
 REPO_NAME="kicad-studio"
-OWNER="oaslananka"
-ORG="oaslananka-lab"
+PERSONAL_OWNER="oaslananka"
+ORG_OWNER="oaslananka-lab"
 
-# Ensure personal remote
+if ! git remote | grep -q "^lab$"; then
+  git remote add lab "https://github.com/${ORG_OWNER}/${REPO_NAME}.git"
+fi
+
 if ! git remote | grep -q "^personal$"; then
-  git remote add personal "https://github.com/${OWNER}/${REPO_NAME}.git"
+  git remote add personal "https://github.com/${PERSONAL_OWNER}/${REPO_NAME}.git"
 fi
 
-# Ensure org remote
-if ! git remote | grep -q "^org$"; then
-  git remote add org "https://github.com/${ORG}/${REPO_NAME}.git"
-fi
+echo "Fetching canonical org and personal showcase remotes..."
+git fetch lab --prune
+git fetch personal --prune || true
 
-echo "Fetching all..."
-git fetch --all
-
-echo "Pushing to personal..."
-git push personal --all --tags
-
-echo "Pushing to org..."
-git push org --all --tags
-
-echo "Sync complete."
+echo "Canonical push target: lab (${ORG_OWNER}/${REPO_NAME})"
+echo "Personal showcase mirroring is handled by .github/workflows/mirror-personal.yml after org changes land."

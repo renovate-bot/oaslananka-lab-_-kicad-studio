@@ -394,7 +394,7 @@ export function buildSettingsHtml(options: SettingsHtmlOptions): string {
     byId('test-ai-key').addEventListener('click', () => vscode.postMessage({ type: 'testAiKey' }));
     byId('detect-cli').addEventListener('click', () => vscode.postMessage({ type: 'detectCli' }));
     byId('clear-all-secrets').addEventListener('click', () => vscode.postMessage({ type: 'clearAllSecrets' }));
-    byId('open-mcp-docs').addEventListener('click', () => vscode.postMessage({ type: 'openExternalLink', href: 'https://github.com/oaslananka/kicad-studio/blob/main/docs/INTEGRATION.md' }));
+    byId('open-mcp-docs').addEventListener('click', () => vscode.postMessage({ type: 'openExternalLink', href: 'https://github.com/oaslananka-lab/kicad-studio/blob/main/docs/INTEGRATION.md' }));
 
     window.addEventListener('message', (event) => {
       const message = event.data || {};

@@ -6,8 +6,8 @@
 set -euo pipefail
 
 APPLY="${1:-}"
-REPO_CANONICAL="oaslananka/kicad-studio"
-REPO_ORG="oaslananka-lab/kicad-studio"
+REPO_CANONICAL="oaslananka-lab/kicad-studio"
+REPO_PERSONAL="oaslananka/kicad-studio"
 
 say()   { printf '\033[1;36m[plan]\033[0m %s\n' "$*"; }
 do_or_print() {
@@ -36,7 +36,7 @@ git for-each-ref --format='%(refname:short) %(upstream:track) %(committerdate:un
     done
 
 echo
-echo "== Remote branches on canonical older than 90 days, no open PR =="
+echo "== Remote branches on canonical organization repo older than 90 days, no open PR =="
 gh api -X GET "/repos/${REPO_CANONICAL}/branches?per_page=100" --jq '.[].name' \
   | while read -r br; do
       case "$br" in
@@ -55,17 +55,17 @@ gh api -X GET "/repos/${REPO_CANONICAL}/branches?per_page=100" --jq '.[].name' \
     done
 
 echo
-echo "== Same on org mirror =="
-gh api -X GET "/repos/${REPO_ORG}/branches?per_page=100" --jq '.[].name' \
+echo "== Same on personal showcase mirror =="
+gh api -X GET "/repos/${REPO_PERSONAL}/branches?per_page=100" --jq '.[].name' \
   | while read -r br; do
       case "$br" in
         main|master|develop|gh-pages|release/*|hotfix/*) continue ;;
       esac
-      sha=$(gh api "/repos/${REPO_ORG}/branches/${br}" --jq '.commit.sha' 2>/dev/null) || continue
-      last=$(gh api "/repos/${REPO_ORG}/commits/${sha}" --jq '.commit.committer.date' 2>/dev/null) || continue
+      sha=$(gh api "/repos/${REPO_PERSONAL}/branches/${br}" --jq '.commit.sha' 2>/dev/null) || continue
+      last=$(gh api "/repos/${REPO_PERSONAL}/commits/${sha}" --jq '.commit.committer.date' 2>/dev/null) || continue
       cutoff=$(date -d '90 days ago' --iso-8601=seconds 2>/dev/null || date -v-90d +%FT%T)
       if [[ "$last" < "$cutoff" ]]; then
-        do_or_print "gh api -X DELETE /repos/${REPO_ORG}/git/refs/heads/${br}"
+        do_or_print "gh api -X DELETE /repos/${REPO_PERSONAL}/git/refs/heads/${br}"
       fi
     done
 
@@ -88,8 +88,8 @@ git ls-remote --tags "https://github.com/${REPO_CANONICAL}.git" \
 gh release list --repo "$REPO_CANONICAL" --limit 200 --json tagName --jq '.[].tagName' | sort -u > /tmp/canonical_releases.txt
 comm -23 /tmp/canonical_tags.txt /tmp/canonical_releases.txt | sed 's/^/  /'
 echo
-echo "Tag mismatch (org has, canonical does not):"
-git ls-remote --tags "https://github.com/${REPO_ORG}.git" \
+echo "Tag mismatch (personal has, canonical does not):"
+git ls-remote --tags "https://github.com/${REPO_PERSONAL}.git" \
   | awk '{print $2}' | sed 's|refs/tags/||' | grep -v '\^{}' | sort -u > /tmp/org_tags.txt
 comm -23 /tmp/org_tags.txt /tmp/canonical_tags.txt | sed 's/^/  /'
 

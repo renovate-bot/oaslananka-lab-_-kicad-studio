@@ -2,7 +2,7 @@
 
 ## Development Setup
 
-1. Install Node.js `24.14.1`, npm `11.13.x`, and VS Code 1.95+.
+1. Install Node.js `24.14.1`, npm `11.13.x`, and VS Code 1.99+.
 2. Run `npm ci`.
 3. Press `F5` to launch the Extension Development Host.
 4. Let the Git hooks handle fast staged checks on commit and run `npm run check` before push.
@@ -28,7 +28,7 @@ Examples:
 
 - `feat(mcp): add fix queue sidebar`
 - `fix(viewer): restore layer visibility on refresh`
-- `docs(readme): document Azure-first CI flow`
+- `docs(readme): document organization-first CI flow`
 - `test(prompts): cover KiCad 10 grouped DRC summaries`
 
 Allowed prefixes:
@@ -52,6 +52,6 @@ Allowed prefixes:
 
 ## CI/CD Expectations
 
-- The `oaslananka-lab` GitHub mirror owns the primary automated CI/CD workflows.
+- The `oaslananka-lab` GitHub repository owns the primary automated CI/CD workflows.
 - Azure DevOps and GitLab are manual fallback pipelines.
-- Marketplace publishing is approval-gated through the GitHub `marketplace` environment.
+- Marketplace publishing is approval-gated through the GitHub `release` environment.

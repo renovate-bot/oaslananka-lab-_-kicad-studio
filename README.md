@@ -2,10 +2,15 @@
 
 [![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.kicadstudio)](https://marketplace.visualstudio.com/items?itemName=oaslananka.kicadstudio)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/oaslananka.kicadstudio)](https://marketplace.visualstudio.com/items?itemName=oaslananka.kicadstudio)
+[![CI](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/codeql.yml/badge.svg)](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/codeql.yml)
+[![Scorecard](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/scorecard.yml/badge.svg)](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/scorecard.yml)
+[![Security](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/gitleaks.yml)
+[![Release](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/release.yml/badge.svg)](https://github.com/oaslananka-lab/kicad-studio/actions/workflows/release.yml)
+[![Codecov](https://codecov.io/gh/oaslananka-lab/kicad-studio/branch/main/graph/badge.svg)](https://codecov.io/gh/oaslananka-lab/kicad-studio)
 [![KiCad 10](https://img.shields.io/badge/KiCad-10-success.svg)](https://www.kicad.org)
-[![kicad-mcp-pro](https://img.shields.io/badge/kicad--mcp--pro-compatible-blue)](https://github.com/oaslananka/kicad-mcp-pro)
+[![kicad-mcp-pro](https://img.shields.io/badge/kicad--mcp--pro-compatible-blue)](https://github.com/oaslananka-lab/kicad-mcp-pro)
 [![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-supported-black)](https://copilot.github.com)
-[![Azure DevOps](https://img.shields.io/badge/CI%2FCD-Azure%20DevOps-0078D4)](https://dev.azure.com/oaslananka/open-source/_git/kicad-studio)
 
 KiCad Studio turns VS Code into a practical KiCad workspace: view schematics and PCBs, run DRC/ERC, inspect BOMs and netlists, export manufacturing outputs, compare changes, search components and libraries, and optionally connect AI tooling through `kicad-mcp-pro`.
 
@@ -13,12 +18,29 @@ KiCad Studio turns VS Code into a practical KiCad workspace: view schematics and
 
 ## Repository And CI/CD
 
-- **Canonical Repository:** `https://github.com/oaslananka/kicad-studio`
-  All development and user interaction happens here. Zero GitHub Actions are consumed on this account.
-- **CI/CD Mirror:** `https://github.com/oaslananka-lab/kicad-studio`
-  Automated CI, security scans, and releases run here. The mirror periodically pulls from canonical.
-- **Operations:** See [docs/repository-operations.md](docs/repository-operations.md) for detailed guidance on the dual-owner model.
-- **Fallbacks:** Azure DevOps and GitLab pipelines are maintained for manual redundancy.
+- **Canonical repository:** `https://github.com/oaslananka-lab/kicad-studio`
+- **Personal showcase mirror:** `https://github.com/oaslananka/kicad-studio`
+- **CI/CD and releases:** run only from the organization repository.
+- **Personal repository:** showcase mirror only; it must not run publishing workflows.
+- **Operations:** see [docs/repository-operations.md](docs/repository-operations.md).
+
+## Automation And Security
+
+Jules automation is configured only for `oaslananka-lab/kicad-studio`. Jules may create or update fix branches and PRs for trusted CI failures, maintainer-dispatched work, dependency triage, and allowlisted issue triggers. Jules cannot publish VS Marketplace extensions, Open VSX extensions, GitHub Releases, VSIX production artifacts, npm packages, Docker images, or marketplace metadata. Jules PRs require human review; no auto-approve or auto-merge workflow is enabled.
+
+Manual Jules trigger:
+
+```bash
+gh workflow run jules-manual.yml --repo oaslananka-lab/kicad-studio
+```
+
+Dependency triage trigger:
+
+```bash
+gh workflow run jules-dependency-fixer.yml --repo oaslananka-lab/kicad-studio
+```
+
+See [docs/automation/jules.md](docs/automation/jules.md) for guardrails and disable steps.
 
 ## What's New In 2.7.0
 
@@ -91,7 +113,7 @@ These projects are not bundled with this extension; attribution is provided for 
 
 #### Compatibility
 
-KiCad Studio 2.7.0 supports `kicad-mcp-pro >=3.0.0 <4.0.0` and recommends `>=3.0.2 <4.0.0`. The extension was tested against `kicad-mcp-pro 3.0.2`. If a connected server reports a version outside the required range, MCP-dependent commands are disabled and KiCad-only viewers, exports, checks, BOM/netlist, language services, and library features continue to work.
+KiCad Studio 2.7.0 supports `kicad-mcp-pro >=3.0.0 <4.0.0` and recommends `>=3.2.0 <4.0.0`. The extension was tested against `kicad-mcp-pro 3.2.0`. If a connected server reports a version outside the required range, MCP-dependent commands are disabled and KiCad-only viewers, exports, checks, BOM/netlist, language services, and library features continue to work.
 
 See [docs/INTEGRATION.md](docs/INTEGRATION.md) for the detailed MCP workflow.
 
@@ -167,6 +189,7 @@ Important settings include:
 - `kicadstudio.mcp.autoDetect`
 - `kicadstudio.mcp.endpoint`
 - `kicadstudio.mcp.allowLegacySse`
+- `kicadstudio.mcp.allowRemoteEndpoint`
 - `kicadstudio.mcp.pushContext`
 - `kicadstudio.mcp.profile`
 - `kicadstudio.mcp.logSize`
@@ -219,12 +242,12 @@ Important settings include:
 - `npm run build`
 - `npm run build:prod`
 - `npm run package`
+- `npm run workflows:lint`
 
 ### CI/CD Layout
 
-- `.github/workflows/ci.yml` and `.github/workflows/publish.yml` are the primary GitHub Actions workflows for the `oaslananka-lab` organization mirror.
-- `azure-pipelines-ci.yml` and `azure-pipelines-publish.yml` are manual fallback Azure pipelines.
-- `.gitlab-ci.yml` is a manual fallback GitLab pipeline.
+- `.github/workflows/ci.yml`, `.github/workflows/release.yml`, and the Jules workflows are scoped to the `oaslananka-lab` organization repository.
+- Azure DevOps and GitLab files are manual fallback references only; they are not canonical release authorities.
 
 ## Contributing
 

@@ -142,7 +142,7 @@ export class KiCadCliDetector {
       } else if (selected === 'Help') {
         await vscode.env.openExternal(
           vscode.Uri.parse(
-            'https://github.com/oaslananka/kicad-studio/blob/main/docs/installation.md'
+            'https://github.com/oaslananka-lab/kicad-studio/blob/main/docs/installation.md'
           )
         );
       }
@@ -240,7 +240,9 @@ export class KiCadCliDetector {
 
     const trimmed = candidate.trim();
     if (
-      (trimmed.includes(' ') || trimmed.includes('"') || trimmed.includes("'")) &&
+      (trimmed.includes(' ') ||
+        trimmed.includes('"') ||
+        trimmed.includes("'")) &&
       !fs.existsSync(trimmed)
     ) {
       const parts = this.splitCommand(trimmed);

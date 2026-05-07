@@ -224,7 +224,7 @@ export class KiCadSettingsPanel implements vscode.Disposable {
 
   private isAllowedExternalLink(href: string): boolean {
     return (
-      href.startsWith('https://github.com/oaslananka/kicad-studio/') ||
+      href.startsWith('https://github.com/oaslananka-lab/kicad-studio/') ||
       href.startsWith('https://www.kicad.org/')
     );
   }
