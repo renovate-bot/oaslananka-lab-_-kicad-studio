@@ -128,7 +128,7 @@ describe('settings webview', () => {
     await panelMock.send({ type: 'detectCli' });
     await panelMock.send({
       type: 'openExternalLink',
-      href: 'https://github.com/oaslananka/kicad-studio/blob/main/docs/INTEGRATION.md'
+      href: 'https://github.com/oaslananka-lab/kicad-studio/blob/main/docs/INTEGRATION.md'
     });
     await panelMock.send({ type: 'clearAllSecrets' });
 

@@ -353,7 +353,7 @@ describe('McpDetector.generateHttpConfig', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('writes a tasks.json task and an SSE mcp.json for uvx installs', async () => {
+  it('writes a tasks.json task and an HTTP mcp.json for uvx installs', async () => {
     (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
     const detector = new McpDetector();
 
@@ -382,8 +382,8 @@ describe('McpDetector.generateHttpConfig', () => {
     const mcp = JSON.parse(fs.readFileSync(mcpPath, 'utf8')) as {
       servers: { kicad: { type: string; url: string } };
     };
-    expect(mcp.servers.kicad.type).toBe('sse');
-    expect(mcp.servers.kicad.url).toBe('http://localhost:27185/sse');
+    expect(mcp.servers.kicad.type).toBe('http');
+    expect(mcp.servers.kicad.url).toBe('http://localhost:27185/mcp');
   });
 
   it('writes a docker task with port mapping for docker installs', async () => {
@@ -545,7 +545,7 @@ describe('McpDetector.generateHttpConfig', () => {
       fs.readFileSync(path.join(vscodeDir, 'mcp.json'), 'utf8')
     ) as { servers: Record<string, unknown> };
     expect(mcp.servers['other']).toBeDefined();
-    expect((mcp.servers['kicad'] as { type: string })?.type).toBe('sse');
+    expect((mcp.servers['kicad'] as { type: string })?.type).toBe('http');
   });
 
   it('buildHttpTaskArgs returns global binary args for pip installs', () => {

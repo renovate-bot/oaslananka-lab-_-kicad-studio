@@ -8,6 +8,10 @@
 TEMP_FOLDER/**
 azure-pipelines*.yml
 reports/**
+docs/automation/**
+docs/dependency-upgrade-notes.md
+docs/jules-runbook.md
+docs/repository-operations.md
 src/**
 test/**
 scripts/**
@@ -16,6 +20,9 @@ out/**
 coverage/**
 test-results/**
 playwright-report/**
+SHA256SUMS.txt
+sbom.cdx.json
+sbom.spdx
 **/*.ts
 **/*.map
 *.vsix
@@ -34,3 +41,4 @@ webpack.config.js
 eslint.config.cjs
 .prettierrc
 jest.config.js
+renovate.json

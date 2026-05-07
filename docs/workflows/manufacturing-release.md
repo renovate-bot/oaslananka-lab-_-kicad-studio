@@ -5,7 +5,7 @@ KiCad Studio 2.6.0 adds `KiCad: Manufacturing Release Wizard` for projects conne
 ## Requirements
 
 - A workspace folder containing a KiCad project.
-- A connected `kicad-mcp-pro` server satisfying `>=3.0.0 <4.0.0`.
+- A connected `kicad-mcp-pro` server satisfying `>=3.0.0 <4.0.0`; `>=3.2.0 <4.0.0` is recommended.
 - Workspace trust, because the wizard can invoke local tooling through the MCP server.
 
 ## Flow

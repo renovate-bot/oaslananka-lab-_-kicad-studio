@@ -1,0 +1,87 @@
+name: Mirror Personal
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Show what would be mirrored without pushing.
+        required: true
+        default: true
+        type: boolean
+      force_mirror:
+        description: Force-update the personal mirror ref. Manual use only.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-personal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    name: Mirror main or release tag to personal showcase
+    if: github.repository == 'oaslananka-lab/kicad-studio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout canonical repository
+        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Mirror selected ref
+        shell: bash
+        env:
+          PERSONAL_REPO_PUSH_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+          FORCE_MIRROR: ${{ github.event_name == 'workflow_dispatch' && inputs.force_mirror == true }}
+        run: |
+          set -euo pipefail
+
+          case "${GITHUB_REF}" in
+            refs/heads/main)
+              source_ref="HEAD"
+              target_ref="refs/heads/main"
+              ;;
+            refs/tags/v*.*.*)
+              source_ref="${GITHUB_REF}"
+              target_ref="${GITHUB_REF}"
+              ;;
+            *)
+              echo "Skipping unsupported ref ${GITHUB_REF}."
+              exit 0
+              ;;
+          esac
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "Dry run: would mirror ${source_ref} to oaslananka/kicad-studio:${target_ref}."
+            git log -1 --oneline
+            exit 0
+          fi
+
+          if [ -z "${PERSONAL_REPO_PUSH_TOKEN}" ]; then
+            echo "PERSONAL_REPO_PUSH_TOKEN is required for personal mirror push." >&2
+            exit 1
+          fi
+
+          git config user.name "oaslananka-lab[bot]"
+          git config user.email "oaslananka-lab@users.noreply.github.com"
+          git remote add personal "https://x-access-token:${PERSONAL_REPO_PUSH_TOKEN}@github.com/oaslananka/kicad-studio.git"
+
+          if [ "${FORCE_MIRROR}" = "true" ]; then
+            git push personal "+${source_ref}:${target_ref}"
+          else
+            git push personal "${source_ref}:${target_ref}"
+          fi

@@ -1,0 +1,100 @@
+name: Jules Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch Jules should start from.
+        required: true
+        default: main
+        type: string
+      task_type:
+        description: Type of guarded Jules task.
+        required: true
+        default: ci-fix
+        type: choice
+        options:
+          - ci-fix
+          - dependency-fix
+          - docs-fix
+          - tests
+          - security-hardening
+          - mcp-integration
+          - packaging
+          - marketplace-packaging
+          - open-vsx-packaging
+          - release-dry-run-fix
+      prompt:
+        description: Focused task prompt for Jules.
+        required: true
+        type: string
+      include_last_commit:
+        description: Include the latest commit diff in Jules context.
+        required: true
+        default: false
+        type: boolean
+      include_commit_log:
+        description: Include recent commit history in Jules context.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jules-manual-${{ github.repository }}-${{ inputs.branch }}
+  cancel-in-progress: false
+
+jobs:
+  invoke:
+    name: Invoke Jules manually
+    if: github.repository == 'oaslananka-lab/kicad-studio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Invoke Jules
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ inputs.branch }}
+          include_last_commit: ${{ inputs.include_last_commit }}
+          include_commit_log: ${{ inputs.include_commit_log }}
+          prompt: |
+            Repository: oaslananka-lab/kicad-studio
+            Personal showcase mirror: oaslananka/kicad-studio
+            Task type: ${{ inputs.task_type }}
+
+            User task:
+            ${{ inputs.prompt }}
+
+            Hard constraints:
+            - Work only in the canonical org repository.
+            - Do not publish anything.
+            - Do not merge anything.
+            - Do not modify, reveal, print, or request secrets.
+            - Do not weaken CI, tests, security checks, Workspace Trust, AI opt-in behavior, or MCP opt-in behavior.
+            - Do not trigger VS Marketplace publish, Open VSX publish, npm publish, Docker publish, or production GitHub Releases.
+            - Do not alter publish/release workflows unless this task explicitly asks for a minimal dry-run or packaging fix.
+            - Keep marketplace/Open VSX/release credentials untouched.
+            - Run local project validation before opening or updating a PR.
+            - Open or update a PR only if validation passes.
+            - Include exact commands run and their results in the PR body.
+
+            Required validation:
+            - corepack npm ci
+            - corepack npm run format:check
+            - corepack npm run lint
+            - corepack npm run typecheck
+            - corepack npm run test:unit
+            - corepack npm test
+            - corepack npm run build
+            - corepack npm run package
+            - corepack npm run workflows:lint
+            - npm audit --audit-level=high
+            - npx @vscode/vsce package
+            - corepack npm run package:ovsx
+
+            If a validation command is missing, add the script or document why it is not applicable. Never silently skip.

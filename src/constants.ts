@@ -192,6 +192,7 @@ export const SETTINGS = {
   autoRunERC: 'kicadstudio.erc.autoRunOnSave',
   mcpAutoDetect: 'kicadstudio.mcp.autoDetect',
   mcpEndpoint: 'kicadstudio.mcp.endpoint',
+  mcpAllowRemoteEndpoint: 'kicadstudio.mcp.allowRemoteEndpoint',
   mcpAllowLegacySse: 'kicadstudio.mcp.allowLegacySse',
   mcpPushContext: 'kicadstudio.mcp.pushContext',
   mcpProfile: 'kicadstudio.mcp.profile',

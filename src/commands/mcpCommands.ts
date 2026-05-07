@@ -10,6 +10,7 @@ import {
   troubleshootingUri
 } from '../utils/notifications';
 import type { CommandServices } from './types';
+import type { FixItem } from '../types';
 
 /**
  * Register MCP integration commands.
@@ -35,7 +36,9 @@ export function registerMcpCommands(
           }
           if (choice === 'Open Repository') {
             await vscode.env.openExternal(
-              vscode.Uri.parse('https://github.com/oaslananka/kicad-mcp-pro')
+              vscode.Uri.parse(
+                'https://github.com/oaslananka-lab/kicad-mcp-pro'
+              )
             );
           }
           return;
@@ -184,7 +187,7 @@ export function registerMcpCommands(
         if (!('candidate' in choice)) {
           await vscode.env.openExternal(
             vscode.Uri.parse(
-              'https://github.com/oaslananka/kicad-mcp-pro#installation'
+              'https://github.com/oaslananka-lab/kicad-mcp-pro#installation'
             )
           );
           return;
@@ -223,7 +226,7 @@ export function registerMcpCommands(
     vscode.commands.registerCommand(COMMANDS.openMcpUpgradeGuide, () =>
       vscode.env.openExternal(
         vscode.Uri.parse(
-          'https://github.com/oaslananka/kicad-mcp-pro#installation'
+          'https://github.com/oaslananka-lab/kicad-mcp-pro#installation'
         )
       )
     ),
@@ -237,47 +240,61 @@ export function registerMcpCommands(
       'Pick MCP Profile'
     ),
 
-    vscode.commands.registerCommand(COMMANDS.openDesignIntent, () => {
-      DesignIntentPanel.createOrShow(extensionContext, services.mcpClient);
-    }),
+    registerTrustedCommand(
+      COMMANDS.openDesignIntent,
+      () => {
+        DesignIntentPanel.createOrShow(extensionContext, services.mcpClient);
+      },
+      'Design Intent'
+    ),
 
     vscode.commands.registerCommand(COMMANDS.refreshFixQueue, () =>
       services.fixQueueProvider.refresh()
     ),
 
-    vscode.commands.registerCommand(COMMANDS.applyFixQueueItem, async (item) =>
-      runWithStructuredMcpErrorHandling(services, () =>
-        services.fixQueueProvider.applyFix(item)
-      )
+    registerTrustedCommand(
+      COMMANDS.applyFixQueueItem,
+      async (item: FixItem) =>
+        runWithStructuredMcpErrorHandling(services, () =>
+          services.fixQueueProvider.applyFix(item)
+        ),
+      'Apply MCP Fix'
     ),
 
-    vscode.commands.registerCommand(
+    registerTrustedCommand(
       COMMANDS.applyFixQueueById,
       async (id: string) =>
         runWithStructuredMcpErrorHandling(services, () =>
           services.fixQueueProvider.applyFixById(id)
-        )
+        ),
+      'Apply MCP Fix'
     ),
 
-    vscode.commands.registerCommand(COMMANDS.applyAllFixQueueItems, async () =>
-      runWithStructuredMcpErrorHandling(services, () =>
-        services.fixQueueProvider.applyAll()
-      )
+    registerTrustedCommand(
+      COMMANDS.applyAllFixQueueItems,
+      async () =>
+        runWithStructuredMcpErrorHandling(services, () =>
+          services.fixQueueProvider.applyAll()
+        ),
+      'Apply MCP Fixes'
     ),
 
-    vscode.commands.registerCommand(COMMANDS.addDrcRuleWithMcp, async () => {
-      await DrcRuleEditorPanel.createOrShow(
-        extensionContext,
-        services.mcpClient
-      );
-    }),
+    registerTrustedCommand(
+      COMMANDS.addDrcRuleWithMcp,
+      async () => {
+        await DrcRuleEditorPanel.createOrShow(
+          extensionContext,
+          services.mcpClient
+        );
+      },
+      'DRC Rule MCP Editing'
+    ),
 
     registerTrustedCommand(
       COMMANDS.manufacturingRelease,
       async () => {
-        const { runManufacturingReleaseWizard } = await import(
-          './manufacturingReleaseWizard'
-        );
+        const { runManufacturingReleaseWizard } =
+          await import('./manufacturingReleaseWizard');
         await runManufacturingReleaseWizard(services);
       },
       'Manufacturing Release'

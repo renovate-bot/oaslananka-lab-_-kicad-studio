@@ -8,7 +8,7 @@ updates:
       time: '06:00'
     open-pull-requests-limit: 5
     groups:
-      actions:
+      github-actions:
         patterns: ['*']
         update-types: [minor, patch]
     cooldown:
@@ -17,10 +17,60 @@ updates:
 
   - package-ecosystem: npm
     directory: /
-    schedule: { interval: weekly, day: monday }
+    schedule:
+      interval: weekly
+      day: monday
     open-pull-requests-limit: 10
     groups:
-      js-minor-patch:
+      npm-safe-minor-patch:
         patterns: ['*']
         update-types: [minor, patch]
-    labels: [dependencies, area:js]
+      npm-test-tooling-major:
+        patterns:
+          - jest
+          - jest-util
+          - '@types/jest'
+          - ts-jest
+          - c8
+        update-types: [major]
+      npm-lint-tooling-major:
+        patterns:
+          - eslint
+          - '@eslint/js'
+          - '@typescript-eslint/*'
+          - lint-staged
+          - prettier
+        update-types: [major]
+      vscode-extension-tooling:
+        patterns:
+          - '@vscode/vsce'
+          - ovsx
+          - '@types/vscode'
+          - '@types/node'
+          - typescript
+          - webpack-cli
+        update-types: [major, minor, patch]
+    ignore:
+      # engines.vscode remains ^1.99.0; keep manifest typings aligned to the minimum engine.
+      - dependency-name: '@types/vscode'
+        update-types:
+          ['version-update:semver-minor', 'version-update:semver-major']
+      # Runtime target remains Node 24.x.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # Postponed until official ESLint 10 migration is intentionally scheduled.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/js'
+        update-types: ['version-update:semver-major']
+      # Postponed until Jest 30 migration is intentionally scheduled across unit and extension tests.
+      - dependency-name: jest
+        update-types: ['version-update:semver-major']
+      - dependency-name: jest-util
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/jest'
+        update-types: ['version-update:semver-major']
+      # Postponed until TypeScript 6 compiler/lint churn is reviewed separately.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+    labels: [dependencies, type:chore]

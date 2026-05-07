@@ -5,10 +5,7 @@ Branch protection rules are defined in `.github/rulesets/main.json`.
 To apply them via GitHub CLI:
 
 ```bash
-# For canonical repo
-gh api -X POST /repos/oaslananka/kicad-studio/rulesets --input .github/rulesets/main.json
-
-# For org mirror
+# For canonical organization repo
 gh api -X POST /repos/oaslananka-lab/kicad-studio/rulesets --input .github/rulesets/main.json
 ```
 

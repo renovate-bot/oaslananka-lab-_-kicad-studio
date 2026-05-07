@@ -1,7 +1,6 @@
 import { KiCadCliDetector } from '../../src/cli/kicadCliDetector';
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
-import * as vscode from 'vscode';
 
 jest.mock('node:child_process');
 jest.mock('node:fs');
@@ -20,17 +19,30 @@ describe('Flatpak Support', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(false);
 
     // Mock spawnSync to return a successful version for flatpak
-    (childProcess.spawnSync as unknown as jest.Mock).mockImplementation((cmd, args) => {
-      if (cmd === 'flatpak' && args[0] === 'run' && args.includes('--version')) {
-         return { status: 0, stdout: 'kicad-cli 10.0.1', stderr: '' };
+    (childProcess.spawnSync as unknown as jest.Mock).mockImplementation(
+      (cmd, args) => {
+        if (
+          cmd === 'flatpak' &&
+          args[0] === 'run' &&
+          args.includes('--version')
+        ) {
+          return { status: 0, stdout: 'kicad-cli 10.0.1', stderr: '' };
+        }
+        return { status: 1 };
       }
-      return { status: 1 };
-    });
+    );
 
-    const result = await detector.validateCandidate(flatpakCandidate, 'common-path');
+    const result = await detector.validateCandidate(
+      flatpakCandidate,
+      'common-path'
+    );
     expect(result).toBeDefined();
     expect(result.path).toBe('flatpak');
-    expect(result.args).toEqual(['run', '--command=kicad-cli', 'org.kicad.KiCad']);
+    expect(result.args).toEqual([
+      'run',
+      '--command=kicad-cli',
+      'org.kicad.KiCad'
+    ]);
     expect(result.version).toBe('10.0.1');
   });
 
@@ -40,10 +52,15 @@ describe('Flatpak Support', () => {
 
     (fs.existsSync as jest.Mock).mockReturnValue(false);
     (childProcess.spawnSync as unknown as jest.Mock).mockReturnValue({
-       status: 0, stdout: 'kicad-cli 10.0.1', stderr: ''
+      status: 0,
+      stdout: 'kicad-cli 10.0.1',
+      stderr: ''
     });
 
-    const result = await detector.validateCandidate(quotedCandidate, 'settings');
+    const result = await detector.validateCandidate(
+      quotedCandidate,
+      'settings'
+    );
     expect(result).toBeDefined();
     expect(result.path).toBe('/opt/My KiCad/kicad-cli');
     expect(result.args).toEqual(['--some-arg']);
@@ -55,7 +72,9 @@ describe('Flatpak Support', () => {
 
     (fs.existsSync as jest.Mock).mockReturnValue(false);
     (childProcess.spawnSync as unknown as jest.Mock).mockReturnValue({
-       status: 0, stdout: 'kicad-cli 10.0.1', stderr: ''
+      status: 0,
+      stdout: 'kicad-cli 10.0.1',
+      stderr: ''
     });
 
     const result = await detector.validateCandidate(metaCandidate, 'settings');
@@ -69,7 +88,9 @@ describe('Flatpak Support', () => {
 
     (fs.existsSync as jest.Mock).mockReturnValue(false);
     (childProcess.spawnSync as unknown as jest.Mock).mockReturnValue({
-       status: 0, stdout: 'kicad-cli 10.0.1', stderr: ''
+      status: 0,
+      stdout: 'kicad-cli 10.0.1',
+      stderr: ''
     });
 
     const result = await detector.validateCandidate(malformed, 'settings');
@@ -98,7 +119,15 @@ describe('Flatpak Support', () => {
 
     expect(childProcess.spawnSync).toHaveBeenCalledWith(
       'flatpak',
-      ['run', '--command=kicad-cli', 'org.kicad.KiCad', 'sch', 'export', 'bom', '--help'],
+      [
+        'run',
+        '--command=kicad-cli',
+        'org.kicad.KiCad',
+        'sch',
+        'export',
+        'bom',
+        '--help'
+      ],
       expect.anything()
     );
   });
@@ -124,7 +153,15 @@ describe('Flatpak Support', () => {
 
     expect(childProcess.spawnSync).toHaveBeenCalledWith(
       'flatpak',
-      ['run', '--command=kicad-cli', 'org.kicad.KiCad', 'pcb', 'export', '3dpdf', '--help'],
+      [
+        'run',
+        '--command=kicad-cli',
+        'org.kicad.KiCad',
+        'pcb',
+        'export',
+        '3dpdf',
+        '--help'
+      ],
       expect.anything()
     );
   });

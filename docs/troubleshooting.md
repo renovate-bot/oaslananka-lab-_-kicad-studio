@@ -2,7 +2,7 @@
 
 ## MCP Incompatible
 
-KiCad Studio 2.6.0 supports `kicad-mcp-pro >=3.0.0 <4.0.0` and recommends `>=3.0.2 <4.0.0`. If the status bar shows an incompatible server, upgrade the server and retry the MCP connection.
+KiCad Studio 2.7.0 supports `kicad-mcp-pro >=3.0.0 <4.0.0` and recommends `>=3.2.0 <4.0.0`. If the status bar shows an incompatible server, upgrade the server and retry the MCP connection.
 
 ## cli-timeout
 

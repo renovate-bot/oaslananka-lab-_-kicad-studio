@@ -175,7 +175,7 @@ export class McpDetector {
   /**
    * Generate an HTTP-transport configuration:
    *  - .vscode/tasks.json  — background task that starts kicad-mcp-pro with --transport http
-   *  - .vscode/mcp.json    — SSE entry so Copilot / Claude Code can also connect over HTTP
+   *  - .vscode/mcp.json    — Streamable HTTP entry so VS Code and MCP clients can connect over HTTP
    */
   async generateHttpConfig(
     projectDir: string,
@@ -226,7 +226,7 @@ export class McpDetector {
       'utf8'
     );
 
-    // ── mcp.json (SSE entry for Copilot / Claude Code) ────────────────────────
+    // ── mcp.json (Streamable HTTP entry for VS Code / MCP clients) ─────────────
     const mcpJsonPath = path.join(vscodeDirPath, 'mcp.json');
     let mcpConfig: { servers: Record<string, unknown> } = { servers: {} };
     if (fs.existsSync(mcpJsonPath)) {
@@ -245,13 +245,13 @@ export class McpDetector {
       }
     }
     mcpConfig.servers['kicad'] = {
-      type: 'sse',
-      url: `http://localhost:${port}/sse`
+      type: 'http',
+      url: `http://localhost:${port}/mcp`
     };
     fs.writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2), 'utf8');
 
     const action = await vscode.window.showInformationMessage(
-      `HTTP task added to .vscode/tasks.json and mcp.json updated with SSE entry (port ${port}). ` +
+      `HTTP task added to .vscode/tasks.json and mcp.json updated with Streamable HTTP entry (port ${port}). ` +
         'Run "Start kicad-mcp-pro (HTTP)" via Terminal → Run Task to start the server.',
       'Run Task Now'
     );

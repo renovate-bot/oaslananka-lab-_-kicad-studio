@@ -35,6 +35,7 @@ TEMP_FOLDER/
 # SBOMs and audit outputs (regenerated in CI)
 sbom.cdx.json
 sbom.spdx
+SHA256SUMS.txt
 requirements-audit.txt
 requirements-build.txt
 .scan-results/

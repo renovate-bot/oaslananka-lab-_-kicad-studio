@@ -335,10 +335,12 @@ export class McpClient {
   }
 
   private getEndpoint(): string {
-    return vscode.workspace
+    const endpoint = vscode.workspace
       .getConfiguration()
       .get<string>(SETTINGS.mcpEndpoint, 'http://127.0.0.1:27185')
       .replace(/\/$/, '');
+    validateEndpoint(endpoint);
+    return endpoint;
   }
 
   private async rpc<T>(
@@ -609,6 +611,35 @@ export class McpClient {
       json: (await response.json()) as JsonRpcResponse<T>,
       sessionId
     };
+  }
+}
+
+function validateEndpoint(endpoint: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(endpoint);
+  } catch {
+    throw new Error(`Invalid MCP endpoint URL: ${endpoint}`);
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('The MCP endpoint must use http:// or https://.');
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  const isLoopback =
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '[::1]';
+  const allowRemoteEndpoint = vscode.workspace
+    .getConfiguration()
+    .get<boolean>(SETTINGS.mcpAllowRemoteEndpoint, false);
+
+  if (!isLoopback && !allowRemoteEndpoint) {
+    throw new Error(
+      `Refusing remote MCP endpoint ${endpoint}. Use a loopback endpoint or enable ${SETTINGS.mcpAllowRemoteEndpoint} intentionally.`
+    );
   }
 }
 

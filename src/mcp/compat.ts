@@ -2,8 +2,8 @@ import type { McpCompatStatus } from '../types';
 
 export const MCP_COMPAT = {
   required: '>=3.0.0 <4.0.0',
-  recommended: '>=3.0.2 <4.0.0',
-  testedAgainst: '3.0.2'
+  recommended: '>=3.2.0 <4.0.0',
+  testedAgainst: '3.2.0'
 } as const;
 
 export function normalizeMcpVersion(version: string | undefined): string {
@@ -41,7 +41,7 @@ function satisfiesCompatRange(version: string, range: string): boolean {
   if (range === MCP_COMPAT.recommended) {
     return (
       parsed.major === 3 &&
-      (parsed.minor > 0 || (parsed.minor === 0 && parsed.patch >= 2))
+      (parsed.minor > 2 || (parsed.minor === 2 && parsed.patch >= 0))
     );
   }
   return false;
