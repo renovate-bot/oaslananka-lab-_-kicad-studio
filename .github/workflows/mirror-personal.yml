@@ -262,5 +262,7 @@ jobs:
           fi
 
           require_token_for_push
-          git -c "http.https://github.com/oaslananka/kicad-studio.git.extraheader=AUTHORIZATION: bearer ${PERSONAL_REPO_PUSH_TOKEN}" \
-            push "${push_options[@]}" "${personal_url}" "${push_refspecs[@]}"
+          authenticated_personal_url="https://x-access-token:${PERSONAL_REPO_PUSH_TOKEN}@github.com/oaslananka/kicad-studio.git"
+          git push "${push_options[@]}" \
+            "${authenticated_personal_url}" \
+            "${push_refspecs[@]}"
