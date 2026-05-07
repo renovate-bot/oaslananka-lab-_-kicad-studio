@@ -8,7 +8,14 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["command"],
+        "anyOf": [
+          {
+            "required": ["command"]
+          },
+          {
+            "required": ["url"]
+          }
+        ],
         "properties": {
           "type": {
             "type": "string",
@@ -18,6 +25,11 @@
             "type": "string",
             "pattern": "^(uvx|kicad-mcp-pro|[A-Za-z]:\\\\.*|/.*)$",
             "description": "Use uvx, kicad-mcp-pro, or an absolute executable path."
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https?://",
+            "description": "HTTP, Streamable HTTP, or legacy SSE endpoint URL."
           },
           "args": {
             "type": "array",

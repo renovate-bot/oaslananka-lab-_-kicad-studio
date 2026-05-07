@@ -15,7 +15,7 @@ export async function pickMcpProfile(
     KICAD_MCP_PROFILES.map((profile) => ({
       label: profile.label,
       description: profile.id,
-      detail: `${profile.blurb} (as of MCP 3.0.2)`,
+      detail: `${profile.blurb} (as of MCP 3.2.0)`,
       profile
     })),
     {

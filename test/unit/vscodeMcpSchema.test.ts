@@ -31,6 +31,21 @@ describe('.vscode/mcp.json KiCad schema', () => {
     ).toBe(true);
   });
 
+  it('accepts a valid Streamable HTTP KiCad MCP server config', () => {
+    const validate = new Ajv().compile(schema);
+
+    expect(
+      validate({
+        servers: {
+          kicad: {
+            type: 'http',
+            url: 'http://localhost:27185/mcp'
+          }
+        }
+      })
+    ).toBe(true);
+  });
+
   it('rejects missing commands and bad profiles', () => {
     const validate = new Ajv({ allErrors: true }).compile(schema);
 

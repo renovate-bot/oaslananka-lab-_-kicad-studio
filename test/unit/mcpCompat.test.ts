@@ -9,18 +9,18 @@ describe('MCP compatibility helpers', () => {
   it('declares the supported MCP 3.x contract', () => {
     expect(MCP_COMPAT).toEqual({
       required: '>=3.0.0 <4.0.0',
-      recommended: '>=3.0.2 <4.0.0',
-      testedAgainst: '3.0.2'
+      recommended: '>=3.2.0 <4.0.0',
+      testedAgainst: '3.2.0'
     });
   });
 
   it('normalizes versions and classifies compatibility', () => {
-    expect(normalizeMcpVersion('kicad-mcp-pro 3.0.2')).toBe('3.0.2');
+    expect(normalizeMcpVersion('kicad-mcp-pro 3.2.0')).toBe('3.2.0');
     expect(normalizeMcpVersion('v3.1')).toBe('3.1.0');
     expect(normalizeMcpVersion('not-a-version')).toBe('0.0.0');
     expect(normalizeMcpVersion(undefined)).toBe('0.0.0');
-    expect(getMcpCompatStatus('3.0.2')).toBe('ok');
-    expect(getMcpCompatStatus('3.1.0')).toBe('ok');
+    expect(getMcpCompatStatus('3.2.0')).toBe('ok');
+    expect(getMcpCompatStatus('3.1.9')).toBe('warn');
     expect(getMcpCompatStatus('3.0.0')).toBe('warn');
     expect(getMcpCompatStatus('3.0.1')).toBe('warn');
     expect(getMcpCompatStatus(undefined)).toBe('incompatible');

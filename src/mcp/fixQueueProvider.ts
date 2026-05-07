@@ -89,10 +89,22 @@ export class FixQueueProvider implements vscode.TreeDataProvider<FixItem> {
   }
 
   async applyAll(): Promise<void> {
-    for (const item of [...this.items]) {
-      if (item.status !== 'pending') {
-        continue;
-      }
+    const pending = this.items.filter((item) => item.status === 'pending');
+    if (!pending.length) {
+      return;
+    }
+
+    const choice = await vscode.window.showWarningMessage(
+      `Apply ${pending.length} MCP fix${pending.length === 1 ? '' : 'es'}?`,
+      { modal: true },
+      'Apply All',
+      'Cancel'
+    );
+    if (choice !== 'Apply All') {
+      return;
+    }
+
+    for (const item of [...pending]) {
       try {
         await this.applyFixInternal(item, { confirm: false });
       } catch {

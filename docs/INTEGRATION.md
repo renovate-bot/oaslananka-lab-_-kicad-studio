@@ -36,7 +36,7 @@ The extension tracks MCP as an optional capability with these states:
 - `Connected`: the server initialized and its version satisfies `>=3.0.0 <4.0.0`.
 - `Incompatible`: the server initialized but reported a version outside `>=3.0.0 <4.0.0`.
 
-KiCad Studio 2.6.0 recommends `kicad-mcp-pro >=3.0.2 <4.0.0` and was tested against `3.0.2`. Connected servers in the required range but below the recommended range show `Connected (older than recommended)`. Incompatible servers do not receive context pushes, fix queue calls, quality gate calls, or manufacturing release calls.
+KiCad Studio 2.7.0 recommends `kicad-mcp-pro >=3.2.0 <4.0.0` and was tested against `3.2.0`. Connected servers in the required range but below the recommended range show `Connected (older than recommended)`. Incompatible servers do not receive context pushes, fix queue calls, quality gate calls, or manufacturing release calls.
 
 The extension persists the last observed server card in `globalState` under `kicadstudio.mcp.lastServerCard`, including `serverInfo.version`, tool capability names, resource capability names, prompt capability names, compatibility status, and capture time. This lets the UI render a useful status while a new connection attempt is still pending.
 
@@ -47,6 +47,7 @@ The extension-side MCP client targets Streamable HTTP:
 - `POST /mcp`
 - `Accept: application/json, text/event-stream`
 - `MCP-Session-Id` is captured from the initialize response and sent on subsequent requests
+- Remote MCP endpoints are refused by default. Set `kicadstudio.mcp.allowRemoteEndpoint` only when the user intentionally trusts a non-loopback endpoint.
 
 If a server responds with `404` or `405`, KiCad Studio does not silently fall back to legacy `/sse` transport unless `kicadstudio.mcp.allowLegacySse` is explicitly enabled.
 
@@ -134,7 +135,7 @@ KiCad Studio contributes `schemas/vscode-mcp.kicad.json` for `**/.vscode/mcp.jso
 
 `KiCad: Open MCP Log` opens a redacted in-memory log of recent MCP request/response traffic. The log viewer is additive to the existing `KiCad Studio MCP` output channel.
 
-The ring buffer keeps 200 entries by default and can be configured up to 1000 through `kicadstudio.mcp.logSize`. It redacts authorization headers, replaces paths under the user home directory with `~`, and truncates payload bodies above 8 KB.
+The ring buffer keeps 200 entries by default and can be configured up to 1000 through `kicadstudio.mcp.logSize`. It redacts authorization headers, cookies, session IDs, API keys, token-shaped fields, replaces paths under the user home directory with `~`, and truncates payload bodies above 8 KB.
 
 ## Design Intent
 

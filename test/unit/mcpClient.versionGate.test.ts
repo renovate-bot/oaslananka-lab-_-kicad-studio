@@ -69,7 +69,8 @@ describe('McpClient version gate', () => {
   }
 
   it.each([
-    ['3.0.2', 'ok'],
+    ['3.2.0', 'ok'],
+    ['3.1.9', 'warn'],
     ['3.0.0', 'warn']
   ])(
     'connects to supported server version %s as %s',
@@ -114,7 +115,7 @@ describe('McpClient version gate', () => {
     global.fetch = jest
       .fn()
       .mockResolvedValueOnce(createJsonResponse(initializeResult('1.27.0')))
-      .mockResolvedValueOnce(createJsonResponse(wellKnownResult('3.0.2')))
+      .mockResolvedValueOnce(createJsonResponse(wellKnownResult('3.2.0')))
       .mockResolvedValueOnce(
         createJsonResponse({ result: { tools: [] } })
       ) as typeof fetch;
@@ -122,7 +123,7 @@ describe('McpClient version gate', () => {
     const state = await createClient().testConnection();
 
     expect(state.kind).toBe('Connected');
-    expect(state.server?.version).toBe('3.0.2');
+    expect(state.server?.version).toBe('3.2.0');
     expect(state.server?.compat).toBe('ok');
   });
 
@@ -141,7 +142,7 @@ describe('McpClient version gate', () => {
   it('normalizes structured quality gate reports and text gate responses', async () => {
     global.fetch = jest
       .fn()
-      .mockResolvedValueOnce(createJsonResponse(initializeResult('3.0.2')))
+      .mockResolvedValueOnce(createJsonResponse(initializeResult('3.2.0')))
       .mockResolvedValueOnce(
         createJsonResponse({
           result: {
@@ -190,7 +191,7 @@ describe('McpClient version gate', () => {
   it('throws structured MCP tool errors', async () => {
     global.fetch = jest
       .fn()
-      .mockResolvedValueOnce(createJsonResponse(initializeResult('3.0.2')))
+      .mockResolvedValueOnce(createJsonResponse(initializeResult('3.2.0')))
       .mockResolvedValueOnce(
         createJsonResponse({
           result: {

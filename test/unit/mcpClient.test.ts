@@ -25,7 +25,7 @@ function createJsonResponse(
     isEmptyResult(body)
       ? {
           result: {
-            serverInfo: { version: '3.0.2' },
+            serverInfo: { version: '3.2.0' },
             capabilities: { tools: [], resources: [], prompts: [] }
           }
         }
@@ -74,8 +74,8 @@ describe('McpClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset mocked fs helpers to safe defaults before each test.
-    mockedFs.existsSync.mockReturnValue(false as unknown as boolean);
-    mockedFs.readFileSync.mockReturnValue('{}' as unknown as Buffer);
+    mockedFs.existsSync.mockReturnValue(false);
+    mockedFs.readFileSync.mockReturnValue('{}');
     __setConfiguration({
       'kicadstudio.mcp.endpoint': 'http://127.0.0.1:27185',
       'kicadstudio.mcp.pushContext': true,
@@ -130,6 +130,45 @@ describe('McpClient', () => {
     expect(fetchMock.mock.calls[1]?.[1]?.headers).toEqual(
       expect.objectContaining({ 'MCP-Session-Id': 'session-123' })
     );
+  });
+
+  it('refuses non-loopback MCP endpoints by default', async () => {
+    __setConfiguration({
+      'kicadstudio.mcp.endpoint': 'https://mcp.example.com',
+      'kicadstudio.mcp.pushContext': true,
+      'kicadstudio.mcp.allowLegacySse': false,
+      'kicadstudio.mcp.allowRemoteEndpoint': false
+    });
+    global.fetch = jest.fn() as typeof fetch;
+
+    await expect(createClient().testConnection()).rejects.toThrow(
+      'Refusing remote MCP endpoint'
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('allows non-loopback MCP endpoints only when explicitly enabled', async () => {
+    __setConfiguration({
+      'kicadstudio.mcp.endpoint': 'https://mcp.example.com',
+      'kicadstudio.mcp.pushContext': true,
+      'kicadstudio.mcp.allowLegacySse': false,
+      'kicadstudio.mcp.allowRemoteEndpoint': true
+    });
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(
+        createJsonResponse(
+          { result: {} },
+          { headers: { 'MCP-Session-Id': 'remote-session' } }
+        )
+      )
+      .mockResolvedValueOnce(createJsonResponse({ result: { tools: [] } }));
+    global.fetch = fetchMock as typeof fetch;
+
+    await expect(createClient().testConnection()).resolves.toEqual(
+      expect.objectContaining({ available: true, connected: true })
+    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://mcp.example.com/mcp');
   });
 
   it('parses JSON text tool results and falls back to plain text when JSON parsing fails', async () => {
@@ -548,13 +587,13 @@ describe('McpClient', () => {
   });
 
   it('reports VsCodeStdio state when HTTP fails but .vscode/mcp.json has kicad-mcp-pro (command field)', async () => {
-    mockedFs.existsSync.mockReturnValue(true as unknown as boolean);
+    mockedFs.existsSync.mockReturnValue(true);
     mockedFs.readFileSync.mockReturnValue(
       JSON.stringify({
         servers: {
           kicad: { command: 'kicad-mcp-pro', args: [], type: 'stdio' }
         }
-      }) as unknown as Buffer
+      })
     );
 
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
@@ -568,13 +607,13 @@ describe('McpClient', () => {
   });
 
   it('reports VsCodeStdio state when kicad-mcp-pro appears in args (not command)', async () => {
-    mockedFs.existsSync.mockReturnValue(true as unknown as boolean);
+    mockedFs.existsSync.mockReturnValue(true);
     mockedFs.readFileSync.mockReturnValue(
       JSON.stringify({
         servers: {
           kicad: { command: 'uvx', args: ['kicad-mcp-pro'], type: 'stdio' }
         }
-      }) as unknown as Buffer
+      })
     );
 
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
@@ -587,13 +626,13 @@ describe('McpClient', () => {
   });
 
   it('stays Disconnected when .vscode/mcp.json exists but has no kicad-mcp-pro server', async () => {
-    mockedFs.existsSync.mockReturnValue(true as unknown as boolean);
+    mockedFs.existsSync.mockReturnValue(true);
     mockedFs.readFileSync.mockReturnValue(
       JSON.stringify({
         servers: {
           other: { command: 'some-other-tool', args: [], type: 'stdio' }
         }
-      }) as unknown as Buffer
+      })
     );
 
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
@@ -605,11 +644,11 @@ describe('McpClient', () => {
   });
 
   it('throws a friendly error when callTool is called while in VsCodeStdio state', async () => {
-    mockedFs.existsSync.mockReturnValue(true as unknown as boolean);
+    mockedFs.existsSync.mockReturnValue(true);
     mockedFs.readFileSync.mockReturnValue(
       JSON.stringify({
         servers: { kicad: { command: 'kicad-mcp-pro', args: [] } }
-      }) as unknown as Buffer
+      })
     );
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 

@@ -105,6 +105,7 @@ describe('FixQueueProvider code-action support', () => {
       expect.objectContaining({ id: 'lightbulb' })
     );
 
+    (window.showWarningMessage as jest.Mock).mockResolvedValue('Apply All');
     await provider.applyAll();
 
     expect(client.callTool).toHaveBeenCalledTimes(1);
