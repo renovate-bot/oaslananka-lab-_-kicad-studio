@@ -27,39 +27,87 @@ fs.writeFileSync(
   'utf8'
 );
 
-const sbom = spawnSync(
-  process.execPath,
-  [
-    bin('cyclonedx-npm'),
-    '--output-file',
-    'sbom.cdx.json',
-    '--output-format',
-    'JSON',
-    '--spec-version',
-    '1.6',
-    '--package-lock-only'
-  ],
-  {
-    cwd: root,
-    stdio: 'inherit',
-    shell: false
-  }
-);
+const pnpmArgs = [
+  '--silent',
+  'sbom',
+  '--sbom-format',
+  'cyclonedx',
+  '--sbom-type',
+  'application'
+];
+const pnpmInvocation =
+  process.platform === 'win32'
+    ? {
+        command: process.env.ComSpec ?? 'cmd.exe',
+        args: ['/d', '/s', '/c', 'pnpm', ...pnpmArgs]
+      }
+    : { command: 'pnpm', args: pnpmArgs };
+const sbom = spawnSync(pnpmInvocation.command, pnpmInvocation.args, {
+  cwd: root,
+  encoding: 'utf8',
+  maxBuffer: 32 * 1024 * 1024,
+  stdio: ['ignore', 'pipe', 'inherit']
+});
+
+if (sbom.error) {
+  console.error(sbom.error.message);
+  process.exit(1);
+}
 
 if (sbom.status !== 0) {
   process.exit(sbom.status ?? 1);
 }
 
-function bin(name) {
-  if (name === 'cyclonedx-npm') {
-    return path.join(
-      root,
-      'node_modules',
-      '@cyclonedx',
-      'cyclonedx-npm',
-      'bin',
-      'cyclonedx-npm-cli.js'
+const parsedSbom = parseJsonOutput(sbom.stdout);
+
+fs.writeFileSync(
+  path.join(root, 'sbom.cdx.json'),
+  `${JSON.stringify(parsedSbom, null, 2)}\n`,
+  'utf8'
+);
+
+function parseJsonOutput(output) {
+  const trimmed = output.trim();
+  if (!trimmed) {
+    throw new Error('pnpm sbom returned empty output.');
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    const parsed = parseJsonDocumentFromNoisyOutput(output);
+    if (parsed) {
+      return parsed;
+    }
+    throw new Error(
+      `pnpm sbom did not return valid JSON: ${
+        error instanceof Error ? error.message : String(error)
+      }`
     );
   }
-  throw new Error(`Unknown release asset helper: ${name}`);
+}
+
+function parseJsonDocumentFromNoisyOutput(output) {
+  const lines = output.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const column = lines[index].indexOf('{');
+    if (column === -1) {
+      continue;
+    }
+
+    const candidate = [lines[index].slice(column), ...lines.slice(index + 1)]
+      .join('\n')
+      .trim();
+    const end = candidate.lastIndexOf('}');
+    if (end === -1) {
+      continue;
+    }
+
+    try {
+      return JSON.parse(candidate.slice(0, end + 1));
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }

@@ -8,7 +8,6 @@ const ACTIONABLE_PHRASES = [
   'bug:',
   'potential issue:',
   'suggested fix',
-  'prompt for ai agent',
   'consider adding',
   'consider using',
   'could lead to',
@@ -48,9 +47,7 @@ const BOT_NAME_PATTERNS = [
   /renovate/i,
   /socket/i,
   /sentry/i,
-  /gemini/i,
-  /jules/i,
-  /codex/i
+  /gemini/i
 ];
 
 main().catch((error) => {

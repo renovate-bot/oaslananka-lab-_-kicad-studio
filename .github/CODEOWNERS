@@ -2,7 +2,7 @@
 
 # Toolchain, security, and release surfaces
 /package.json @oaslananka
-/package-lock.json @oaslananka
+/pnpm-lock.yaml @oaslananka
 /.node-version @oaslananka
 /.nvmrc @oaslananka
 /.npmrc @oaslananka

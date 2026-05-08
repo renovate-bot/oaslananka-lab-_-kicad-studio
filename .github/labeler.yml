@@ -32,7 +32,7 @@ type:chore:
             '.github/**',
             'scripts/**',
             'package.json',
-            'package-lock.json',
+            'pnpm-lock.yaml',
             'Taskfile.yml',
             '.pre-commit-config.yaml'
           ]
@@ -47,7 +47,7 @@ marketplace:blocking:
           [
             '.vscodeignore',
             'package.json',
-            'package-lock.json',
+            'pnpm-lock.yaml',
             'scripts/package-extension.js',
             'scripts/publish.sh',
             '.github/workflows/release.yml'

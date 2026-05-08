@@ -7,7 +7,7 @@ stable class, recommended fix, and automation boundary.
 
 ```bash
 node scripts/classify-gh-failure.mjs --log-file failed-run.log --json
-node scripts/classify-gh-failure.mjs --text "npm audit high vulnerability"
+node scripts/classify-gh-failure.mjs --text "pnpm audit high vulnerability"
 gh run view <run-id> --repo oaslananka-lab/kicad-studio --log-failed \
   | node scripts/classify-gh-failure.mjs --json
 ```
@@ -58,7 +58,7 @@ The classifier recognizes:
 - `test failure`
 - `typecheck failure`
 - `lint failure`
-- `npm audit failure`
+- `pnpm audit failure`
 - `dependency audit finding`
 - `package build failure`
 - `personal-mirror-tag-clobber`

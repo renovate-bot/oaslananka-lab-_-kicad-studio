@@ -1,26 +1,31 @@
 # Release Process
 
-Releases are triggered manually from the canonical `oaslananka-lab/kicad-studio` repository. The personal `oaslananka/kicad-studio` repository is a showcase mirror and is never the release authority.
+Releases are created from the canonical `oaslananka-lab/kicad-studio`
+repository. The personal `oaslananka/kicad-studio` repository is a showcase
+mirror and is never the release authority.
 
-1. Go to **Actions** → **Release**.
-2. Click **Run workflow**.
-3. Enter the version (e.g., `v2.7.7`).
-4. Choose whether to **Publish to registries** (`true` or `false`).
-5. If publishing, type `APPROVE_RELEASE` in the approval field.
+## Source Of Truth
 
-The workflow will:
+- release-please manifest mode controls version selection.
+- Conventional Commit history determines SemVer bumps.
+- `.release-please-manifest.json` records the current release state.
+- `release-please-config.json` defines the package metadata and changelog path.
+- Maintainers do not enter release versions manually.
 
-- Build and package the extension.
-- Validate the package metadata and required VSIX runtime assets.
-- Generate `SHA256SUMS.txt`.
-- Generate `sbom.cdx.json`.
-- Create a build provenance attestation.
-- Publish to VS Code Marketplace and Open VSX (if requested).
-- Create a GitHub Release (draft if not publishing).
+## Workflow
 
-Required environment:
+1. A qualifying commit lands on `main`.
+2. `.github/workflows/release.yml` runs release-please.
+3. If a release PR is needed, release-please opens or updates it.
+4. After the release PR is merged, release-please creates the GitHub Release.
+5. Asset jobs build the VSIX from a clean runner checkout.
+6. The workflow generates `SHA256SUMS.txt`, `sbom.cdx.json`, and provenance.
+7. Assets are attached to the GitHub Release and verified.
+8. Registry publishing runs from the release tag when release outputs indicate a
+   release was created.
 
-- `release`
+Manual workflow dispatch is available for diagnostics only and accepts no
+version input.
 
 Required secrets:
 
@@ -32,17 +37,14 @@ Required secrets:
 Supporting secrets:
 
 - `CODECOV_TOKEN` for coverage upload only
-- `JULES_API_KEY` for Jules automation only
 - `PERSONAL_REPO_PUSH_TOKEN` for one-way showcase mirroring only
 - `SENTRY_AUTH_TOKEN` only when source maps are uploaded
 
-Publishing must not run unless `publish=true` and `approval=APPROVE_RELEASE`.
-
-Before any publish attempt, inspect the state machine:
+Before release triage, inspect the state machine:
 
 ```bash
 GH_TOKEN=<token> node scripts/release-state.mjs --repo oaslananka-lab/kicad-studio --json
 ```
 
-`safe_to_publish` is advisory and conservative. Even when it is true, publishing
-still requires manual workflow dispatch and the `release` environment approval.
+`safe_to_publish` is advisory and conservative. Publishing authority remains in
+`.github/workflows/release.yml` and its release-please outputs.

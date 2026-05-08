@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "==> npm audit"
-npm audit --audit-level=high
+echo "==> pnpm audit"
+pnpm audit --audit-level high
 
 echo "==> gitleaks"
 if ! command -v gitleaks >/dev/null 2>&1; then
@@ -16,6 +16,6 @@ gitleaks detect --no-banner --redact
 
 echo "==> bundle size"
 if ! compgen -G "*.vsix" >/dev/null || [[ ! -f dist/extension.js ]]; then
-  npm run package
+  pnpm run package
 fi
-npm run check:bundle-size
+pnpm run check:bundle-size

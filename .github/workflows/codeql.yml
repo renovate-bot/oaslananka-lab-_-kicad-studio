@@ -2,49 +2,41 @@ name: CodeQL
 
 on:
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches: ['main']
+    branches: [main]
   merge_group:
   schedule:
-    - cron: '20 18 * * 1'
+    - cron: '26 3 * * 2'
+  workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   analyze:
-    name: CodeQL
+    name: CodeQL (javascript-typescript)
     if: >-
       github.repository == 'oaslananka-lab/kicad-studio' &&
-      (
-        github.event_name != 'pull_request' ||
-        github.event.pull_request.draft == false
-      )
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ['javascript-typescript']
-
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
-
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e46ed2cbd01164d986452f91f178727624ae40d7
+        uses: github/codeql-action/init@5e316336eb4f107009e477d4bfbfff13d7250fae
         with:
-          languages: ${{ matrix.language }}
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@e46ed2cbd01164d986452f91f178727624ae40d7
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@e46ed2cbd01164d986452f91f178727624ae40d7
+          languages: javascript-typescript
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@5e316336eb4f107009e477d4bfbfff13d7250fae

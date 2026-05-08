@@ -31,44 +31,20 @@ Mirror failure is advisory for release authority. It should be fixed, but it
 must not cause Marketplace or Open VSX publishing to depend on the personal
 repository.
 
-## Manual Dry Run
+## Manual Diagnostics
 
-Manual dispatch defaults to dry-run:
+Manual dispatch has no inputs. It re-runs the same safe mirror plan against the
+current default branch ref and refuses divergent refs.
 
 ```bash
-gh workflow run mirror-personal.yml \
-  --repo oaslananka-lab/kicad-studio \
-  -f dry_run=true \
-  -f force_mirror=false \
-  -f ref_scope=main-and-tags
+gh workflow run mirror-personal.yml --repo oaslananka-lab/kicad-studio
 ```
 
-The workflow prints the exact ref plan without changing personal refs.
+## Divergent Ref Policy
 
-## Divergent Tag Policy
-
-If a personal tag diverges, automatic mode fails with:
-
-```text
-Personal showcase tag <tag> diverges from canonical. Run mirror-personal.yml with force_mirror=true, ref_scope=tags, tag_name=<tag>, approval=MIRROR_CANONICAL_TO_PERSONAL.
-```
-
-Do not delete or overwrite the tag automatically. Review the canonical tag
-object first.
-
-## Manual Force Mode
-
-Force mode requires all of these:
-
-- `workflow_dispatch`
-- `force_mirror=true`
-- `approval=MIRROR_CANONICAL_TO_PERSONAL`
-- explicit `ref_scope`
-- optional `tag_name` when forcing a single tag
-
-The workflow uses `--force-with-lease` and prints the exact ref plan. The
-`PERSONAL_REPO_PUSH_TOKEN` value must never be printed or stored in the
-repository.
+If a personal ref diverges, automatic and manual runs fail with a clear error.
+Do not delete or overwrite the personal ref from automation. Review the
+canonical and personal refs before any separate recovery.
 
 ## Required Secret
 

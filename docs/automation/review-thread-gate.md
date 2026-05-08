@@ -18,12 +18,12 @@ The gate ignores:
 
 - resolved threads
 - outdated threads
-- bot-only informational threads
+- automation-only informational threads
 
 The gate blocks on:
 
 - unresolved, not-outdated human review threads
-- unresolved, not-outdated bot threads containing actionable release,
+- unresolved, not-outdated automation-authored threads containing actionable release,
   security, workflow, package, Marketplace, `vsce`, `ovsx`, secret, token,
   correctness, vulnerability, or suggested-fix language
 

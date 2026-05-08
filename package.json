@@ -8,17 +8,12 @@
     "vscode": "^1.99.0",
     "node": "24.x"
   },
-  "packageManager": "npm@11.13.0",
+  "packageManager": "pnpm@11.0.8",
   "devEngines": {
     "runtime": {
       "name": "node",
       "version": "24.x",
       "onFail": "warn"
-    },
-    "packageManager": {
-      "name": "npm",
-      "version": ">=11.0.0",
-      "onFail": "error"
     }
   },
   "categories": [
@@ -1787,25 +1782,25 @@
     "prepare": "husky",
     "prepare:media": "node scripts/bundle-kicanvas.js",
     "generate:assets": "node scripts/generate-icon.js",
-    "vscode:prepublish": "npm run build:prod",
-    "build": "npm run prepare:media && webpack --mode production",
-    "build:prod": "npm run build",
+    "vscode:prepublish": "pnpm run build:prod",
+    "build": "pnpm run prepare:media && webpack --mode production",
+    "build:prod": "pnpm run build",
     "watch": "webpack --mode development --watch",
-    "format": "prettier --ignore-unknown --write package.json package-lock.json README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml scripts/**/*.{js,mjs} azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js",
-    "format:check": "prettier --ignore-unknown --check package.json package-lock.json README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml scripts/**/*.{js,mjs} azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js",
+    "format": "prettier --ignore-unknown --write package.json pnpm-lock.yaml pnpm-workspace.yaml README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml scripts/**/*.{js,mjs} azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc release-please-config.json .release-please-manifest.json .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js stryker.config.json Taskfile.yml .editorconfig .github/*.yml .github/*.yaml .github/rulesets/*.json .github/CODEOWNERS .vscodeignore",
+    "format:check": "prettier --ignore-unknown --check package.json pnpm-lock.yaml pnpm-workspace.yaml README.md CHANGELOG.md SECURITY.md docs/**/*.md .github/workflows/*.yml scripts/**/*.{js,mjs} azure-pipelines-*.yml .gitlab-ci.yml .vscode/*.json tsconfig*.json .prettierrc .prettierignore .npmrc release-please-config.json .release-please-manifest.json .nvmrc .node-version eslint.config.cjs jest.config.js webpack.config.js stryker.config.json Taskfile.yml .editorconfig .github/*.yml .github/*.yaml .github/rulesets/*.json .github/CODEOWNERS .vscodeignore",
     "lint": "eslint src test scripts --ext .ts,.js,.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "audit:ci": "npm audit --audit-level=high",
+    "audit:ci": "pnpm audit --audit-level high",
     "check:staged": "lint-staged",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run build",
     "check:workspace-trust": "node scripts/check-untrusted-workspace.js",
-    "check:ci": "npm run audit:ci && npm run format:check && npm run docs:check && npm run workflows:lint && npm run lint && npm run typecheck && npm run check:workspace-trust && npm run test:unit:coverage && npm run build && npm run package && npm run package:validate && npm run check:bundle-size",
+    "check:ci": "pnpm run audit:ci && pnpm run format:check && pnpm run docs:check && pnpm run workflows:lint && pnpm run lint && pnpm run typecheck && pnpm run check:workspace-trust && pnpm run test:unit:coverage && pnpm run build && pnpm run test:integration && pnpm run package && pnpm run package:validate && pnpm run release:dry-run && pnpm run check:bundle-size",
     "compile-tests": "tsc -p tsconfig.test.json",
-    "test": "npm run test:unit && npm run test:integration",
+    "test": "pnpm run test:unit && pnpm run test:integration",
     "test:unit": "jest --runInBand",
     "test:unit:coverage": "jest --runInBand --coverage",
-    "test:integration": "npm run compile-tests && node ./out/test/runTest.js",
-    "test:integration:real": "npm run compile-tests && node ./out/test/integration/realServer/quickstart.flow.test.js && node ./out/test/integration/realServer/qualityGate.flow.test.js && node ./out/test/integration/realServer/contextBridge.flow.test.js",
+    "test:integration": "pnpm run compile-tests && node ./out/test/runTest.js",
+    "test:integration:real": "pnpm run compile-tests && node ./out/test/integration/realServer/quickstart.flow.test.js && node ./out/test/integration/realServer/qualityGate.flow.test.js && node ./out/test/integration/realServer/contextBridge.flow.test.js",
     "test:e2e": "playwright test test/e2e/",
     "check:bundle-size": "node scripts/check-bundle-size.js",
     "bundle-kicanvas": "node scripts/bundle-kicanvas.js",
@@ -1818,7 +1813,8 @@
     "docs:check": "node scripts/validate-docs.js",
     "workflows:lint": "node scripts/lint-workflows.js",
     "publish": "node scripts/refuse-direct-publish.mjs",
-    "pretest": "npm run build && npm run compile-tests"
+    "pretest": "pnpm run build && pnpm run compile-tests",
+    "release:dry-run": "node scripts/validate-release-please.mjs"
   },
   "c8": {
     "reporter": [
@@ -1839,7 +1835,6 @@
   "devDependencies": {
     "@commitlint/cli": "20.5.3",
     "@commitlint/config-conventional": "20.5.3",
-    "@cyclonedx/cyclonedx-npm": "4.2.1",
     "@eslint/js": "9.39.4",
     "@go-task/cli": "3.50.0",
     "@playwright/test": "1.59.1",
@@ -1852,6 +1847,7 @@
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.9.1",
     "actionlint": "2.0.6",
+    "ajv": "8.20.0",
     "c8": "11.0.0",
     "eslint": "9.39.4",
     "fast-check": "4.7.0",
@@ -1867,7 +1863,10 @@
     "ts-loader": "9.5.7",
     "typescript": "5.9.3",
     "webpack": "5.106.2",
-    "webpack-cli": "7.0.2"
+    "webpack-cli": "7.0.2",
+    "release-please": "17.6.0",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/jest-runner": "9.6.1"
   },
   "dependencies": {
     "exceljs": "4.4.0",
@@ -1879,12 +1878,5 @@
       "prettier --write"
     ],
     "*.{json,md,yml,yaml}": "prettier --write"
-  },
-  "overrides": {
-    "uuid": "^14.0.0",
-    "mocha": {
-      "diff": "^8.0.4",
-      "serialize-javascript": "^7.0.5"
-    }
   }
 }

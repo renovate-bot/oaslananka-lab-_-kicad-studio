@@ -48,14 +48,18 @@
   color: b60205
 - name: review:clean
   color: 0e8a16
-- name: agent:fix-review
-  color: 5319e7
-- name: agent:needs-human
-  color: d93f0b
 - name: release:blocking
   color: b60205
 - name: release:dry-run-ok
   color: 0e8a16
+- name: 'autorelease: pending'
+  color: 1d76db
+- name: 'autorelease: tagged'
+  color: 0e8a16
+- name: 'autorelease: snapshot'
+  color: fbca04
+- name: 'autorelease: snooze'
+  color: cccccc
 - name: marketplace:blocking
   color: b60205
 - name: marketplace:dry-run-ok

@@ -42,10 +42,10 @@ async function main() {
 
   const repo = options.repo ?? DEFAULT_REPO;
   const packageJson = readJson(path.join(ROOT, 'package.json'));
-  const version = options.version ?? packageJson.version;
-  const tagName = version.startsWith('v') ? version : `v${version}`;
+  const version = packageJson.version;
+  const tagName = `v${version}`;
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-  const state = await inspectReleaseState({ repo, version, tagName, token });
+  const state = await inspectReleaseState({ repo, tagName, token });
 
   if (options.summaryFile) {
     fs.writeFileSync(
@@ -78,9 +78,6 @@ function parseArgs(args) {
       case '--repo':
         options.repo = requireValue(args, (index += 1), arg);
         break;
-      case '--version':
-        options.version = requireValue(args, (index += 1), arg);
-        break;
       case '--json':
         options.json = true;
         break;
@@ -107,7 +104,6 @@ function printHelp() {
 
 Options:
   --repo owner/name      Canonical repository, default ${DEFAULT_REPO}.
-  --version version     Package version or v-prefixed tag to inspect.
   --json                Print machine-readable JSON.
   --summary-file path   Write JSON summary to the given path.
   --help                Show this help.
@@ -117,20 +113,16 @@ Environment:
   for release, workflow, and mirror state inspection.`);
 }
 
-async function inspectReleaseState({ repo, version, tagName, token }) {
+async function inspectReleaseState({ repo, tagName, token }) {
   const [owner, name] = parseRepo(repo);
   const packageJson = readJson(path.join(ROOT, 'package.json'));
-  const lockJson = readJson(path.join(ROOT, 'package-lock.json'));
   const localVsix = path.join(
     ROOT,
     `${packageJson.name}-${packageJson.version}.vsix`
   );
   const checks = {
-    packageVersionMatchesInput:
-      packageJson.version === version || `v${packageJson.version}` === version,
-    lockVersionMatchesPackage:
-      lockJson.version === packageJson.version &&
-      lockJson.packages?.['']?.version === packageJson.version,
+    pnpmLockExists: fs.existsSync(path.join(ROOT, 'pnpm-lock.yaml')),
+    packageLockAbsent: !fs.existsSync(path.join(ROOT, 'package-lock.json')),
     localVsixExists: fs.existsSync(localVsix),
     localChecksumsExist: fs.existsSync(path.join(ROOT, 'SHA256SUMS.txt')),
     localSbomExists: fs.existsSync(path.join(ROOT, 'sbom.cdx.json'))
@@ -314,14 +306,12 @@ function apiErrorFor(label, result) {
 
 function collectBlockers({ checks, remote, tagName }) {
   const blockers = [];
-  if (!checks.packageVersionMatchesInput) {
-    blockers.push(
-      'package.json version does not match the requested release version.'
-    );
+  if (!checks.pnpmLockExists) {
+    blockers.push('pnpm-lock.yaml is missing.');
   }
-  if (!checks.lockVersionMatchesPackage) {
+  if (!checks.packageLockAbsent) {
     blockers.push(
-      'package-lock.json root version does not match package.json.'
+      'package-lock.json must not be committed after pnpm migration.'
     );
   }
   if (!remote.tokenAvailable) {
@@ -380,13 +370,13 @@ function nextSafeCommand({ currentState, tagName, blockers, remote }) {
     return 'Open or update the release PR through the configured release automation.';
   }
   if (currentState === 'tag-created') {
-    return `Run the Release workflow for ${tagName} with publish=false.`;
+    return `Run the Release workflow diagnostics for ${tagName}.`;
   }
   if (currentState === 'vsix-built' && !remote.latestReleaseRun) {
-    return `Run the Release workflow for ${tagName} with publish=false.`;
+    return `Run the Release workflow diagnostics for ${tagName}.`;
   }
   if (currentState === 'dry-run-success' || currentState === 'vsix-built') {
-    return 'Review release artifacts and require human environment approval before any publish=true run.';
+    return 'Review release artifacts and keep publish authority in the release workflow outputs.';
   }
   return 'Inspect post-release smoke and mirror state before closing the release.';
 }

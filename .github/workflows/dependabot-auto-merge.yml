@@ -7,47 +7,35 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   auto-merge:
     name: Auto-merge Dependabot patch/minor
     if: >-
-      github.event.pull_request.user.id == '49699333' &&
+      github.event.sender.login == 'dependabot[bot]' &&
+      github.event.sender.type == 'Bot' &&
       github.repository == 'oaslananka-lab/kicad-studio'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
-      - name: Fetch Dependabot metadata
-        id: meta
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Auto-approve patch updates
-        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          script: |
-            await github.rest.pulls.createReview({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              event: 'APPROVE',
-              body: 'Auto-approved: patch-level dependency update.'
-            });
-
-      - name: Auto-merge patch + minor
-        if: >-
-          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
-          steps.meta.outputs.update-type == 'version-update:semver-minor'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
-        with:
-          script: |
-            await github.rest.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              merge_method: 'squash'
-            });
+          node-version-file: .node-version
+      - name: Auto-merge safe dependency updates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/dependabot-auto-merge.mjs

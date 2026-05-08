@@ -1,22 +1,27 @@
-name: Auto-label
+name: Auto Label
 
 on:
   pull_request:
-    types: [opened, synchronize]
-  issues:
-    types: [opened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
-  issues: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  labeler:
-    if: github.repository == 'oaslananka-lab/kicad-studio'
-    runs-on: ubuntu-latest
+  label:
+    name: Auto label
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/labeler@f27b608878404679385c85cfa523b85ccb86e213
         with:
-          repo-token: '${{ secrets.GITHUB_TOKEN }}'
-          sync-labels: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml

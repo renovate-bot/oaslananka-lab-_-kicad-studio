@@ -19,7 +19,6 @@ This branch consolidates the open Dependabot and Socket dependency wave into one
 | #12 | `@eslint/js` 9 to 10                                                                           | Postponed with ESLint 10.                                                                         |
 | #13 | `actions/checkout` pinned SHA update                                                           | Reviewed as safe patch input; existing pinned checkout usage remains intact.                      |
 | #14 | `actions/stale` 9 to 10                                                                        | Reviewed as acceptable major input; no direct workflow change was required in this branch.        |
-| #15 | `release-drafter` 6 to 7                                                                       | Reviewed as acceptable major input; no direct workflow change was required in this branch.        |
 
 ## Applied Updates
 

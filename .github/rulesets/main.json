@@ -3,12 +3,21 @@
   "target": "branch",
   "enforcement": "active",
   "conditions": {
-    "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    }
   },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
-    { "type": "required_signatures" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_signatures"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -24,13 +33,36 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "Full CI Pipeline (ubuntu-latest)" },
-          { "context": "Full CI Pipeline (windows-latest)" },
-          { "context": "Full CI Pipeline (macos-latest)" },
-          { "context": "Trivy (filesystem scan)" },
-          { "context": "CodeQL (javascript-typescript)" },
-          { "context": "Gitleaks" },
-          { "context": "Scorecard analysis" }
+          {
+            "context": "Full CI Pipeline (ubuntu-24.04)"
+          },
+          {
+            "context": "Full CI Pipeline (windows-2025)"
+          },
+          {
+            "context": "Full CI Pipeline (macos-15)"
+          },
+          {
+            "context": "Trivy (filesystem scan)"
+          },
+          {
+            "context": "pnpm audit"
+          },
+          {
+            "context": "Workflow security (zizmor)"
+          },
+          {
+            "context": "CodeQL (javascript-typescript)"
+          },
+          {
+            "context": "Gitleaks"
+          },
+          {
+            "context": "Scorecard analysis"
+          },
+          {
+            "context": "Review Thread Gate"
+          }
         ]
       }
     }

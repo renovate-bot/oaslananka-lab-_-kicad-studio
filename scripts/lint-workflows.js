@@ -11,7 +11,9 @@ const workflowsDir = path.join(root, '.github', 'workflows');
 const ignoredMessages = [
   // The npm WASM build lags GitHub's current permissions list. GitHub's
   // artifact attestation docs require attestations: write for provenance.
-  /unknown permission scope "attestations"/
+  /unknown permission scope "attestations"/,
+  // The npm WASM build also lags current hosted runner labels.
+  /label "(ubuntu-24\.04|windows-2025|macos-15)" is unknown/
 ];
 
 main().catch((error) => {

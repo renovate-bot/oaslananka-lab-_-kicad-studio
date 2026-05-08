@@ -1,70 +1,66 @@
-name: Sync labels
+name: Sync Labels
+
 on:
   push:
     branches: [main]
-    paths: ['.github/labels.yml']
+    paths:
+      - '.github/labels.yml'
+      - '.github/workflows/sync-labels.yml'
   workflow_dispatch:
 
 permissions:
+  contents: read
   issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   sync:
+    name: Sync labels
     if: github.repository == 'oaslananka-lab/kicad-studio'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
-      - name: Sync labels
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         with:
           script: |
             const fs = require('fs');
-            const scalar = (value) => value.trim().replace(/^['"]|['"]$/g, '');
-            const labels = [];
-            let current;
-
-            for (const line of fs.readFileSync('.github/labels.yml', 'utf8').split(/\r?\n/)) {
-              const name = line.match(/^-\s+name:\s*(.+)$/);
-              if (name) {
-                current = { name: scalar(name[1]), description: '' };
-                labels.push(current);
-                continue;
-              }
-
-              const property = line.match(/^\s+(color|description):\s*(.+)$/);
-              if (property && current) {
-                current[property[1]] = scalar(property[2]);
+            const yaml = require('js-yaml');
+            const desired = yaml.load(fs.readFileSync('.github/labels.yml', 'utf8'));
+            const desiredNames = new Set(desired.map(label => label.name));
+            for (const label of desired) {
+              try {
+                await github.rest.issues.updateLabel({
+                  ...context.repo,
+                  name: label.name,
+                  color: String(label.color).replace(/^#/, ''),
+                  description: label.description || ''
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  ...context.repo,
+                  name: label.name,
+                  color: String(label.color).replace(/^#/, ''),
+                  description: label.description || ''
+                });
               }
             }
-
-            const { owner, repo } = context.repo;
             const existing = await github.paginate(github.rest.issues.listLabelsForRepo, {
-              owner,
-              repo,
+              ...context.repo,
               per_page: 100
             });
-            const byName = new Map(existing.map((label) => [label.name.toLowerCase(), label]));
-
-            for (const label of labels) {
-              const match = byName.get(label.name.toLowerCase());
-              if (match) {
-                await github.rest.issues.updateLabel({
-                  owner,
-                  repo,
-                  name: match.name,
-                  new_name: label.name,
-                  color: label.color,
-                  description: label.description
-                });
-              } else {
-                await github.rest.issues.createLabel({
-                  owner,
-                  repo,
-                  name: label.name,
-                  color: label.color,
-                  description: label.description
-                });
+            for (const label of existing) {
+              if (!desiredNames.has(label.name)) {
+                await github.rest.issues.deleteLabel({ ...context.repo, name: label.name });
               }
             }

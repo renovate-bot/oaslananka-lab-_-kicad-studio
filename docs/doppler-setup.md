@@ -12,4 +12,3 @@ The following secrets should be present in the `all/main` config:
 - `DOPPLER_GITHUB_SERVICE_TOKEN`
 - `VSCE_PAT`
 - `OVSX_PAT`
-- `JULES_API_KEY`

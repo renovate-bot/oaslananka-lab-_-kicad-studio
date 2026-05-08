@@ -12,14 +12,14 @@ KiCad Studio uses the `oaslananka-lab` organization repository as the canonical 
 ## Trigger Policy
 
 - GitHub Actions in `oaslananka-lab/kicad-studio` run CI for pushes, pull requests, and merge queue events.
-- Release and publish workflows run only from the organization repository and require the `release` environment plus explicit publish approval.
+- Release and publish workflows run only from the organization repository. Release versions are derived by release-please from Conventional Commit history and the manifest.
 - The personal GitHub repository is showcase-only and should have Actions disabled.
 - Azure Pipelines are manual-only (`trigger: none`, `pr: none`).
 - GitLab CI is manual-only and starts only from the GitLab web UI.
 
 ## Draft-First Pull Requests
 
-Agent-generated PRs should start as draft. Draft PRs run cheap gates only:
+Draft PRs run cheap gates only:
 
 - review-thread gate
 - format/lint quick checks
@@ -49,7 +49,6 @@ Configure these in the `oaslananka-lab/kicad-studio` repository or as selected o
 - `VSCE_PAT`: Visual Studio Marketplace publish token.
 - `OVSX_PAT`: Open VSX publish token.
 - `PERSONAL_REPO_PUSH_TOKEN`: token for one-way source mirroring to the personal showcase repository.
-- `JULES_API_KEY`: Jules workflow token.
 - `CODECOV_TOKEN`: coverage upload token only.
 - `DOPPLER_GITHUB_SERVICE_TOKEN`: optional only if maintainers later replace the default `github.token` GitHub Release flow with a service-token fallback.
 - `SENTRY_AUTH_TOKEN`: optional, only when source maps are uploaded.

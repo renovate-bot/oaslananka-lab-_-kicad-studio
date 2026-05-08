@@ -5,7 +5,7 @@ target="${PUBLISH_TARGET:-all}"
 vsix="$(find . -maxdepth 1 -type f -name 'kicadstudio-*.vsix' | sort | head -n 1)"
 
 if [ -z "${vsix}" ]; then
-  echo "No kicadstudio-*.vsix artifact found. Run npm run package first." >&2
+  echo "No kicadstudio-*.vsix artifact found. Run pnpm run package first." >&2
   exit 1
 fi
 
@@ -15,7 +15,7 @@ publish_marketplace() {
     exit 1
   fi
   echo "Publishing ${vsix} to Visual Studio Marketplace..."
-  npx @vscode/vsce publish --packagePath "${vsix}" --pat "${VSCE_PAT}"
+  pnpm exec vsce publish --packagePath "${vsix}" --pat "${VSCE_PAT}"
 }
 
 publish_open_vsx() {
@@ -24,7 +24,7 @@ publish_open_vsx() {
     exit 1
   fi
   echo "Publishing ${vsix} to Open VSX..."
-  npx ovsx publish "${vsix}" --pat "${OVSX_PAT}"
+  pnpm exec ovsx publish "${vsix}" --pat "${OVSX_PAT}"
 }
 
 case "${target}" in

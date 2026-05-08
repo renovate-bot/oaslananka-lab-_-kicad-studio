@@ -26,34 +26,16 @@ KiCad Studio turns VS Code into a practical KiCad workspace: view schematics and
 
 ## Automation And Security
 
-Jules automation is configured only for `oaslananka-lab/kicad-studio`. Jules may create or update fix branches and PRs for trusted CI failures, maintainer-dispatched work, dependency triage, and allowlisted issue triggers. Jules cannot publish VS Marketplace extensions, Open VSX extensions, GitHub Releases, VSIX production artifacts, npm packages, Docker images, or marketplace metadata. Jules PRs require human review; no auto-approve or auto-merge workflow is enabled.
+Repository automation is limited to CI, security scanning, dependency maintenance, review-thread enforcement, label synchronization, release-please, and release publishing. Publishing runs only from the organization repository and only through the configured release workflow.
 
-Manual Jules trigger:
-
-```bash
-gh workflow run jules-manual.yml --repo oaslananka-lab/kicad-studio
-```
-
-Dependency triage trigger:
-
-```bash
-gh workflow run jules-dependency-fixer.yml --repo oaslananka-lab/kicad-studio
-```
-
-See [docs/automation/jules.md](docs/automation/jules.md) for guardrails and disable steps.
-
-Repository operations also include a review-thread gate, guarded review-fix
-loop, failure classifier, manual Actions maintenance workflow, release state
-machine, and preflighted personal mirror policy. See
-[docs/repository-operations.md](docs/repository-operations.md) and
-[docs/automation/agent-policy.md](docs/automation/agent-policy.md).
+See [docs/repository-operations.md](docs/repository-operations.md) for operational policy and release verification.
 
 ## What's New In 2.7.0
 
 - VS Code engine raised to `^1.99.0` with matching manifest typings.
-- Node.js/npm development toolchain aligned on Node.js 24.x and npm 11+.
-- CI and merge queue workflows now use `npm ci` and fail closed on PR/push security checks.
-- Local security scripts run high-severity npm audit, gitleaks, and bundle-size enforcement.
+- Node.js development toolchain aligned on Node.js 24.x and pnpm 11.
+- CI and merge queue workflows now use `pnpm install --frozen-lockfile` and fail closed on PR/push security checks.
+- Local security scripts run high-severity pnpm audit, gitleaks, and bundle-size enforcement.
 - Taskfile, pre-commit, Renovate, CODEOWNERS, and report hygiene were tightened for release maintenance.
 
 ## Feature Highlights
@@ -237,22 +219,22 @@ Important settings include:
 
 ### Local Commands
 
-- `npm ci`
-- `npm run check`
-- `npm run check:ci`
-- `npm run format:check`
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test:unit`
-- `npm test`
-- `npm run build`
-- `npm run build:prod`
-- `npm run package`
-- `npm run workflows:lint`
+- `pnpm install --frozen-lockfile`
+- `pnpm run check`
+- `pnpm run check:ci`
+- `pnpm run format:check`
+- `pnpm run lint`
+- `pnpm run typecheck`
+- `pnpm run test:unit`
+- `pnpm test`
+- `pnpm run build`
+- `pnpm run build:prod`
+- `pnpm run package`
+- `pnpm run workflows:lint`
 
 ### CI/CD Layout
 
-- `.github/workflows/ci.yml`, `.github/workflows/release.yml`, and the Jules workflows are scoped to the `oaslananka-lab` organization repository.
+- `.github/workflows/ci.yml`, `.github/workflows/release.yml`, and repository maintenance workflows are scoped to the `oaslananka-lab` organization repository.
 - Azure DevOps and GitLab files are manual fallback references only; they are not canonical release authorities.
 
 ## Contributing

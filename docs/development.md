@@ -4,7 +4,7 @@
 
 ```bash
 # Install Task: https://taskfile.dev/installation/
-task install     # npm ci from package-lock.json
+task install     # pnpm install --frozen-lockfile from pnpm-lock.yaml
 task hooks       # install git hooks
 ```
 
@@ -20,7 +20,7 @@ task lint        # check formatting and linting
 task typecheck   # static types
 task test        # run tests
 task ci          # run the full CI pipeline locally
-task security    # run npm audit, gitleaks, and bundle-size checks
+task security    # run pnpm audit, gitleaks, and bundle-size checks
 ```
 
 ## Before push
@@ -36,6 +36,6 @@ task ci:act      # optional: run GitHub Actions in Docker locally
 ## Troubleshooting
 
 - `task: command not found` → install Task: `brew install go-task` or download from https://taskfile.dev/installation/
-- `npm ci` rejects your runtime → switch to Node.js 24.x and npm 11 or newer.
+- `pnpm install --frozen-lockfile` rejects your runtime → switch to Node.js 24.x and pnpm 11.
 - pre-commit hook is too slow → run `pre-commit run --all-files` once to warm caches
 - `task ci` fails but CI passes (or vice versa) → likely Doppler secrets differ; run `task doppler:check`

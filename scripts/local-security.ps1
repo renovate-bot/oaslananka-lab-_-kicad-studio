@@ -4,8 +4,8 @@ Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
 
-Write-Host '==> npm audit'
-npm audit --audit-level=high
+Write-Host '==> pnpm audit'
+pnpm audit --audit-level high
 
 Write-Host '==> gitleaks'
 $gitleaks = Get-Command gitleaks -ErrorAction SilentlyContinue
@@ -16,6 +16,6 @@ gitleaks detect --no-banner --redact
 
 Write-Host '==> bundle size'
 if (-not (Get-ChildItem -LiteralPath $root -Filter '*.vsix' -File -ErrorAction SilentlyContinue) -or -not (Test-Path -LiteralPath (Join-Path $root 'dist/extension.js'))) {
-  npm run package
+  pnpm run package
 }
-npm run check:bundle-size
+pnpm run check:bundle-size

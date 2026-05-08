@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-npm run check:staged
+pnpm run check:staged

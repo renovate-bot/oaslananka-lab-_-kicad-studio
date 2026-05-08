@@ -15,24 +15,24 @@ kicad-studio uses **Jest** for unit tests and **Playwright** for E2E/integration
 
 ```bash
 # Install deps
-npm ci
+pnpm install --frozen-lockfile
 
 # Unit + integration (fast)
-npm test
+pnpm test
 
 # E2E (requires display; use xvfb on Linux)
-xvfb-run -a npx task e2e # Linux
-npx task e2e # macOS / Windows
+xvfb-run -a pnpm exec task e2e # Linux
+pnpm exec task e2e # macOS / Windows
 
 # Coverage report
-npm run test:coverage
+pnpm run test:unit:coverage
 ```
 
 ## CI Behavior
 
 - All 3 OS (ubuntu, windows, macos) run the full Jest suite.
 - E2E runs via `xvfb-run` on Linux only.
-- Coverage is uploaded to Codecov from ubuntu-latest.
+- Coverage is generated on ubuntu-24.04 during CI.
 - Mutation score is tracked weekly; see Actions tab.
 
 ## VS Code Extension Test Constraints
@@ -45,5 +45,5 @@ npm run test:coverage
 
 1. Unit test: `src/<module>/__tests__/<module>.test.ts`.
 2. Integration test: `test/integration/<feature>.test.ts`.
-3. Run `npm test -- --testPathPattern=<file>` locally.
-4. Ensure `npm run lint` passes before committing.
+3. Run `pnpm test -- --testPathPattern=<file>` locally.
+4. Ensure `pnpm run lint` passes before committing.

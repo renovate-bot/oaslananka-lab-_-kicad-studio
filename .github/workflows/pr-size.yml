@@ -1,15 +1,29 @@
-name: 'Pull Request Size Labeler'
-on: [pull_request]
+name: PR Size
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  triage:
-    if: github.repository == 'oaslananka-lab/kicad-studio'
-    runs-on: ubuntu-latest
+  size:
+    name: PR size
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: pascalgn/size-label-action@56b489b027932ec0cf60438a1a5f1a19c8fc71ff
-        env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const changes = pr.additions + pr.deletions;
+            await core.summary.addHeading('PR size').addRaw(String(changes) + ' changed lines').write();

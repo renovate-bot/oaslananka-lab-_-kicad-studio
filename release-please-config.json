@@ -1,0 +1,9 @@
+{
+  "release-type": "node",
+  "packages": {
+    ".": {
+      "package-name": "kicadstudio",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

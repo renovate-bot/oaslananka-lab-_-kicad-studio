@@ -10,7 +10,6 @@ azure-pipelines*.yml
 reports/**
 docs/automation/**
 docs/dependency-upgrade-notes.md
-docs/jules-runbook.md
 docs/repository-operations.md
 src/**
 test/**
@@ -29,10 +28,16 @@ review-thread-summary*.json
 *.vsix
 .actrc
 .pre-commit-config.yaml
+.editorconfig
+.gitattributes
 .node-version
 .nvmrc
 .gitignore
 .prettierignore
+.release-please-manifest.json
+release-please-config.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
 Taskfile.yml
 commitlint.config.cjs
 tsconfig.json
@@ -43,3 +48,4 @@ eslint.config.cjs
 .prettierrc
 jest.config.js
 renovate.json
+stryker.config.json

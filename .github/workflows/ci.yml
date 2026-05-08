@@ -2,32 +2,34 @@ name: CI
 
 on:
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   ci:
-    name: Full CI Pipeline
+    name: Full CI Pipeline (${{ matrix.os }})
     if: >-
       github.repository == 'oaslananka-lab/kicad-studio' &&
-      (
-        github.event_name != 'pull_request' ||
-        github.event.pull_request.draft == false
-      )
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, windows-2025, macos-15]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -35,36 +37,16 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version-file: .node-version
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.8 --activate
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Run CI
         run: |
           if [ "${{ runner.os }}" = "Linux" ]; then
-            xvfb-run -a npm exec -- task ci
+            xvfb-run -a pnpm exec task ci
           else
-            npm exec -- task ci
+            pnpm exec task ci
           fi
-        shell: bash
-      - name: Publish test results
-        if: always() && hashFiles('**/junit.xml', '**/test-results.xml') != ''
-        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040
-        with:
-          files: |
-            **/junit.xml
-            **/test-results.xml
-      - name: Upload coverage to Codecov
-        if: >-
-          matrix.os == 'ubuntu-latest' &&
-          github.actor != 'dependabot[bot]' &&
-          (
-            github.event_name != 'pull_request' ||
-            github.event.pull_request.head.repo.full_name == github.repository
-          )
-        # codecov/codecov-action@v6
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2
-        continue-on-error: true
-        with:
-          files: coverage/lcov.info
-          flags: unit
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}

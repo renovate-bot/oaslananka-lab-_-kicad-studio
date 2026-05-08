@@ -8,4 +8,4 @@ KiCad Studio settings are contributed through the VS Code Settings UI under the 
 - Update README and feature docs when a setting changes public behavior.
 - Keep prompt-facing AI settings aligned with `docs/AI_PROVIDERS.md`.
 - Keep MCP settings aligned with `docs/INTEGRATION.md` and the `.vscode/mcp.json` schema.
-- Validate manifest edits with `npm run format:check`, `npm run typecheck`, and package metadata checks before release.
+- Validate manifest edits with `pnpm run format:check`, `pnpm run typecheck`, and package metadata checks before release.

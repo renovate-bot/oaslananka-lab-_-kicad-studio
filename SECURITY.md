@@ -31,4 +31,4 @@ Before release, run:
 task security:local
 ```
 
-The local security task runs high-severity `npm audit`, `gitleaks detect --redact`, and the bundle-size gate. GitHub pull request, merge queue, and push security workflows are expected to fail closed on findings.
+The local security task runs high-severity `pnpm audit`, `gitleaks detect --redact`, and the bundle-size gate. GitHub pull request, merge queue, and push security workflows are expected to fail closed on findings.

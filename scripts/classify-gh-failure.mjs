@@ -70,7 +70,7 @@ const FAILURE_CLASSES = [
     ],
     rootCause: 'The generated VSIX is invalid or cannot be consumed.',
     recommendedFix:
-      'Regenerate the VSIX with npm run package, run package validation, and inspect package contents before any publish retry.',
+      'Regenerate the VSIX with pnpm run package, run package validation, and inspect package contents before any publish retry.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -84,7 +84,7 @@ const FAILURE_CLASSES = [
     ],
     rootCause: 'The VSIX contents do not match the expected runtime package.',
     recommendedFix:
-      'Fix .vscodeignore or packaging inputs, then run npm run package and npm run package:validate.',
+      'Fix .vscodeignore or packaging inputs, then run pnpm run package and pnpm run package:validate.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -97,9 +97,9 @@ const FAILURE_CLASSES = [
       /version.*does not match package\.json/i
     ],
     rootCause:
-      'The release tag, workflow input, package.json, or package-lock version disagree.',
+      'The release tag, release-please output, package.json, or pnpm lock state disagree.',
     recommendedFix:
-      'Stop the release and align package.json, package-lock.json, and the v-prefixed release tag before retrying.',
+      'Stop the release and align package.json, pnpm-lock.yaml, and the v-prefixed release tag before retrying.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -123,7 +123,7 @@ const FAILURE_CLASSES = [
     patterns: [/sbom.*(failed|error|missing)/i, /cyclonedx.*(failed|error)/i],
     rootCause: 'SBOM generation failed or the expected SBOM file is missing.',
     recommendedFix:
-      'Run npm run release:assets locally, fix dependency/SBOM generation errors, and keep the SBOM artifact with the release assets.',
+      'Run pnpm run release:assets locally, fix dependency/SBOM generation errors, and keep the SBOM artifact with the release assets.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -136,7 +136,7 @@ const FAILURE_CLASSES = [
     ],
     rootCause: 'Checksum generation failed or SHA256SUMS.txt is missing.',
     recommendedFix:
-      'Run npm run release:assets locally and verify SHA256SUMS.txt covers the generated VSIX.',
+      'Run pnpm run release:assets locally and verify SHA256SUMS.txt covers the generated VSIX.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -161,7 +161,7 @@ const FAILURE_CLASSES = [
     patterns: [/\bvsce\b.*(error|failed|invalid)/i, /@vscode\/vsce/i],
     rootCause: 'VSIX packaging failed before marketplace upload.',
     recommendedFix:
-      'Run npm run package and package validation locally, then fix manifest, .vscodeignore, or bundled runtime asset drift.',
+      'Run pnpm run package and package validation locally, then fix manifest, .vscodeignore, or bundled runtime asset drift.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -194,14 +194,14 @@ const FAILURE_CLASSES = [
   {
     id: 'package-json-version-drift',
     patterns: [
-      /package-lock.*version.*match/i,
+      /pnpm lock.*version.*match/i,
       /version.*drift/i,
       /tag.*version/i
     ],
     rootCause:
-      'package.json, package-lock.json, or release tag versions disagree.',
+      'package.json, pnpm-lock.yaml, or release tag versions disagree.',
     recommendedFix:
-      'Update package.json and package-lock.json together, or stop the release until the tag and package version agree.',
+      'Update package.json and pnpm-lock.yaml together, or stop the release until the tag and package version agree.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -222,7 +222,7 @@ const FAILURE_CLASSES = [
     patterns: [/workflow.*syntax/i, /invalid workflow/i, /yaml/i],
     rootCause: 'GitHub Actions workflow YAML or expression syntax is invalid.',
     recommendedFix:
-      'Run npm run workflows:lint, fix the workflow syntax, and keep permissions/concurrency explicit.',
+      'Run pnpm run workflows:lint, fix the workflow syntax, and keep permissions/concurrency explicit.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -233,7 +233,7 @@ const FAILURE_CLASSES = [
     rootCause:
       'actionlint reported invalid workflow syntax, context use, or action configuration.',
     recommendedFix:
-      'Fix the reported workflow line and re-run npm run workflows:lint.',
+      'Fix the reported workflow line and re-run pnpm run workflows:lint.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: true
@@ -250,11 +250,14 @@ const FAILURE_CLASSES = [
   },
   {
     id: 'dependency-cache/restore issue',
-    patterns: [/cache.*(restore|miss|fail)/i, /npm ci.*cache/i],
+    patterns: [
+      /cache.*(restore|miss|fail)/i,
+      /pnpm install --frozen-lockfile.*cache/i
+    ],
     rootCause:
       'Dependency cache restore or cache service behavior failed independently from project correctness.',
     recommendedFix:
-      'Retry the run if npm ci itself is clean; adjust cache keys only if the issue repeats.',
+      'Retry the run if pnpm install --frozen-lockfile itself is clean; adjust cache keys only if the issue repeats.',
     autoFixAllowed: false,
     humanApprovalRequired: false,
     releasePublishMustStop: false
@@ -305,7 +308,7 @@ const FAILURE_CLASSES = [
   },
   {
     id: 'test failure',
-    patterns: [/jest/i, /test failed/i, /expected .* received/i, /npm test/i],
+    patterns: [/jest/i, /test failed/i, /expected .* received/i, /pnpm test/i],
     rootCause: 'A unit, integration, or package smoke test failed.',
     recommendedFix:
       'Reproduce locally, fix the behavior or fixture expectation, and keep regression coverage focused.',
@@ -334,9 +337,9 @@ const FAILURE_CLASSES = [
     releasePublishMustStop: false
   },
   {
-    id: 'npm audit failure',
-    patterns: [/npm audit/i, /audit.*high/i, /audit.*critical/i],
-    rootCause: 'npm audit found a high or critical dependency vulnerability.',
+    id: 'pnpm audit failure',
+    patterns: [/pnpm audit/i, /audit.*high/i, /audit.*critical/i],
+    rootCause: 'pnpm audit found a high or critical dependency vulnerability.',
     recommendedFix:
       'Upgrade the affected dependency through a controlled PR and run full extension packaging validation.',
     autoFixAllowed: false,
@@ -345,7 +348,7 @@ const FAILURE_CLASSES = [
   },
   {
     id: 'dependency audit finding',
-    patterns: [/dependency audit/i, /npm audit/i, /audit.*(high|critical)/i],
+    patterns: [/dependency audit/i, /pnpm audit/i, /audit.*(high|critical)/i],
     rootCause: 'Dependency audit found a high or critical vulnerability.',
     recommendedFix:
       'Upgrade or mitigate the affected dependency in a controlled PR and run full extension packaging validation.',
@@ -357,12 +360,12 @@ const FAILURE_CLASSES = [
     id: 'package build failure',
     patterns: [
       /package build.*(failed|error)/i,
-      /npm run package.*(failed|error)/i,
+      /pnpm run package.*(failed|error)/i,
       /webpack.*(failed|error)/i
     ],
     rootCause: 'The extension build or VSIX package build failed.',
     recommendedFix:
-      'Reproduce locally with npm run build and npm run package, then fix the exact source, asset, or bundling error.',
+      'Reproduce locally with pnpm run build and pnpm run package, then fix the exact source, asset, or bundling error.',
     autoFixAllowed: true,
     humanApprovalRequired: false,
     releasePublishMustStop: false
@@ -373,7 +376,7 @@ const FAILURE_CLASSES = [
     rootCause:
       'A personal showcase tag differs from the canonical organization tag.',
     recommendedFix:
-      'Do not overwrite automatically. Run the mirror workflow manually with force_mirror=true and the explicit approval string after review.',
+      'Do not overwrite automatically. Review the canonical and personal refs before any separate recovery.',
     autoFixAllowed: false,
     humanApprovalRequired: true,
     releasePublishMustStop: false
@@ -384,7 +387,7 @@ const FAILURE_CLASSES = [
     rootCause:
       'The personal showcase main branch diverged from canonical main.',
     recommendedFix:
-      'Review the ref plan and use manual force-with-lease mirror mode only when the org repo is confirmed canonical.',
+      'Review the canonical and personal refs before any separate recovery.',
     autoFixAllowed: false,
     humanApprovalRequired: true,
     releasePublishMustStop: false

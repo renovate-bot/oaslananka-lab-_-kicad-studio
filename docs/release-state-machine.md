@@ -28,7 +28,7 @@ or mutate refs.
 The script checks:
 
 - `package.json` version
-- `package-lock.json` root version
+- `pnpm-lock.yaml` root version
 - expected `v<version>` tag
 - GitHub Release for the tag
 - local VSIX artifact
@@ -50,7 +50,6 @@ node scripts/release-state.mjs --repo oaslananka-lab/kicad-studio --json
 ```bash
 GH_TOKEN=<token> node scripts/release-state.mjs \
   --repo oaslananka-lab/kicad-studio \
-  --version 2.7.7 \
   --summary-file release-state.json
 ```
 
@@ -58,12 +57,5 @@ GH_TOKEN=<token> node scripts/release-state.mjs \
 
 `safe_to_publish` is conservative. It remains false until local package state,
 remote tag/release state, latest release workflow state, and VSIX artifact
-state are all coherent. Even when it becomes true, publishing still requires:
-
-- manual workflow dispatch
-- `publish=true`
-- `approval=APPROVE_RELEASE`
-- `release` environment approval
-- valid VS Marketplace and Open VSX credentials
-
-The state machine is an operator aid, not a publishing authority.
+state are all coherent. The state machine is an operator aid, not a publishing
+authority.

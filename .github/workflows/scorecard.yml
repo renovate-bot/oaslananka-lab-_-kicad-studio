@@ -1,47 +1,46 @@
-name: Scorecard supply-chain security
+name: Scorecard
+
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches: ['main']
-  schedule:
-    - cron: '30 1 * * 6'
   push:
-    branches: ['main']
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '11 2 * * 1'
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  analysis:
+  scorecard:
     name: Scorecard analysis
-    if: github.repository == 'oaslananka-lab/kicad-studio'
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      id-token: write
-
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - name: 'Checkout code'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
-
-      - name: 'Run analysis'
-        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a
+      - name: Run OSSF Scorecard
+        uses: ossf/scorecard-action@ff5dd8929f96a8a4dc67d13f32b8c75057829621
         with:
-          results_file: results.sarif
-          results_format: sarif
-          publish_results: ${{ github.event_name != 'pull_request' }}
-
-      - name: 'Upload artifact'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: SARIF file
-          path: results.sarif
-          retention-days: 5
-
-      - name: 'Upload to code-scanning'
-        if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7
-        with:
-          sarif_file: results.sarif
+          results_format: json
+          results_file: scorecard.json
+          publish_results: true
+      - name: Enforce minimum score
+        run: |
+          score="$(jq -r '.score' scorecard.json)"
+          awk -v score="${score}" 'BEGIN { if (score < 7.0) exit 1 }'

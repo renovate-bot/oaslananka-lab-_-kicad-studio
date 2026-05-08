@@ -69,6 +69,11 @@ for (const pattern of [
   'test/**',
   'coverage/**',
   'node_modules/**',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'release-please-config.json',
+  '.release-please-manifest.json',
+  'stryker.config.json',
   '*.vsix'
 ]) {
   assert(
@@ -85,14 +90,14 @@ assert(
   '.vscodeignore must not exclude runtime media assets'
 );
 
-const lock = readJson('package-lock.json');
+assert(pkg.packageManager?.startsWith('pnpm@'), 'packageManager must pin pnpm');
 assert(
-  lock.version === pkg.version,
-  'package-lock root version must match package.json'
+  fs.existsSync(path.join(root, 'pnpm-lock.yaml')),
+  'pnpm-lock.yaml must be committed'
 );
 assert(
-  lock.packages?.['']?.version === pkg.version,
-  'package-lock package root version must match package.json'
+  !fs.existsSync(path.join(root, 'package-lock.json')),
+  'package-lock.json must not be committed'
 );
 
 function readJson(file) {
