@@ -24,10 +24,7 @@ async function main() {
   const version = readManifestVersion();
   const versionParts = parseVersionParts(version);
   const tagName = readReleaseTagName(version);
-  const before = await githubJson(
-    `/repos/${repo}/releases/tags/${tagName}`,
-    token
-  );
+  const before = await findReleaseByTag(repo, token, tagName);
   assertReleaseLookup('Initial', before);
 
   runReleasePlease([
@@ -42,13 +39,11 @@ async function main() {
     CONFIG_FILE,
     '--manifest-file',
     MANIFEST_FILE,
+    '--force-tag-creation',
     '--draft'
   ]);
 
-  const after = await githubJson(
-    `/repos/${repo}/releases/tags/${tagName}`,
-    token
-  );
+  const after = await findReleaseByTag(repo, token, tagName);
   assertReleaseLookup('Post-release', after);
   const releaseCreated = before.status === 404 && after.ok;
 
@@ -81,6 +76,31 @@ async function main() {
       `## Release Automation\n\n- release_created: ${releaseCreated}\n- version: ${version}\n- tag: ${tagName}\n`
     );
   }
+}
+
+async function findReleaseByTag(repo, token, tagName) {
+  const direct = await githubJson(
+    `/repos/${repo}/releases/tags/${encodeURIComponent(tagName)}`,
+    token
+  );
+  if (direct.ok || direct.status !== 404) {
+    return direct;
+  }
+
+  const releases = await githubJson(
+    `/repos/${repo}/releases?per_page=100`,
+    token
+  );
+  assertReleaseLookup('Release list', releases);
+  if (Array.isArray(releases.data)) {
+    const matchingRelease = releases.data.find(
+      (release) => release?.tag_name === tagName
+    );
+    if (matchingRelease) {
+      return { ok: true, status: 200, data: matchingRelease };
+    }
+  }
+  return direct;
 }
 
 function runReleasePlease(args) {
