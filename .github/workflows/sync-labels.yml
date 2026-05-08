@@ -30,37 +30,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
-      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-            const desired = yaml.load(fs.readFileSync('.github/labels.yml', 'utf8'));
-            const desiredNames = new Set(desired.map(label => label.name));
-            for (const label of desired) {
-              try {
-                await github.rest.issues.updateLabel({
-                  ...context.repo,
-                  name: label.name,
-                  color: String(label.color).replace(/^#/, ''),
-                  description: label.description || ''
-                });
-              } catch (error) {
-                if (error.status !== 404) throw error;
-                await github.rest.issues.createLabel({
-                  ...context.repo,
-                  name: label.name,
-                  color: String(label.color).replace(/^#/, ''),
-                  description: label.description || ''
-                });
-              }
-            }
-            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, {
-              ...context.repo,
-              per_page: 100
-            });
-            for (const label of existing) {
-              if (!desiredNames.has(label.name)) {
-                await github.rest.issues.deleteLabel({ ...context.repo, name: label.name });
-              }
-            }
+          node-version-file: .node-version
+      - name: Sync repository labels
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/sync-labels.mjs

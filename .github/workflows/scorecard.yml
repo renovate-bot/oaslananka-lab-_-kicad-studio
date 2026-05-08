@@ -11,16 +11,10 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-defaults:
-  run:
-    shell: bash
 
 jobs:
   scorecard:
@@ -30,6 +24,10 @@ jobs:
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -41,6 +39,7 @@ jobs:
           results_file: scorecard.json
           publish_results: true
       - name: Enforce minimum score
+        shell: bash
         run: |
           score="$(jq -r '.score' scorecard.json)"
           awk -v score="${score}" 'BEGIN { if (score < 7.0) exit 1 }'
