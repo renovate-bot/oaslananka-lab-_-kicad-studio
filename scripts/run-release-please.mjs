@@ -46,6 +46,10 @@ async function main() {
   const after = await findReleaseByTag(repo, token, tagName);
   assertReleaseLookup('Post-release', after);
   const releaseCreated = before.status === 404 && after.ok;
+  const releaseSha = readReleaseSha(after);
+  if (releaseCreated && !releaseSha) {
+    throw new Error(`Release ${tagName} did not include a target commit SHA.`);
+  }
 
   if (!releaseCreated) {
     runReleasePlease([
@@ -66,6 +70,7 @@ async function main() {
   setOutput('release_created', releaseCreated ? 'true' : 'false');
   setOutput('version', version);
   setOutput('tag_name', tagName);
+  setOutput('release_sha', releaseSha ?? '');
   setOutput('major', versionParts.major);
   setOutput('minor', versionParts.minor);
   setOutput('patch', versionParts.patch);
@@ -73,7 +78,7 @@ async function main() {
   if (process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
-      `## Release Automation\n\n- release_created: ${releaseCreated}\n- version: ${version}\n- tag: ${tagName}\n`
+      `## Release Automation\n\n- release_created: ${releaseCreated}\n- version: ${version}\n- tag: ${tagName}\n- sha: ${releaseSha ?? ''}\n`
     );
   }
 }
@@ -101,6 +106,20 @@ async function findReleaseByTag(repo, token, tagName) {
     }
   }
   return direct;
+}
+
+function readReleaseSha(result) {
+  if (!result.ok || !result.data || typeof result.data !== 'object') {
+    return null;
+  }
+  if (isCommitSha(result.data.target_commitish)) {
+    return result.data.target_commitish;
+  }
+  return null;
+}
+
+function isCommitSha(value) {
+  return typeof value === 'string' && /^[0-9a-f]{40}$/i.test(value);
 }
 
 function runReleasePlease(args) {
