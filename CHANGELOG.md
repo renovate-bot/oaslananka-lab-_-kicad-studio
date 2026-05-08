@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.8.1](https://github.com/oaslananka-lab/kicad-studio/compare/kicadstudio-v2.8.0...kicadstudio-v2.8.1) (2026-05-08)
+
+### Bug Fixes
+
+- **ci:** use release token for mirror releases ([166f4ac](https://github.com/oaslananka-lab/kicad-studio/commit/166f4acbfb67d297d191d11619f1466ffeb4074f))
+- **release:** checkout release assets by target commit ([41d9565](https://github.com/oaslananka-lab/kicad-studio/commit/41d9565fcb3dafab2a55285a6f489a5b7ebbb08b))
+- **release:** detect draft releases before asset jobs ([ad7c2a6](https://github.com/oaslananka-lab/kicad-studio/commit/ad7c2a63be27383a70c2db652d93a0c47e5649f5))
+- **release:** upload draft release assets by id ([4231486](https://github.com/oaslananka-lab/kicad-studio/commit/42314861cf831ea354905ec7d6b4b8da37145171))
+- **release:** use release token for GitHub releases ([c4bd962](https://github.com/oaslananka-lab/kicad-studio/commit/c4bd962afebcedcbcc067f52c44693bd4ba1055a))
+
 ## [2.8.0](https://github.com/oaslananka-lab/kicad-studio/compare/kicadstudio-v2.7.7...kicadstudio-v2.8.0) (2026-05-08)
 
 ### Features
