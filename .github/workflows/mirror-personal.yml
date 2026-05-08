@@ -37,7 +37,7 @@ jobs:
       - name: Push mirror
         env:
           ORG_REPO: oaslananka-lab/kicad-studio
-          ORG_TOKEN: ${{ github.token }}
+          ORG_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN || github.token }}
           MIRROR_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN }}
           PERSONAL_REPO: oaslananka/kicad-studio
         run: |
