@@ -33,11 +33,35 @@ jobs:
         with:
           persist-credentials: false
       - name: Run OSSF Scorecard
-        uses: ossf/scorecard-action@62b2cac7ed8198b15735ed49ab1e5cf35480ba46
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a
         with:
           results_format: json
           results_file: scorecard.json
           publish_results: true
+      - name: Upload Scorecard results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: scorecard-results
+          path: scorecard.json
+          if-no-files-found: error
+          retention-days: 5
+
+  scorecard-gate:
+    name: Scorecard minimum score
+    needs: scorecard
+    if: >-
+      github.repository == 'oaslananka-lab/kicad-studio' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Download Scorecard results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: scorecard-results
+          path: .
       - name: Enforce minimum score
         shell: bash
         run: |
