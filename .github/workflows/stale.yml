@@ -6,8 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  issues: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +18,9 @@ jobs:
     if: github.repository == 'oaslananka-lab/kicad-studio'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f
         with:
