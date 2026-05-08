@@ -1,5 +1,7 @@
 {
   "release-type": "node",
+  "pull-request-header": "Release changes are prepared from the conventional commit history.",
+  "pull-request-footer": "Release metadata is derived from the release manifest and Conventional Commit history.",
   "packages": {
     ".": {
       "package-name": "kicadstudio",

@@ -23,7 +23,7 @@ async function main() {
   const targetBranch = process.env.GITHUB_REF_NAME || 'main';
   const version = readManifestVersion();
   const versionParts = parseVersionParts(version);
-  const tagName = `v${version}`;
+  const tagName = readReleaseTagName(version);
   const before = await githubJson(
     `/repos/${repo}/releases/tags/${tagName}`,
     token
@@ -64,11 +64,7 @@ async function main() {
       '--config-file',
       CONFIG_FILE,
       '--manifest-file',
-      MANIFEST_FILE,
-      '--pull-request-header',
-      'Release changes are prepared from the conventional commit history.',
-      '--pull-request-footer',
-      ''
+      MANIFEST_FILE
     ]);
   }
 
@@ -198,12 +194,37 @@ function readManifestVersion() {
   return version;
 }
 
+function readReleaseTagName(version) {
+  const config = readJson(CONFIG_FILE);
+  const packageConfig = config.packages?.['.'] ?? {};
+  const includeVInTag =
+    readBoolean(packageConfig['include-v-in-tag']) ??
+    readBoolean(packageConfig['include-v-in-tags']) ??
+    readBoolean(config['include-v-in-tag']) ??
+    readBoolean(config['include-v-in-tags']) ??
+    true;
+  const versionName = includeVInTag ? `v${version}` : version;
+  const component =
+    readString(packageConfig.component) ??
+    readString(packageConfig['package-name']);
+
+  return component ? `${component}-${versionName}` : versionName;
+}
+
 function parseVersionParts(version) {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/);
   if (!match) {
     throw new Error(`${MANIFEST_FILE} contains an invalid SemVer: ${version}`);
   }
   return { major: match[1], minor: match[2], patch: match[3] };
+}
+
+function readBoolean(value) {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function readString(value) {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 function requiredEnv(name) {
