@@ -73,7 +73,7 @@ jobs:
       - name: Run release-please
         id: release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: node scripts/run-release-please.mjs
@@ -118,7 +118,7 @@ jobs:
             sbom.cdx.json
       - name: Attach release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ needs.release-please.outputs.release_id }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
         run: |
@@ -146,7 +146,7 @@ jobs:
           gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" --field draft=false >/dev/null
       - name: Verify release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
         run: |
           assets="$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')"
