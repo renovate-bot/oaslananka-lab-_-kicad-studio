@@ -1,5 +1,43 @@
 # Changelog
 
+## [2.8.0](https://github.com/oaslananka-lab/kicad-studio/compare/kicadstudio-v2.7.7...kicadstudio-v2.8.0) (2026-05-08)
+
+### Features
+
+- add HTTP transport mode for kicad-mcp-pro (v2.7.5) ([e710159](https://github.com/oaslananka-lab/kicad-studio/commit/e710159e4a43e9d42ee83296e1b130a38280c605))
+- **core:** professional refactor for AI, settings, and KiCad 10.0.1 ([b74ef3d](https://github.com/oaslananka-lab/kicad-studio/commit/b74ef3dd7207cdb097e2939707825059ebc6d10f))
+- enhance end-to-end testing setup and add new integration tests for editor flows and DRC rules ([390c3f4](https://github.com/oaslananka-lab/kicad-studio/commit/390c3f4f3d9204c22b4cd9b6c1b17ad3aafc8eb3))
+- **mcp:** phase 1-12 integration hardening ([d45cc26](https://github.com/oaslananka-lab/kicad-studio/commit/d45cc26bb1852e71060b3ce2cfcb93c7bb12ffdb))
+- update OpenAI model to gpt-5.4 and improve datasheet URL validation ([ce71d27](https://github.com/oaslananka-lab/kicad-studio/commit/ce71d27e7be233dca6d747a1d947336674c75107))
+
+### Bug Fixes
+
+- **build:** keep extension bundle within size budget ([28b4c4b](https://github.com/oaslananka-lab/kicad-studio/commit/28b4c4b9a4a3c7c96f93e569b4e9232020fad85a))
+- chat scroll perf, Codex in settings, MCP stdio error guards ([aa2d96c](https://github.com/oaslananka-lab/kicad-studio/commit/aa2d96cab40dcba5fbfd662fbc6751ed96bb6bed))
+- **ci:** allow gitleaks to fail gracefully if license is missing ([0a6252b](https://github.com/oaslananka-lab/kicad-studio/commit/0a6252b7f5f0d84e9d8cc9e26df781da660d14cb))
+- **ci:** avoid job-level hashFiles in lint-fast ([8a451b0](https://github.com/oaslananka-lab/kicad-studio/commit/8a451b0ba00efeb9c10d6fff13a8fcb0067aed3b))
+- **ci:** install npm before cache probing ([9396c9b](https://github.com/oaslananka-lab/kicad-studio/commit/9396c9b47aabd5a5bada520a70b6fa511596587d))
+- **ci:** normalize workflow line endings ([da3e62b](https://github.com/oaslananka-lab/kicad-studio/commit/da3e62b8c0f93cfd4a6356efcf2c8016c8eb149c))
+- **ci:** pin scorecard action commit ([0970d5a](https://github.com/oaslananka-lab/kicad-studio/commit/0970d5aa211a277b51e3f2c842c781ace92cfa90))
+- **ci:** pin workflows to repo node version ([452aea4](https://github.com/oaslananka-lab/kicad-studio/commit/452aea4b3afee49fd5019fbf42dfe0256d1c3cf3))
+- **ci:** quote label color values ([b2ba0ff](https://github.com/oaslananka-lab/kicad-studio/commit/b2ba0fffce364bbd2243c0b77aefcee41cdb3882))
+- **ci:** relax npm version check and add repo-token for task setup ([65e7e91](https://github.com/oaslananka-lab/kicad-studio/commit/65e7e916befe9946c31115c38b0397275eb6ccb7))
+- **ci:** repair main workflow gates ([184743d](https://github.com/oaslananka-lab/kicad-studio/commit/184743dc00d131b668ba9b06ddf50482e44b609c))
+- **ci:** satisfy actionlint for codecov upload ([ff5af23](https://github.com/oaslananka-lab/kicad-studio/commit/ff5af234c0f14ae3109772f3c8711ab24dd8f300))
+- **ci:** satisfy actionlint for node project detection ([4dd4db6](https://github.com/oaslananka-lab/kicad-studio/commit/4dd4db61d2c63c7d3b8251c554d2a87fa68908fb))
+- **ci:** split scorecard publish gate ([43a1f8c](https://github.com/oaslananka-lab/kicad-studio/commit/43a1f8caa6d6f381861a04276f1d44198baa67aa))
+- **ci:** use codecov uploader binary ([55cc2f7](https://github.com/oaslananka-lab/kicad-studio/commit/55cc2f7e8c6116ea790bb021df93696f279ddcc0))
+- **ci:** use robust npm install in lint-fast ([8037188](https://github.com/oaslananka-lab/kicad-studio/commit/8037188cfbc0648f42f1697c8ff3352165bf737a))
+- **ci:** use supported codecov upload arguments ([292aeeb](https://github.com/oaslananka-lab/kicad-studio/commit/292aeeb8a7a0801ab5f6ac8accec16c42b8c14af))
+- DRC schema, diff cyan, project tree, VsCodeStdio UI, CH224A fixtures (v2.7.4) ([9fe4b83](https://github.com/oaslananka-lab/kicad-studio/commit/9fe4b839fc2f7ff2ad15b9b7343f2c11adfb355f))
+- **fixtures:** spread schematic symbols across A4 sheet via sch_auto_place_functional ([243fc35](https://github.com/oaslananka-lab/kicad-studio/commit/243fc35813091ebfef27a1367712c80b34a01332))
+- **language:** skip project JSON diagnostics ([4979f46](https://github.com/oaslananka-lab/kicad-studio/commit/4979f46c6196ea34105b07cdfe8ff670abab67a9))
+- **release:** prefer repository marketplace secrets ([70ca625](https://github.com/oaslananka-lab/kicad-studio/commit/70ca625f1b2cbe78553ab69ef4a45e92342f94a3))
+- **scripts:** make cleanup helper bash-safe ([f4bf5df](https://github.com/oaslananka-lab/kicad-studio/commit/f4bf5dfcc177bd5d28a4845ec7dd9558d3d120a5))
+- **security:** resolve code scanning findings ([34825fa](https://github.com/oaslananka-lab/kicad-studio/commit/34825fa8dd8e798a0eee0921bedb91b40baa880d))
+- split Fix Queue / Quality Gates viewsWelcome by mcpConnected state (v2.7.6) ([61e2147](https://github.com/oaslananka-lab/kicad-studio/commit/61e2147c7d92d6b60af34ea090e5da0c7a49d04a))
+- v2.7.2 — max_completion_tokens, streaming perf, hop-over detection, Codex provider, MCP stdio ([#11](https://github.com/oaslananka-lab/kicad-studio/issues/11)) ([79246eb](https://github.com/oaslananka-lab/kicad-studio/commit/79246eb117b92751f298d616a20f06430d7ab0a9))
+
 ## [2.7.7] - 2026-04-29
 
 ### Added
