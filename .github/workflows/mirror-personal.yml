@@ -5,10 +5,15 @@ on:
     branches: [main]
     tags:
       - 'v*.*.*'
+      - 'kicadstudio-v*.*.*'
+  release:
+    types: [published]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,36 +36,137 @@ jobs:
           persist-credentials: false
       - name: Push mirror
         env:
+          ORG_REPO: oaslananka-lab/kicad-studio
+          ORG_TOKEN: ${{ github.token }}
           MIRROR_TOKEN: ${{ secrets.PERSONAL_REPO_PUSH_TOKEN }}
+          PERSONAL_REPO: oaslananka/kicad-studio
         run: |
           if [ -z "${MIRROR_TOKEN:-}" ]; then
             echo 'PERSONAL_REPO_PUSH_TOKEN is not configured; skipping mirror.'
             exit 0
           fi
+
+          mirror_tag() {
+            local remote="$1"
+            local tag="$2"
+            local label="$3"
+            local remote_sha
+            local local_sha
+            local_sha="$(git rev-parse "refs/tags/${tag}")"
+            remote_sha="$(git ls-remote --refs --tags "${remote}" "refs/tags/${tag}" | cut -f1 || true)"
+            if [ -z "${remote_sha}" ]; then
+              git push "${remote}" "refs/tags/${tag}:refs/tags/${tag}"
+            elif [ "${remote_sha}" != "${local_sha}" ]; then
+              echo "${label} tag ${tag} diverges from local tag ${local_sha}."
+              exit 1
+            fi
+          }
+
+          sync_releases_from() {
+            local source_repo="$1"
+            local source_token="$2"
+            local target_repo="$3"
+            local target_token="$4"
+            local preserve_latest="$5"
+
+            while IFS=$'\t' read -r tag is_latest; do
+              sync_release \
+                "${source_repo}" \
+                "${source_token}" \
+                "${target_repo}" \
+                "${target_token}" \
+                "${tag}" \
+                "${preserve_latest}" \
+                "${is_latest}"
+            done < <(
+              GH_TOKEN="${source_token}" gh release list \
+                --repo "${source_repo}" \
+                --limit 100 \
+                --json tagName,isDraft,isLatest \
+                --jq '.[] | select(.isDraft == false) | [.tagName, (.isLatest | tostring)] | @tsv'
+            )
+          }
+
+          sync_release() {
+            local source_repo="$1"
+            local source_token="$2"
+            local target_repo="$3"
+            local target_token="$4"
+            local tag="$5"
+            local preserve_latest="$6"
+            local source_latest="$7"
+            local tmp
+            local notes_file
+            local assets_dir
+            local title
+            local is_prerelease
+            local latest_flag
+            local -a create_args
+
+            if GH_TOKEN="${target_token}" gh release view "${tag}" --repo "${target_repo}" >/dev/null 2>&1; then
+              return
+            fi
+
+            tmp="$(mktemp -d)"
+            notes_file="${tmp}/notes.md"
+            assets_dir="${tmp}/assets"
+            mkdir -p "${assets_dir}"
+
+            title="$(GH_TOKEN="${source_token}" gh release view "${tag}" --repo "${source_repo}" --json name --jq '.name')"
+            is_prerelease="$(GH_TOKEN="${source_token}" gh release view "${tag}" --repo "${source_repo}" --json isPrerelease --jq '.isPrerelease')"
+            GH_TOKEN="${source_token}" gh release view "${tag}" --repo "${source_repo}" --json body --jq '.body // ""' > "${notes_file}"
+            GH_TOKEN="${source_token}" gh release download "${tag}" --repo "${source_repo}" --dir "${assets_dir}" || true
+
+            latest_flag='--latest=false'
+            if [ "${preserve_latest}" = 'true' ] && [ "${source_latest}" = 'true' ]; then
+              latest_flag='--latest'
+            fi
+
+            create_args=(
+              "${tag}"
+              --repo "${target_repo}"
+              --target "$(git rev-list -n 1 "refs/tags/${tag}")"
+              --title "${title}"
+              --notes-file "${notes_file}"
+              "${latest_flag}"
+            )
+            if [ "${is_prerelease}" = 'true' ]; then
+              create_args+=(--prerelease)
+            fi
+
+            if compgen -G "${assets_dir}/*" >/dev/null; then
+              GH_TOKEN="${target_token}" gh release create "${create_args[@]}" "${assets_dir}"/*
+            else
+              GH_TOKEN="${target_token}" gh release create "${create_args[@]}"
+            fi
+            rm -rf "${tmp}"
+          }
+
+          git remote set-url origin "https://x-access-token:${ORG_TOKEN}@github.com/${ORG_REPO}.git"
           git remote add personal "https://x-access-token:${MIRROR_TOKEN}@github.com/oaslananka/kicad-studio.git"
           git fetch origin main --tags
           git fetch personal main --tags --prune
 
-          if git show-ref --verify --quiet refs/remotes/personal/main; then
-            if git merge-base --is-ancestor refs/remotes/personal/main refs/remotes/origin/main; then
+          if git merge-base --is-ancestor refs/remotes/personal/main refs/remotes/origin/main; then
+            if [ "$(git rev-parse refs/remotes/personal/main)" != "$(git rev-parse refs/remotes/origin/main)" ]; then
               git push personal refs/remotes/origin/main:main
-            else
-              echo 'Personal showcase main diverges from canonical main.'
-              exit 1
             fi
+          elif git merge-base --is-ancestor refs/remotes/origin/main refs/remotes/personal/main; then
+            git push origin refs/remotes/personal/main:main
           else
-            git push personal refs/remotes/origin/main:main
+            echo 'Personal and organization main branches have diverged.'
+            exit 1
           fi
 
           while IFS= read -r tag; do
-            if git ls-remote --refs --exit-code --tags personal "refs/tags/${tag}" >/tmp/personal-tag.txt 2>/dev/null; then
-              personal_sha="$(cut -f1 /tmp/personal-tag.txt)"
-              canonical_sha="$(git rev-parse "refs/tags/${tag}")"
-              if [ "${personal_sha}" != "${canonical_sha}" ]; then
-                echo "Personal showcase tag ${tag} diverges from canonical."
-                exit 1
-              fi
-            else
-              git push personal "refs/tags/${tag}:refs/tags/${tag}"
-            fi
-          done < <(git tag --list 'v*.*.*')
+            mirror_tag personal "${tag}" 'personal'
+            mirror_tag origin "${tag}" 'organization'
+          done < <(
+            {
+              git tag --list 'v*.*.*'
+              git tag --list 'kicadstudio-v*.*.*'
+            } | sort -u
+          )
+
+          sync_releases_from "${ORG_REPO}" "${ORG_TOKEN}" "${PERSONAL_REPO}" "${MIRROR_TOKEN}" true
+          sync_releases_from "${PERSONAL_REPO}" "${MIRROR_TOKEN}" "${ORG_REPO}" "${ORG_TOKEN}" false
