@@ -21,6 +21,9 @@ defaults:
   run:
     shell: bash
 
+env:
+  TRIVY_VERSION: 0.70.0
+
 jobs:
   trivy:
     name: Trivy (filesystem scan)
@@ -36,15 +39,27 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
+      - name: Install Trivy
+        run: |
+          tmp="$(mktemp -d)"
+          archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          base_url="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          curl -fsSLo "${tmp}/${archive}" "${base_url}/${archive}"
+          curl -fsSLo "${tmp}/checksums.txt" "${base_url}/trivy_${TRIVY_VERSION}_checksums.txt"
+          grep " ${archive}$" "${tmp}/checksums.txt" > "${tmp}/checksum.txt"
+          (cd "${tmp}" && sha256sum -c checksum.txt)
+          tar -xzf "${tmp}/${archive}" -C "${tmp}" trivy
+          sudo install -m 0755 "${tmp}/trivy" /usr/local/bin/trivy
+          rm -rf "${tmp}"
+          trivy --version
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+        run: |
+          trivy fs \
+            --format sarif \
+            --output trivy-results.sarif \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            .
       - name: Upload Trivy SARIF
         if: ${{ success() || failure() }}
         uses: github/codeql-action/upload-sarif@5e316336eb4f107009e477d4bfbfff13d7250fae
