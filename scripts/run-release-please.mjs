@@ -39,7 +39,6 @@ async function main() {
     CONFIG_FILE,
     '--manifest-file',
     MANIFEST_FILE,
-    '--force-tag-creation',
     '--draft'
   ]);
 
@@ -47,8 +46,12 @@ async function main() {
   assertReleaseLookup('Post-release', after);
   const releaseCreated = before.status === 404 && after.ok;
   const releaseSha = readReleaseSha(after);
+  const releaseId = readReleaseId(after);
   if (releaseCreated && !releaseSha) {
     throw new Error(`Release ${tagName} did not include a target commit SHA.`);
+  }
+  if (releaseCreated && !releaseId) {
+    throw new Error(`Release ${tagName} did not include a release ID.`);
   }
 
   if (!releaseCreated) {
@@ -70,6 +73,7 @@ async function main() {
   setOutput('release_created', releaseCreated ? 'true' : 'false');
   setOutput('version', version);
   setOutput('tag_name', tagName);
+  setOutput('release_id', releaseId ?? '');
   setOutput('release_sha', releaseSha ?? '');
   setOutput('major', versionParts.major);
   setOutput('minor', versionParts.minor);
@@ -78,7 +82,7 @@ async function main() {
   if (process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
-      `## Release Automation\n\n- release_created: ${releaseCreated}\n- version: ${version}\n- tag: ${tagName}\n- sha: ${releaseSha ?? ''}\n`
+      `## Release Automation\n\n- release_created: ${releaseCreated}\n- version: ${version}\n- tag: ${tagName}\n- release_id: ${releaseId ?? ''}\n- sha: ${releaseSha ?? ''}\n`
     );
   }
 }
@@ -106,6 +110,14 @@ async function findReleaseByTag(repo, token, tagName) {
     }
   }
   return direct;
+}
+
+function readReleaseId(result) {
+  if (!result.ok || !result.data || typeof result.data !== 'object') {
+    return null;
+  }
+  const id = result.data.id;
+  return Number.isInteger(id) && id > 0 ? String(id) : null;
 }
 
 function readReleaseSha(result) {

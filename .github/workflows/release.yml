@@ -50,6 +50,7 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       version: ${{ steps.release.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      release_id: ${{ steps.release.outputs.release_id }}
       release_sha: ${{ steps.release.outputs.release_sha }}
       major: ${{ steps.release.outputs.major }}
       minor: ${{ steps.release.outputs.minor }}
@@ -118,10 +119,31 @@ jobs:
       - name: Attach release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.release-please.outputs.release_id }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
         run: |
-          gh release upload "${RELEASE_TAG}" *.vsix SHA256SUMS.txt sbom.cdx.json --clobber
-          gh release edit "${RELEASE_TAG}" --draft=false
+          upload_asset() {
+            local file="$1"
+            local name
+            name="$(basename "${file}")"
+            local existing_id
+            existing_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" --jq ".[] | select(.name == \"${name}\") | .id" || true)"
+            if [ -n "${existing_id}" ]; then
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${existing_id}"
+            fi
+            gh api \
+              --method POST \
+              "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=${name}" \
+              --header "Content-Type: application/octet-stream" \
+              --input "${file}" \
+              >/dev/null
+          }
+
+          for asset in *.vsix SHA256SUMS.txt sbom.cdx.json; do
+            upload_asset "${asset}"
+          done
+
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" --field draft=false >/dev/null
       - name: Verify release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
