@@ -186,6 +186,14 @@ describe('KiCadCliDetector', () => {
     await expect(detector.hasCapability('bom')).resolves.toBe(true);
 
     expect(spawnSyncMock).toHaveBeenCalledTimes(1);
+    expect(spawnSyncMock).toHaveBeenCalledWith(
+      'C:\\KiCad\\bin\\kicad-cli.exe',
+      expect.any(Array),
+      expect.objectContaining({
+        timeout: 5000,
+        maxBuffer: 1024 * 1024
+      })
+    );
   });
 
   it('reads and caches command help for option/format probes', async () => {

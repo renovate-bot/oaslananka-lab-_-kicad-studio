@@ -181,6 +181,173 @@ describe('KiCadCliRunner', () => {
     expect(spawnMock).toHaveBeenCalledTimes(1);
   });
 
+  it('applies each caller parseOutput after de-duplicated execution', async () => {
+    __setConfiguration({});
+    const detector = {
+      detect: jest.fn().mockResolvedValue({
+        path: '/usr/bin/kicad-cli',
+        version: '10.0.1',
+        versionLabel: 'KiCad 10.0.1',
+        source: 'path'
+      })
+    };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    };
+    const spawnMock = childProcess.spawn as unknown as jest.Mock;
+    let child: ReturnType<typeof createChildProcessMock> | undefined;
+    spawnMock.mockImplementation(() => {
+      child = createChildProcessMock();
+      return child;
+    });
+
+    const runner = new KiCadCliRunner(detector as never, logger as never);
+    const firstSuffix = 'first';
+    const secondSuffix = 'second';
+    const first = runner.run({
+      command: ['sch', 'erc', 'sample.kicad_sch'],
+      cwd: tempDir,
+      progressTitle: 'ERC',
+      parseOutput: (stdout) => `${stdout}-${firstSuffix}`
+    });
+    const second = runner.run({
+      command: ['sch', 'erc', 'sample.kicad_sch'],
+      cwd: tempDir,
+      progressTitle: 'ERC',
+      parseOutput: (stdout) => `${stdout}-${secondSuffix}`
+    });
+
+    while (spawnMock.mock.calls.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    child?.stdout.emit('data', Buffer.from('same'));
+    child?.emit('close', 0);
+
+    await expect(first).resolves.toEqual(
+      expect.objectContaining({ parsed: 'same-first' })
+    );
+    await expect(second).resolves.toEqual(
+      expect.objectContaining({ parsed: 'same-second' })
+    );
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not de-duplicate identical arguments from different working directories', async () => {
+    __setConfiguration({});
+    const firstCwd = path.join(tempDir, 'project-a');
+    const secondCwd = path.join(tempDir, 'project-b');
+    fs.mkdirSync(firstCwd);
+    fs.mkdirSync(secondCwd);
+    const detector = {
+      detect: jest.fn().mockResolvedValue({
+        path: '/usr/bin/kicad-cli',
+        version: '10.0.1',
+        versionLabel: 'KiCad 10.0.1',
+        source: 'path'
+      })
+    };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    };
+    const spawnMock = childProcess.spawn as unknown as jest.Mock;
+    const children: Array<ReturnType<typeof createChildProcessMock>> = [];
+    spawnMock.mockImplementation(() => {
+      const child = createChildProcessMock();
+      children.push(child);
+      return child;
+    });
+
+    const runner = new KiCadCliRunner(detector as never, logger as never);
+    const first = runner.run({
+      command: ['pcb', 'drc', 'board.kicad_pcb'],
+      cwd: firstCwd,
+      progressTitle: 'DRC'
+    });
+    const second = runner.run({
+      command: ['pcb', 'drc', 'board.kicad_pcb'],
+      cwd: secondCwd,
+      progressTitle: 'DRC'
+    });
+
+    while (spawnMock.mock.calls.length < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(spawnMock).toHaveBeenCalledTimes(2);
+    children[0]?.stdout.emit('data', Buffer.from('project-a'));
+    children[0]?.emit('close', 0);
+    children[1]?.stdout.emit('data', Buffer.from('project-b'));
+    children[1]?.emit('close', 0);
+
+    await expect(first).resolves.toEqual(
+      expect.objectContaining({ stdout: 'project-a' })
+    );
+    await expect(second).resolves.toEqual(
+      expect.objectContaining({ stdout: 'project-b' })
+    );
+
+    expect(spawnMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('redacts define variables and token-like values from logs and progress', async () => {
+    const boardFile = path.join(tempDir, 'secret.kicad_pcb');
+    fs.writeFileSync(boardFile, '', 'utf8');
+    __setConfiguration({
+      'kicadstudio.cli.defineVars': {
+        CUSTOMER: 'confidential-customer'
+      }
+    });
+    const detector = {
+      detect: jest.fn().mockResolvedValue({
+        path: '/usr/bin/kicad-cli',
+        version: '10.0.1',
+        versionLabel: 'KiCad 10.0.1',
+        source: 'path'
+      })
+    };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    };
+    const onProgress = jest.fn();
+    const spawnMock = childProcess.spawn as unknown as jest.Mock;
+    spawnMock.mockImplementation(() => {
+      const child = createChildProcessMock();
+      queueMicrotask(() => {
+        child.stdout.emit(
+          'data',
+          Buffer.from('Bearer sk-123456789 api_token=raw-secret')
+        );
+        child.emit('close', 0);
+      });
+      return child;
+    });
+
+    const runner = new KiCadCliRunner(detector as never, logger as never);
+    await runner.run({
+      command: ['pcb', 'drc', boardFile],
+      cwd: tempDir,
+      progressTitle: 'DRC',
+      onProgress
+    });
+
+    const logOutput = logger.info.mock.calls.flat().join('\n');
+    const progressOutput = onProgress.mock.calls.flat().join('\n');
+    expect(logOutput).toContain('CUSTOMER=***');
+    expect(logOutput).not.toContain('confidential-customer');
+    expect(logOutput).not.toContain('sk-123456789');
+    expect(logOutput).not.toContain('raw-secret');
+    expect(progressOutput).toContain('Bearer ***');
+    expect(progressOutput).toContain('api_token=***');
+  });
+
   it('fails fast when no kicad-cli installation can be detected', async () => {
     __setConfiguration({});
     const runner = new KiCadCliRunner(

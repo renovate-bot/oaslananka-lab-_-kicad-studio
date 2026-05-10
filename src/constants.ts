@@ -21,6 +21,7 @@ export const SEARCH_DEBOUNCE_MS = 300;
 export const CLI_TIMEOUT_MS = 5 * 60 * 1000;
 export const AI_MAX_TOKENS = 4096;
 export const AI_STREAM_TIMEOUT_MS = 120_000;
+export const MCP_REQUEST_TIMEOUT_MS = 15_000;
 export const AI_CHAT_MAX_HISTORY = 20;
 export const VIEWER_HIDDEN_CACHE_RELEASE_MS = 5 * 60 * 1000;
 export const VIEWER_DEFAULT_LARGE_FILE_THRESHOLD_BYTES = 10 * 1024 * 1024;
@@ -194,6 +195,7 @@ export const SETTINGS = {
   mcpEndpoint: 'kicadstudio.mcp.endpoint',
   mcpAllowRemoteEndpoint: 'kicadstudio.mcp.allowRemoteEndpoint',
   mcpAllowLegacySse: 'kicadstudio.mcp.allowLegacySse',
+  mcpTimeout: 'kicadstudio.mcp.timeout',
   mcpPushContext: 'kicadstudio.mcp.pushContext',
   mcpProfile: 'kicadstudio.mcp.profile',
   mcpLogSize: 'kicadstudio.mcp.logSize',

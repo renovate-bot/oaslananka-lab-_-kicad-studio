@@ -43,7 +43,7 @@ async function main() {
   const repo = options.repo ?? DEFAULT_REPO;
   const packageJson = readJson(path.join(ROOT, 'package.json'));
   const version = packageJson.version;
-  const tagName = `v${version}`;
+  const tagName = readReleaseTagName(version);
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
   const state = await inspectReleaseState({ repo, tagName, token });
 
@@ -383,6 +383,32 @@ function nextSafeCommand({ currentState, tagName, blockers, remote }) {
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function readReleaseTagName(version) {
+  const configFile = path.join(ROOT, 'release-please-config.json');
+  const config = fs.existsSync(configFile) ? readJson(configFile) : {};
+  const packageConfig = config.packages?.['.'] ?? {};
+  const includeVInTag =
+    readBoolean(packageConfig['include-v-in-tag']) ??
+    readBoolean(packageConfig['include-v-in-tags']) ??
+    readBoolean(config['include-v-in-tag']) ??
+    readBoolean(config['include-v-in-tags']) ??
+    true;
+  const versionName = includeVInTag ? `v${version}` : version;
+  const component =
+    readString(packageConfig.component) ??
+    readString(packageConfig['package-name']);
+
+  return component ? `${component}-${versionName}` : versionName;
+}
+
+function readBoolean(value) {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function readString(value) {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 function formatText(state) {

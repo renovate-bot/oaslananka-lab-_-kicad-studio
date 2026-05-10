@@ -11,7 +11,11 @@ import {
   inferOutputPath,
   readTextFileSync
 } from '../utils/fileUtils';
-import { getWorkspaceRoot, isKiCadFile } from '../utils/pathUtils';
+import {
+  assertPathInside,
+  isKiCadFile,
+  resolveWorkspaceOutputDir
+} from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 import { zipDirectory } from '../utils/zipUtils';
 import { KiCadCliDetector } from './kicadCliDetector';
@@ -39,6 +43,18 @@ export type ExportCommandKind =
   | 'export-sch-bom'
   | 'export-netlist';
 
+const DEFAULT_GERBER_LAYERS = [
+  'F.Cu',
+  'B.Cu',
+  'F.SilkS',
+  'B.SilkS',
+  'F.Mask',
+  'B.Mask',
+  'Edge.Cuts',
+  'F.Fab',
+  'B.Fab'
+];
+
 export interface ExportCommandBuildOptions {
   versionMajor?: number;
   precision?: string;
@@ -46,6 +62,7 @@ export interface ExportCommandBuildOptions {
   ipcUnits?: string;
   theme?: string;
   bomFields?: string[];
+  gerberLayers?: string[];
 }
 
 export function buildCliExportCommands(
@@ -70,7 +87,10 @@ export function buildCliExportCommands(
   const bomPresetFlag = versionMajor >= 10 ? '--preset' : '--format-preset';
 
   switch (kind) {
-    case 'export-gerbers':
+    case 'export-gerbers': {
+      const layers = options.gerberLayers?.length
+        ? options.gerberLayers
+        : DEFAULT_GERBER_LAYERS;
       return [
         [
           'pcb',
@@ -79,11 +99,12 @@ export function buildCliExportCommands(
           '--output',
           outputDir,
           '--layers',
-          'F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts,F.Fab,B.Fab,In1.Cu,In2.Cu',
+          layers.join(','),
           ...(versionMajor >= 9 ? ['--precision', precision] : []),
           file
         ]
       ];
+    }
     case 'export-gerbers-with-drill':
       return [
         ...buildCliExportCommands('export-gerbers', file, outputDir, options),
@@ -344,6 +365,20 @@ export function buildCliExportCommands(
   }
 }
 
+export async function discoverGerberLayers(file: string): Promise<string[]> {
+  try {
+    const raw = await fs.promises.readFile(file, 'utf8');
+    const layers = Array.from(
+      raw.matchAll(/\(\s*\d+\s+"([^"]+)"\s+[A-Za-z_.-]+(?:\s+"[^"]+")?\s*\)/g),
+      (match) => match[1]
+    ).filter((entry): entry is string => Boolean(entry));
+
+    return [...new Set(layers)];
+  } catch {
+    return [];
+  }
+}
+
 export class KiCadExportService {
   constructor(
     private readonly runner: KiCadCliRunner,
@@ -415,17 +450,19 @@ export class KiCadExportService {
     if (!file) {
       return;
     }
-    const outputDir = this.resolveOutputDir(file);
-    await this.runCommandSequence(
-      buildCliExportCommands(
-        'export-svg',
-        file,
-        outputDir,
-        await this.getBuildOptions()
-      ),
+    const outputDir = this.tryResolveOutputDir(file);
+    if (!outputDir) {
+      return;
+    }
+    const buildOptions = await this.getBuildOptions(file);
+    const exported = await this.runCommandSequence(
+      buildCliExportCommands('export-svg', file, outputDir, buildOptions),
       path.dirname(file),
       'Exporting SVG'
     );
+    if (!exported) {
+      return;
+    }
     await this.showOutputFolder(outputDir);
   }
 
@@ -444,7 +481,7 @@ export class KiCadExportService {
       path.join(os.tmpdir(), 'kicadstudio-viewer-svg-')
     );
     try {
-      const buildOptions = await this.getBuildOptions();
+      const buildOptions = await this.getBuildOptions(file);
       const commands = file.endsWith('.kicad_pcb')
         ? this.buildViewerPcbSvgFallbackCommands(file, tempRoot, versionMajor)
         : buildCliExportCommands('export-svg', file, tempRoot, buildOptions);
@@ -588,17 +625,19 @@ export class KiCadExportService {
       );
       return;
     }
-    const outputDir = this.resolveOutputDir(file);
-    await this.runCommandSequence(
-      buildCliExportCommands(
-        'export-dxf',
-        file,
-        outputDir,
-        await this.getBuildOptions()
-      ),
+    const outputDir = this.tryResolveOutputDir(file);
+    if (!outputDir) {
+      return;
+    }
+    const buildOptions = await this.getBuildOptions(file);
+    const exported = await this.runCommandSequence(
+      buildCliExportCommands('export-dxf', file, outputDir, buildOptions),
       path.dirname(file),
       'Exporting DXF'
     );
+    if (!exported) {
+      return;
+    }
     await this.showOutputFolder(outputDir);
   }
 
@@ -669,7 +708,10 @@ export class KiCadExportService {
     if (!file) {
       return;
     }
-    const outputDir = this.resolveOutputDir(file);
+    const outputDir = this.tryResolveOutputDir(file);
+    if (!outputDir) {
+      return;
+    }
     const outputFile = inferOutputPath(file, outputDir, '-ibom', '.html');
     const entries = this.bomParser.parse(readTextFileSync(file));
     await this.bomExporter.exportInteractiveHtml(entries, outputFile);
@@ -694,6 +736,10 @@ export class KiCadExportService {
     if (!projectFile) {
       return;
     }
+    const outputDir = this.tryResolveOutputDir(projectFile);
+    if (!outputDir) {
+      return;
+    }
 
     await this.runCommandSequence(
       [
@@ -703,7 +749,7 @@ export class KiCadExportService {
           '--file',
           jobsetFile,
           '--output',
-          this.resolveOutputDir(projectFile),
+          outputDir,
           projectFile
         ]
       ],
@@ -733,34 +779,48 @@ export class KiCadExportService {
       return;
     }
 
-    const rootOutputDir = this.resolveOutputDir(pcbFile);
+    const rootOutputDir = this.tryResolveOutputDir(pcbFile);
+    if (!rootOutputDir) {
+      return;
+    }
     const packageName = `${path.parse(pcbFile).name}-${profile.label}-manufacturing`;
     const stagingDir = path.join(rootOutputDir, packageName);
+    assertPathInside(
+      rootOutputDir,
+      stagingDir,
+      'Manufacturing staging directory must stay inside the generated output root.'
+    );
     fs.rmSync(stagingDir, { recursive: true, force: true });
     ensureDirectory(stagingDir);
 
-    await this.runCommandSequence(
+    const exportedGerbers = await this.runCommandSequence(
       buildCliExportCommands(
         'export-gerbers-with-drill',
         pcbFile,
         stagingDir,
-        await this.getBuildOptions()
+        await this.getBuildOptions(pcbFile, true)
       ),
       path.dirname(pcbFile),
       `Exporting ${profile.label} manufacturing Gerbers`
     );
+    if (!exportedGerbers) {
+      return;
+    }
 
     if (await this.detector.hasCapability('pos')) {
-      await this.runCommandSequence(
+      const exportedPositions = await this.runCommandSequence(
         buildCliExportCommands(
           'export-pos',
           pcbFile,
           stagingDir,
-          await this.getBuildOptions()
+          await this.getBuildOptions(pcbFile)
         ),
         path.dirname(pcbFile),
         `Exporting ${profile.label} pick-and-place`
       );
+      if (!exportedPositions) {
+        return;
+      }
     }
 
     const schematicFile = await this.findSiblingSchematic(pcbFile);
@@ -872,7 +932,10 @@ export class KiCadExportService {
       return;
     }
 
-    const outputDir = this.resolveOutputDir(file);
+    const outputDir = this.tryResolveOutputDir(file);
+    if (!outputDir) {
+      return;
+    }
     const entries = this.bomParser.parse(readTextFileSync(file));
     const outputFile =
       format === 'csv'
@@ -898,17 +961,22 @@ export class KiCadExportService {
       return;
     }
 
-    const outputDir = this.resolveOutputDir(file);
-    await this.runCommandSequence(
-      buildCliExportCommands(
-        kind,
-        file,
-        outputDir,
-        await this.getBuildOptions()
-      ),
+    const outputDir = this.tryResolveOutputDir(file);
+    if (!outputDir) {
+      return;
+    }
+    const buildOptions = await this.getBuildOptions(
+      file,
+      kind === 'export-gerbers' || kind === 'export-gerbers-with-drill'
+    );
+    const exported = await this.runCommandSequence(
+      buildCliExportCommands(kind, file, outputDir, buildOptions),
       path.dirname(file),
       title
     );
+    if (!exported) {
+      return;
+    }
     await this.showOutputFolder(outputDir);
   }
 
@@ -916,7 +984,7 @@ export class KiCadExportService {
     commands: string[][],
     cwd: string,
     title: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       for (const [index, command] of commands.entries()) {
         await this.runner.runWithProgress<string>({
@@ -928,6 +996,7 @@ export class KiCadExportService {
           }
         });
       }
+      return true;
     } catch (error) {
       this.logger.error(title, error);
       const message =
@@ -935,6 +1004,7 @@ export class KiCadExportService {
           ? `${error.message}\nWhat happened: the export command failed.\nHow to fix: confirm kicad-cli is installed and the target file opens in KiCad.`
           : 'The export command failed. Confirm kicad-cli is installed and the target file opens in KiCad.';
       void vscode.window.showErrorMessage(message);
+      return false;
     }
   }
 
@@ -950,16 +1020,26 @@ export class KiCadExportService {
   }
 
   private resolveOutputDir(file: string): string {
-    const workspaceRoot =
-      getWorkspaceRoot(vscode.Uri.file(file)) ?? path.dirname(file);
     const configured = vscode.workspace
       .getConfiguration()
       .get<string>(SETTINGS.outputDir, 'fab');
-    const outputDir = path.isAbsolute(configured)
-      ? configured
-      : path.join(workspaceRoot, configured);
+    const outputDir = resolveWorkspaceOutputDir(file, configured);
     ensureDirectory(outputDir);
     return outputDir;
+  }
+
+  private tryResolveOutputDir(file: string): string | undefined {
+    try {
+      return this.resolveOutputDir(file);
+    } catch (error) {
+      this.logger.error('Resolving output directory failed', error);
+      const message =
+        error instanceof Error
+          ? `${error.message}\nWhat happened: output directory validation failed.\nHow to fix: choose an output directory inside the current workspace.`
+          : 'Output directory validation failed. Choose an output directory inside the current workspace.';
+      void vscode.window.showErrorMessage(message);
+      return undefined;
+    }
   }
 
   private buildViewerPcbSvgFallbackCommands(
@@ -1142,10 +1222,26 @@ export class KiCadExportService {
         const files = await vscode.workspace.findFiles(
           `**/*${ext}`,
           '**/node_modules/**',
-          1
+          20
         );
-        if (files[0]) {
+        if (files.length === 1 && files[0]) {
           candidates.push(files[0].fsPath);
+        } else if (files.length > 1) {
+          const picked = await vscode.window.showQuickPick(
+            files.map((uri) => ({
+              label: path.basename(uri.fsPath),
+              description: path.dirname(uri.fsPath),
+              uri
+            })),
+            {
+              title: `Choose ${ext} file`,
+              placeHolder:
+                'Multiple KiCad files were found; choose the project file to use.'
+            }
+          );
+          if (picked) {
+            candidates.push(picked.uri.fsPath);
+          }
         }
       }
     }
@@ -1175,14 +1271,45 @@ export class KiCadExportService {
     const files = await vscode.workspace.findFiles(
       '**/*.kicad_sch',
       '**/node_modules/**',
-      1
+      20
     );
-    return files[0]?.fsPath;
+    const expectedName = `${path.parse(pcbFile).name}.kicad_sch`;
+    const matches = files.filter(
+      (uri) => path.basename(uri.fsPath) === expectedName
+    );
+    if (matches.length === 1) {
+      return matches[0]?.fsPath;
+    }
+    if (matches.length > 1 || files.length > 0) {
+      void vscode.window.showWarningMessage(
+        'Could not determine the matching schematic for this PCB. Place the schematic next to the PCB with the same base name, or run BOM export explicitly.'
+      );
+    }
+    return undefined;
   }
 
-  private async getBuildOptions(): Promise<ExportCommandBuildOptions> {
+  private async getBuildOptions(
+    file?: string,
+    includeGerberLayers = false
+  ): Promise<ExportCommandBuildOptions> {
     const detected = await this.detector.detect();
     const versionMajor = Number(detected?.version.split('.')[0] ?? '9');
+    const gerberLayers =
+      includeGerberLayers && file?.endsWith('.kicad_pcb')
+        ? await discoverGerberLayers(file)
+        : [];
+    if (
+      includeGerberLayers &&
+      file?.endsWith('.kicad_pcb') &&
+      !gerberLayers.length
+    ) {
+      this.logger.warn(
+        `Could not discover Gerber layers for ${file}; using the safe default fabrication layer set.`
+      );
+      void vscode.window.showWarningMessage(
+        'Could not discover board layers. Gerber export will use the default fabrication layer set.'
+      );
+    }
     return {
       versionMajor,
       precision: String(
@@ -1201,7 +1328,8 @@ export class KiCadExportService {
         .get<string>(SETTINGS.viewerTheme, 'dark'),
       bomFields: vscode.workspace
         .getConfiguration()
-        .get<string[]>(SETTINGS.bomFields, [])
+        .get<string[]>(SETTINGS.bomFields, []),
+      ...(gerberLayers.length ? { gerberLayers } : {})
     };
   }
 }

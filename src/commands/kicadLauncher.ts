@@ -3,6 +3,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { SETTINGS } from '../constants';
+import { normalizeUserPath } from '../utils/pathUtils';
+
+const SYNC_PROBE_TIMEOUT_MS = 5_000;
+const SYNC_PROBE_MAX_BUFFER = 1024 * 1024;
 
 /**
  * Resolve the KiCad GUI executable for a given file type. Checks configured
@@ -111,19 +115,22 @@ function expandConfiguredKiCadPath(
   configured: string,
   names: string[]
 ): string[] {
-  if (!fs.existsSync(configured)) {
-    return [configured];
+  const normalized = normalizeUserPath(configured);
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(normalized);
+  } catch {
+    return [normalized];
   }
-  const stat = fs.statSync(configured);
   if (!stat.isDirectory()) {
-    return [configured];
+    return [normalized];
   }
-  if (process.platform === 'darwin' && configured.endsWith('.app')) {
-    return [path.join(configured, 'Contents', 'MacOS', 'kicad')];
+  if (process.platform === 'darwin' && normalized.endsWith('.app')) {
+    return [path.join(normalized, 'Contents', 'MacOS', 'kicad')];
   }
   return names.flatMap((name) => [
-    path.join(configured, name),
-    path.join(configured, 'bin', name)
+    path.join(normalized, name),
+    path.join(normalized, 'bin', name)
   ]);
 }
 
@@ -152,7 +159,11 @@ function getPreferredKiCadExecutableNames(filePath: string): string[] {
 
 function findExecutableOnPath(name: string): string | undefined {
   const finder = process.platform === 'win32' ? 'where' : 'which';
-  const result = spawnSync(finder, [name], { encoding: 'utf8' });
+  const result = spawnSync(finder, [name], {
+    encoding: 'utf8',
+    timeout: SYNC_PROBE_TIMEOUT_MS,
+    maxBuffer: SYNC_PROBE_MAX_BUFFER
+  });
   if (result.status !== 0) {
     return undefined;
   }

@@ -3,6 +3,7 @@ import {
   AIProviderNotConfiguredError,
   AIRequestTimeoutError,
   AIStreamAbortedError,
+  CliExitError,
   KiCadCliNotFoundError,
   KiCadCliTimeoutError
 } from '../../src/errors';
@@ -26,5 +27,16 @@ describe('custom errors', () => {
       'OpenAI request timed out'
     );
     expect(new AIHttpError('rate limited').message).toBe('rate limited');
+  });
+
+  it('uses explicit no-output wording for silent CLI failures', () => {
+    expect(
+      new CliExitError({
+        command: 'pcb drc',
+        code: 2,
+        stdout: '',
+        stderr: ''
+      }).message
+    ).toContain('No diagnostic output was produced.');
   });
 });

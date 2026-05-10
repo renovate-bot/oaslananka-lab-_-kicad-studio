@@ -1,3 +1,8 @@
+jest.mock('node:child_process', () => ({
+  spawnSync: jest.fn()
+}));
+
+import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -143,6 +148,77 @@ describe('GitDiffDetector', () => {
       'BASE',
       expect.stringContaining('gitdiff-versions.kicad_sch')
     );
+    fs.rmSync(tempFile, { force: true });
+  });
+
+  it('throws when bounded git show fails before completion', () => {
+    const detector = new GitDiffDetector(new SExpressionParser()) as any;
+    const spawnSyncMock = childProcess.spawnSync as unknown as jest.Mock;
+    spawnSyncMock.mockReturnValue({
+      status: null,
+      stdout: '',
+      stderr: '',
+      error: new Error('spawn timed out')
+    });
+
+    expect(() =>
+      detector.readGitVersion(process.cwd(), 'HEAD', 'board.kicad_sch')
+    ).toThrow('spawn timed out');
+  });
+
+  it('returns empty text only when the file is missing from the ref', () => {
+    const detector = new GitDiffDetector(new SExpressionParser()) as any;
+    const spawnSyncMock = childProcess.spawnSync as unknown as jest.Mock;
+    spawnSyncMock.mockReturnValue({
+      status: 128,
+      stdout: '',
+      stderr: "fatal: Path 'board.kicad_sch' does not exist in 'HEAD'"
+    });
+
+    expect(
+      detector.readGitVersion(process.cwd(), 'HEAD', 'board.kicad_sch')
+    ).toBe('');
+  });
+
+  it('returns stdout for successful git show and rejects non-missing failures', () => {
+    const detector = new GitDiffDetector(new SExpressionParser()) as any;
+    const spawnSyncMock = childProcess.spawnSync as unknown as jest.Mock;
+
+    spawnSyncMock.mockReturnValueOnce({
+      status: 0,
+      stdout: '(kicad_sch)',
+      stderr: ''
+    });
+    expect(
+      detector.readGitVersion(process.cwd(), 'HEAD', 'board.kicad_sch')
+    ).toBe('(kicad_sch)');
+
+    spawnSyncMock.mockReturnValueOnce({
+      status: 128,
+      stdout: '',
+      stderr: 'fatal: not a git repository'
+    });
+    expect(() =>
+      detector.readGitVersion(process.cwd(), 'HEAD', 'board.kicad_sch')
+    ).toThrow('not a git repository');
+  });
+
+  it('ignores malformed component nodes without identifiers', async () => {
+    const detector = new GitDiffDetector(new SExpressionParser()) as any;
+    const tempFile = path.join(
+      process.cwd(),
+      'test',
+      'fixtures',
+      'gitdiff-malformed.kicad_sch'
+    );
+    detector.readGitVersion = jest.fn().mockReturnValue('(kicad_sch)');
+    fs.writeFileSync(
+      tempFile,
+      '(kicad_sch (symbol (property "Value" "10k")))',
+      'utf8'
+    );
+
+    await expect(detector.getChangedComponents(tempFile)).resolves.toEqual([]);
     fs.rmSync(tempFile, { force: true });
   });
 });

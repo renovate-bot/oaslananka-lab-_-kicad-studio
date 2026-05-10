@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { SETTINGS } from '../constants';
+import { MCP_REQUEST_TIMEOUT_MS, SETTINGS } from '../constants';
 import type {
   FixItem,
   McpCapabilityCard,
@@ -50,6 +50,13 @@ class McpHttpError extends Error {
   }
 }
 
+class McpRequestTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`MCP request timed out after ${timeoutMs}ms.`);
+    this.name = 'McpRequestTimeoutError';
+  }
+}
+
 export class McpClient {
   private lastInstall: McpInstallStatus = { found: false, source: 'none' };
   private sessionId: string | undefined;
@@ -93,6 +100,10 @@ export class McpClient {
   }
 
   async detectInstall(): Promise<McpInstallStatus> {
+    if (vscode.workspace.isTrusted === false) {
+      this.lastInstall = { found: false, source: 'none' };
+      return this.lastInstall;
+    }
     this.lastInstall = await this.detector.detectKicadMcpPro();
     return this.lastInstall;
   }
@@ -106,6 +117,15 @@ export class McpClient {
   }
 
   async testConnection(): Promise<McpConnectionState> {
+    if (vscode.workspace.isTrusted === false) {
+      return this.setState({
+        kind: 'Disconnected',
+        available: false,
+        connected: false,
+        message: 'MCP integration is disabled in Restricted Mode.'
+      });
+    }
+
     const install = await this.detectInstall();
     const endpoint = this.getEndpoint();
     if (!endpoint) {
@@ -174,6 +194,9 @@ export class McpClient {
   }
 
   async pushContext(context: StudioContext): Promise<void> {
+    if (vscode.workspace.isTrusted === false) {
+      return;
+    }
     if (
       !vscode.workspace
         .getConfiguration()
@@ -401,7 +424,7 @@ export class McpClient {
           protocolVersion: '2024-11-05',
           clientInfo: {
             name: 'kicad-studio',
-            version: '2.6.0'
+            version: getExtensionVersion(this.context)
           },
           capabilities: {}
         });
@@ -435,11 +458,16 @@ export class McpClient {
     });
     this.trafficLogger?.recordRequest(method, requestBody, this.buildHeaders());
 
-    const primaryResponse = await fetch(primaryEndpoint, {
-      method: 'POST',
-      headers: this.buildHeaders(),
-      body: requestBody
-    });
+    const timeoutMs = getMcpRequestTimeoutMs();
+    const primaryResponse = await fetchWithTimeout(
+      primaryEndpoint,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: requestBody
+      },
+      timeoutMs
+    );
 
     if (primaryResponse.status === 404 || primaryResponse.status === 405) {
       const allowLegacySse = vscode.workspace
@@ -455,11 +483,15 @@ export class McpClient {
         'Falling back to legacy MCP /sse transport because allowLegacySse is enabled.'
       );
       const fallback = await this.readRpcResponse<T>(
-        await fetch(`${baseEndpoint}/sse`, {
-          method: 'POST',
-          headers: this.buildHeaders(),
-          body: requestBody
-        })
+        await fetchWithTimeout(
+          `${baseEndpoint}/sse`,
+          {
+            method: 'POST',
+            headers: this.buildHeaders(),
+            body: requestBody
+          },
+          timeoutMs
+        )
       );
       this.trafficLogger?.recordResponse(method, fallback.json);
       return fallback;
@@ -643,6 +675,55 @@ function validateEndpoint(endpoint: string): void {
   }
 }
 
+function getExtensionVersion(context: vscode.ExtensionContext): string {
+  const version = (
+    context as {
+      extension?: {
+        packageJSON?: {
+          version?: unknown;
+        };
+      };
+    }
+  ).extension?.packageJSON?.version;
+  return typeof version === 'string' && version.trim() ? version : '0.0.0';
+}
+
+function getMcpRequestTimeoutMs(): number {
+  const seconds = vscode.workspace
+    .getConfiguration()
+    .get<number>(SETTINGS.mcpTimeout, MCP_REQUEST_TIMEOUT_MS / 1000);
+  return Math.max(1, Math.min(seconds, 120)) * 1000;
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new McpRequestTimeoutError(timeoutMs));
+  }, timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: init.signal
+        ? AbortSignal.any([init.signal, controller.signal])
+        : controller.signal
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw controller.signal.reason instanceof Error
+        ? controller.signal.reason
+        : new McpRequestTimeoutError(timeoutMs);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 interface InitializeResult {
   serverInfo?:
     | {
@@ -665,6 +746,9 @@ class McpStructuredError extends Error {
 }
 
 function isTransientMcpError(error: unknown): boolean {
+  if (error instanceof McpRequestTimeoutError) {
+    return true;
+  }
   if (error instanceof McpHttpError) {
     return error.status === 408 || error.status === 429 || error.status >= 500;
   }

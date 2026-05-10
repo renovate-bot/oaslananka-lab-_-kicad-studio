@@ -7,6 +7,7 @@ import {
 } from '../constants';
 import { asRecord, asString, hasType } from '../utils/webviewMessages';
 import { isAiSecretProvider } from '../utils/secrets';
+import { requireWorkspaceTrust } from '../utils/workspaceTrust';
 import type { CommandServices } from '../commands/types';
 import { buildSettingsHtml, type SettingsViewState } from './settingsHtml';
 
@@ -43,6 +44,7 @@ const SETTINGS_KEYS = [
   SETTINGS.mcpAutoDetect,
   SETTINGS.mcpEndpoint,
   SETTINGS.mcpAllowLegacySse,
+  SETTINGS.mcpTimeout,
   SETTINGS.mcpPushContext,
   SETTINGS.mcpProfile
 ] as const;
@@ -147,6 +149,9 @@ export class KiCadSettingsPanel implements vscode.Disposable {
     }
 
     if (message.type === 'detectCli') {
+      if (!(await requireWorkspaceTrust('Detect kicad-cli'))) {
+        return;
+      }
       const cli = await this.services.cliDetector.detect(true);
       this.services.statusBar.update({ cli });
       await this.postState(
@@ -210,7 +215,8 @@ export class KiCadSettingsPanel implements vscode.Disposable {
     if (
       key === SETTINGS.viewerLargeFileThresholdBytes ||
       key === SETTINGS.aiMaxTokens ||
-      key === SETTINGS.aiTimeout
+      key === SETTINGS.aiTimeout ||
+      key === SETTINGS.mcpTimeout
     ) {
       const parsed = Number(value);
       return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;

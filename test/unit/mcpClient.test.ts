@@ -1,5 +1,9 @@
 import { McpClient } from '../../src/mcp/mcpClient';
-import { __setConfiguration, createExtensionContextMock } from './vscodeMock';
+import {
+  __setConfiguration,
+  createExtensionContextMock,
+  workspace
+} from './vscodeMock';
 
 // Mock node:fs so the VsCodeStdio fallback cannot read the real .vscode/mcp.json
 // that exists in this workspace. Individual tests override existsSync/readFileSync
@@ -85,6 +89,7 @@ describe('McpClient', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    workspace.isTrusted = true;
   });
 
   function createClient(context = createExtensionContextMock(), options = {}) {
@@ -104,6 +109,108 @@ describe('McpClient', () => {
       options
     );
   }
+
+  it('does not probe or push MCP context in restricted workspaces', async () => {
+    workspace.isTrusted = false;
+    global.fetch = jest.fn() as typeof fetch;
+    const detector = {
+      detectKicadMcpPro: jest
+        .fn()
+        .mockResolvedValue({ found: true, source: 'uvx' })
+    };
+    const client = new McpClient(
+      createExtensionContextMock() as never,
+      detector as never,
+      {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn()
+      } as never
+    );
+
+    await expect(client.detectInstall()).resolves.toEqual({
+      found: false,
+      source: 'none'
+    });
+    await expect(client.testConnection()).resolves.toEqual(
+      expect.objectContaining({
+        kind: 'Disconnected',
+        available: false,
+        connected: false
+      })
+    );
+    await expect(
+      client.pushContext({
+        activeFile: 'board.kicad_pcb',
+        fileType: 'pcb',
+        drcErrors: []
+      })
+    ).resolves.toBeUndefined();
+
+    expect(detector.detectKicadMcpPro).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('sends the extension package version in MCP client metadata', async () => {
+    const rpcBodies: Array<{ method?: string; params?: unknown }> = [];
+    const fetchMock = jest.fn(async (_url, init?: RequestInit) => {
+      rpcBodies.push(JSON.parse(String(init?.body)));
+      const method = rpcBodies[rpcBodies.length - 1]?.method;
+      return createJsonResponse(
+        method === 'tools/list' ? { result: { tools: [] } } : { result: {} },
+        { headers: { 'MCP-Session-Id': 'version-session' } }
+      );
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const context = {
+      ...createExtensionContextMock(),
+      extension: {
+        packageJSON: {
+          name: 'kicadstudio',
+          version: '9.9.9'
+        }
+      }
+    };
+
+    await expect(createClient(context).testConnection()).resolves.toEqual(
+      expect.objectContaining({ connected: true })
+    );
+
+    expect(rpcBodies[0]).toEqual(
+      expect.objectContaining({
+        method: 'initialize',
+        params: expect.objectContaining({
+          clientInfo: {
+            name: 'kicad-studio',
+            version: '9.9.9'
+          }
+        })
+      })
+    );
+  });
+
+  it('attaches an abortable timeout signal to MCP HTTP requests', async () => {
+    __setConfiguration({
+      'kicadstudio.mcp.endpoint': 'http://127.0.0.1:27185',
+      'kicadstudio.mcp.pushContext': true,
+      'kicadstudio.mcp.allowLegacySse': false,
+      'kicadstudio.mcp.timeout': 1
+    });
+    const fetchMock = jest.fn(async (_url, init?: RequestInit) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      return createJsonResponse(
+        { result: {} },
+        { headers: { 'MCP-Session-Id': 'timeout-session' } }
+      );
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(createClient().testConnection()).resolves.toEqual(
+      expect.objectContaining({ available: true })
+    );
+    expect(fetchMock).toHaveBeenCalled();
+  });
 
   it('initializes a session and reuses MCP-Session-Id for subsequent calls', async () => {
     const fetchMock = jest

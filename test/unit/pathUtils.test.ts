@@ -9,6 +9,7 @@ import {
   normalizeUserPath,
   pathExistsOnAnyPlatform,
   relativeToWorkspace,
+  resolveWorkspaceOutputDir,
   toPosixPath
 } from '../../src/utils/pathUtils';
 
@@ -67,10 +68,62 @@ describe('pathUtils', () => {
 
   it('expands home-relative user paths', () => {
     const expanded = normalizeUserPath('~/kicad/config');
+    const homeOnly = normalizeUserPath('~');
     const normalized = normalizeUserPath('folder/../board.kicad_pcb');
+    const quoted = normalizeUserPath(
+      '"C:\\Program Files\\KiCad\\kicad-cli.exe"'
+    );
 
     expect(expanded).toContain('kicad');
+    expect(homeOnly).toBe(os.homedir());
     expect(normalized.endsWith(`board.kicad_pcb`)).toBe(true);
+    expect(quoted).not.toContain('"');
+    expect(quoted).toContain('Program Files');
+    expect(normalizeUserPath('   ')).toBe('');
+    expect(normalizeUserPath('""')).toBe('');
+  });
+
+  it('keeps configured output directories inside the workspace', () => {
+    const workspaceFile = path.join(process.cwd(), 'package.json');
+    const resolved = resolveWorkspaceOutputDir(workspaceFile, 'fab');
+    const blank = resolveWorkspaceOutputDir(workspaceFile, '   ');
+
+    expect(resolved).toBe(path.join(process.cwd(), 'fab'));
+    expect(blank).toBe(path.join(process.cwd(), 'fab'));
+    expect(() => resolveWorkspaceOutputDir(workspaceFile, '..')).toThrow(
+      'Output directory must stay inside the workspace'
+    );
+    expect(() => resolveWorkspaceOutputDir(workspaceFile, tempDir)).toThrow(
+      'Output directory must stay inside the workspace'
+    );
+    expect(resolveWorkspaceOutputDir(workspaceFile, 'fab/nested/output')).toBe(
+      path.join(process.cwd(), 'fab', 'nested', 'output')
+    );
+  });
+
+  it('rejects output paths that escape through symlinked parents', () => {
+    const workspaceFile = path.join(process.cwd(), 'package.json');
+    const outside = path.join(tempDir, 'outside');
+    const link = path.join(process.cwd(), '.tmp-kicadstudio-outside-link');
+    fs.mkdirSync(outside, { recursive: true });
+
+    try {
+      fs.symlinkSync(
+        outside,
+        link,
+        process.platform === 'win32' ? 'junction' : 'dir'
+      );
+    } catch {
+      return;
+    }
+
+    try {
+      expect(() =>
+        resolveWorkspaceOutputDir(workspaceFile, path.basename(link))
+      ).toThrow('Output directory must stay inside the workspace');
+    } finally {
+      fs.rmSync(link, { recursive: true, force: true });
+    }
   });
 
   it('finds sibling project files and handles unreadable directories', () => {

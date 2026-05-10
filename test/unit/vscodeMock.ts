@@ -33,6 +33,12 @@ export function createExtensionContextMock() {
   const secretsStore = new Map<string, string>();
   return {
     extensionUri: Uri.file('/extension'),
+    extension: {
+      packageJSON: {
+        name: 'kicadstudio',
+        version: '2.8.1'
+      }
+    },
     subscriptions: [] as Array<{ dispose(): void }>,
     workspaceState,
     globalState,

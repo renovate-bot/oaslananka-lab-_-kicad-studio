@@ -5,6 +5,9 @@ import type { ComponentDiff } from '../types';
 import { SExpressionParser, type SNode } from '../language/sExpressionParser';
 import { getWorkspaceRoot, relativeToWorkspace } from '../utils/pathUtils';
 
+const GIT_SHOW_TIMEOUT_MS = 5_000;
+const GIT_SHOW_MAX_BUFFER = 5 * 1024 * 1024;
+
 interface DiffComponentRecord {
   [key: string]: string;
   uuid: string;
@@ -95,12 +98,26 @@ export class GitDiffDetector {
   ): string {
     const result = spawnSync('git', ['show', `${ref}:${relativePath}`], {
       cwd: workspaceRoot,
-      encoding: 'utf8'
+      encoding: 'utf8',
+      timeout: GIT_SHOW_TIMEOUT_MS,
+      maxBuffer: GIT_SHOW_MAX_BUFFER
     });
-    if (result.status !== 0) {
+    if (result.status === 0) {
+      return result.stdout;
+    }
+    if (result.error || result.status === null) {
+      const reason =
+        result.error instanceof Error
+          ? result.error.message
+          : result.stderr || 'git show did not complete.';
+      throw new Error(`Failed to read ${relativePath} from ${ref}: ${reason}`);
+    }
+    if (isMissingBlobError(result.stderr)) {
       return '';
     }
-    return result.stdout;
+    throw new Error(
+      `Failed to read ${relativePath} from ${ref}: ${result.stderr || `git exited with ${result.status}`}`
+    );
   }
 
   private extractComponents(text: string): Map<string, DiffComponentRecord> {
@@ -161,4 +178,12 @@ export class GitDiffDetector {
     }
     return undefined;
   }
+}
+
+function isMissingBlobError(stderr: string): boolean {
+  return (
+    /Path .* does not exist in/i.test(stderr) ||
+    /exists on disk, but not in/i.test(stderr) ||
+    /does not exist in ['"]?[^'"]+['"]?$/i.test(stderr)
+  );
 }

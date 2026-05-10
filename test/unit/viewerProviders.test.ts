@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { SchematicEditorProvider } from '../../src/providers/schematicEditorProvider';
 import { PcbEditorProvider } from '../../src/providers/pcbEditorProvider';
-import { __setConfiguration, workspace } from './vscodeMock';
+import { __setConfiguration, window, workspace } from './vscodeMock';
 
 type ProviderCtor = new (
   context: vscode.ExtensionContext,
@@ -83,6 +83,16 @@ describe.each([
     (workspace.fs.readFile as jest.Mock).mockResolvedValue(
       Buffer.from(sourceText, 'utf8')
     );
+    (workspace.fs.stat as jest.Mock).mockReset();
+    (workspace.fs.stat as jest.Mock).mockResolvedValue({
+      size: Buffer.byteLength(sourceText),
+      ctime: 0,
+      mtime: 0,
+      type: 1
+    });
+    (workspace.fs.writeFile as jest.Mock).mockReset();
+    (window.showSaveDialog as jest.Mock).mockReset();
+    (window.showErrorMessage as jest.Mock).mockReset();
     (workspace.onDidSaveTextDocument as jest.Mock).mockClear();
   });
 
@@ -133,6 +143,136 @@ describe.each([
           fileName: path.basename(tempFile)
         })
       })
+    );
+  });
+
+  it('uses file metadata before full reads for oversized KiCad files', async () => {
+    __setConfiguration({
+      'kicadstudio.viewer.autoRefresh': true,
+      'kicadstudio.viewer.largeFileThresholdBytes': 1024 * 1024
+    });
+    (workspace.fs.stat as jest.Mock).mockResolvedValue({
+      size: 2 * 1024 * 1024,
+      ctime: 0,
+      mtime: 0,
+      type: 1
+    });
+    const provider = new ContextProvider({
+      extensionUri: vscode.Uri.file('/extension')
+    } as vscode.ExtensionContext);
+    const panel = createPanel();
+    const document = {
+      uri: vscode.Uri.file(tempFile)
+    } as vscode.CustomDocument;
+
+    await provider.resolveCustomEditor(
+      document,
+      panel as unknown as vscode.WebviewPanel
+    );
+
+    expect(workspace.fs.readFile).not.toHaveBeenCalled();
+    expect(panel.webview.html).toContain('Interactive render is disabled');
+  });
+
+  it('skips oversized non-file URI metadata instead of doing a full read', async () => {
+    __setConfiguration({
+      'kicadstudio.viewer.autoRefresh': true,
+      'kicadstudio.viewer.largeFileThresholdBytes': 1024 * 1024
+    });
+    const remoteUri = Object.assign(vscode.Uri.parse('vscode-remote://board'), {
+      scheme: 'vscode-remote',
+      fsPath: '/remote/board.kicad_pcb',
+      toString: () => 'vscode-remote://board'
+    }) as vscode.Uri;
+    (workspace.fs.stat as jest.Mock).mockResolvedValue({
+      size: 2 * 1024 * 1024,
+      ctime: 0,
+      mtime: 0,
+      type: 1
+    });
+    (workspace.fs.readFile as jest.Mock).mockResolvedValue(
+      Buffer.from(sourceText, 'utf8')
+    );
+    const provider = new ContextProvider({
+      extensionUri: vscode.Uri.file('/extension')
+    } as vscode.ExtensionContext);
+    const panel = createPanel();
+    const document = {
+      uri: remoteUri
+    } as vscode.CustomDocument;
+
+    await provider.resolveCustomEditor(
+      document,
+      panel as unknown as vscode.WebviewPanel
+    );
+
+    expect(workspace.fs.readFile).not.toHaveBeenCalled();
+    expect(panel.webview.html).toContain('Interactive render is disabled');
+  });
+
+  it('uses VS Code workspace reads for bounded non-file URI metadata', async () => {
+    __setConfiguration({
+      'kicadstudio.viewer.autoRefresh': true,
+      'kicadstudio.viewer.largeFileThresholdBytes':
+        Buffer.byteLength(sourceText) + 1
+    });
+    const remoteUri = Object.assign(vscode.Uri.parse('vscode-remote://board'), {
+      scheme: 'vscode-remote',
+      fsPath: '/remote/board.kicad_pcb',
+      toString: () => 'vscode-remote://board'
+    }) as vscode.Uri;
+    (workspace.fs.stat as jest.Mock).mockResolvedValue({
+      size: Buffer.byteLength(sourceText),
+      ctime: 0,
+      mtime: 0,
+      type: 1
+    });
+    (workspace.fs.readFile as jest.Mock).mockResolvedValue(
+      Buffer.from(sourceText, 'utf8')
+    );
+    const provider = new ContextProvider({
+      extensionUri: vscode.Uri.file('/extension')
+    } as vscode.ExtensionContext);
+    const panel = createPanel();
+    const document = {
+      uri: remoteUri
+    } as vscode.CustomDocument;
+
+    await provider.resolveCustomEditor(
+      document,
+      panel as unknown as vscode.WebviewPanel
+    );
+
+    expect(workspace.fs.readFile).toHaveBeenCalledWith(remoteUri);
+    expect(panel.webview.html).not.toContain('Interactive render is disabled');
+  });
+
+  it('rejects invalid PNG export payloads from the webview bridge', async () => {
+    const provider = new ContextProvider({
+      extensionUri: vscode.Uri.file('/extension')
+    } as vscode.ExtensionContext);
+    const panel = createPanel();
+    const document = {
+      uri: vscode.Uri.file(tempFile)
+    } as vscode.CustomDocument;
+    (window.showSaveDialog as jest.Mock).mockResolvedValue(
+      vscode.Uri.file(path.join(os.tmpdir(), 'invalid-snapshot.png'))
+    );
+
+    await provider.resolveCustomEditor(
+      document,
+      panel as unknown as vscode.WebviewPanel
+    );
+    await panel.fireMessage({
+      type: 'exportPng',
+      payload: {
+        dataUrl: 'data:text/plain;base64,ZmFrZQ=='
+      }
+    });
+
+    expect(workspace.fs.writeFile).not.toHaveBeenCalled();
+    expect(window.showErrorMessage).toHaveBeenCalledWith(
+      'Only PNG data URLs can be saved from the viewer.'
     );
   });
 

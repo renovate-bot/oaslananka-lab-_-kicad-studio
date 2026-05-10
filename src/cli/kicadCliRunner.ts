@@ -8,9 +8,10 @@ import {
   KiCadCliNotFoundError,
   KiCadCliTimeoutError
 } from '../errors';
-import type { CliResult, CliRunOptions } from '../types';
+import type { CliResult, CliRunOptions, DetectedKiCadCli } from '../types';
 import { Logger } from '../utils/logger';
 import { findSiblingProjectFile } from '../utils/pathUtils';
+import { redactSensitiveText } from '../utils/secrets';
 import { KiCadCliDetector } from './kicadCliDetector';
 
 const CLI_OUTPUT_LIMIT_BYTES = 10 * 1024 * 1024;
@@ -28,16 +29,26 @@ export class KiCadCliRunner {
   ) {}
 
   async run<T>(options: CliRunOptions): Promise<CliResult<T>> {
-    const key = options.command.join(' ');
-    const existing = this.runningCommands.get(key);
-    if (existing) {
-      return existing as Promise<CliResult<T>>;
+    this.validateRunOptions(options);
+    const detected = await this.detector.detect(true);
+    if (!detected) {
+      throw new KiCadCliNotFoundError();
     }
 
-    const next = this.executeCommand<T>(options);
-    this.runningCommands.set(key, next as Promise<CliResult>);
+    const command = this.buildCommandWithDefineVars(
+      options.command,
+      options.cwd
+    );
+    const key = this.buildCommandKey(options, detected, command);
+    const existing = this.runningCommands.get(key);
+    if (existing) {
+      return this.withParsedOutput(await existing, options.parseOutput);
+    }
+
+    const next = this.executeCommand(options, detected, command);
+    this.runningCommands.set(key, next);
     try {
-      return await next;
+      return this.withParsedOutput(await next, options.parseOutput);
     } finally {
       this.runningCommands.delete(key);
     }
@@ -81,27 +92,19 @@ export class KiCadCliRunner {
     this.controllers.clear();
   }
 
-  private async executeCommand<T>(
-    options: CliRunOptions
-  ): Promise<CliResult<T>> {
-    this.validateRunOptions(options);
-    const detected = await this.detector.detect(true);
-    if (!detected) {
-      throw new KiCadCliNotFoundError();
-    }
-
-    const command = this.buildCommandWithDefineVars(
-      options.command,
-      options.cwd
-    );
+  private async executeCommand(
+    options: CliRunOptions,
+    detected: DetectedKiCadCli,
+    command: string[]
+  ): Promise<CliResult> {
     const controller = new AbortController();
     const signal = composeAbortSignals(options.signal, controller.signal);
     this.controllers.add(controller);
     const startedAt = Date.now();
     const fullArgs = [...(detected.args ?? []), ...command];
-    this.logger.info(`Running ${detected.path} ${fullArgs.join(' ')}`);
+    this.logger.info(formatCliCommand(detected.path, fullArgs));
 
-    return new Promise<CliResult<T>>((resolve, reject) => {
+    return new Promise<CliResult>((resolve, reject) => {
       const child = spawn(detected.path, fullArgs, {
         cwd: options.cwd,
         env: process.env,
@@ -118,7 +121,10 @@ export class KiCadCliRunner {
       let truncatedOutputBytes = 0;
       const timeout = setTimeout(() => {
         controller.abort(
-          new KiCadCliTimeoutError(command.join(' '), CLI_TIMEOUT_MS)
+          new KiCadCliTimeoutError(
+            redactCliArgs(command).join(' '),
+            CLI_TIMEOUT_MS
+          )
         );
       }, CLI_TIMEOUT_MS);
 
@@ -130,6 +136,7 @@ export class KiCadCliRunner {
 
       child.stdout.on('data', (chunk: Buffer) => {
         const text = chunk.toString('utf8');
+        const redactedText = redactSensitiveText(text);
         const appended = appendBoundedOutput({
           current: stdout,
           chunk,
@@ -146,12 +153,13 @@ export class KiCadCliRunner {
             `KiCad CLI stdout was truncated after ${CLI_OUTPUT_LIMIT_BYTES} bytes.`
           );
         }
-        options.onProgress?.(text.trim());
-        this.logger.info(text.trimEnd());
+        options.onProgress?.(redactedText.trim());
+        this.logger.info(redactedText.trimEnd());
       });
 
       child.stderr.on('data', (chunk: Buffer) => {
         const text = chunk.toString('utf8');
+        const redactedText = redactSensitiveText(text);
         const appended = appendBoundedOutput({
           current: stderr,
           chunk,
@@ -168,24 +176,23 @@ export class KiCadCliRunner {
             `KiCad CLI stderr was truncated after ${CLI_OUTPUT_LIMIT_BYTES} bytes.`
           );
         }
-        options.onProgress?.(text.trim());
-        this.logger.warn(text.trimEnd());
+        options.onProgress?.(redactedText.trim());
+        this.logger.warn(redactedText.trimEnd());
       });
 
       child.on('error', (error) => {
         finish(() =>
-          reject(this.normalizeError(error, options.command.join(' ')))
+          reject(this.normalizeError(error, redactCliArgs(command).join(' ')))
         );
       });
 
       child.on('close', (exitCode) => {
         finish(() => {
-          const result: CliResult<T> = {
+          const result: CliResult = {
             stdout,
             stderr,
             exitCode: exitCode ?? -1,
             durationMs: Date.now() - startedAt,
-            parsed: options.parseOutput?.(stdout, stderr) as T | undefined,
             ...(stdoutTruncated ? { stdoutTruncated } : {}),
             ...(stderrTruncated ? { stderrTruncated } : {}),
             ...(truncatedOutputBytes ? { truncatedOutputBytes } : {})
@@ -194,10 +201,12 @@ export class KiCadCliRunner {
           if ((exitCode ?? -1) !== 0) {
             reject(
               new CliExitError({
-                command: command.join(' '),
+                command: redactCliArgs(command).join(' '),
                 code: exitCode ?? -1,
-                stdout,
-                stderr: this.normalizeCliFailure(stderr || stdout || '')
+                stdout: redactSensitiveText(stdout),
+                stderr: this.normalizeCliFailure(
+                  redactSensitiveText(stderr || stdout || '')
+                )
               })
             );
             return;
@@ -229,6 +238,33 @@ export class KiCadCliRunner {
         );
       }
     }
+  }
+
+  private buildCommandKey(
+    options: CliRunOptions,
+    detected: DetectedKiCadCli,
+    command: string[]
+  ): string {
+    return JSON.stringify({
+      cwd: safeRealpath(options.cwd),
+      cliPath: detected.path,
+      cliArgs: detected.args ?? [],
+      command,
+      outputMode: 'raw'
+    });
+  }
+
+  private withParsedOutput<T>(
+    result: CliResult,
+    parseOutput: CliRunOptions['parseOutput']
+  ): CliResult<T> {
+    if (!parseOutput) {
+      return result as CliResult<T>;
+    }
+    return {
+      ...result,
+      parsed: parseOutput(result.stdout, result.stderr) as T
+    };
   }
 
   private normalizeError(error: unknown, command: string): Error {
@@ -307,6 +343,32 @@ export class KiCadCliRunner {
       return {};
     }
   }
+}
+
+function safeRealpath(targetPath: string): string {
+  try {
+    return fs.realpathSync.native(targetPath);
+  } catch {
+    return path.resolve(targetPath);
+  }
+}
+
+function formatCliCommand(command: string, args: string[]): string {
+  return `Running ${redactSensitiveText(command)} ${redactCliArgs(args).join(' ')}`;
+}
+
+function redactCliArgs(args: string[]): string[] {
+  const redacted: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const current = args[index] ?? '';
+    if (args[index - 1] === '--define-var') {
+      const key = current.split('=')[0] ?? 'VALUE';
+      redacted.push(`${key}=***`);
+      continue;
+    }
+    redacted.push(redactSensitiveText(current));
+  }
+  return redacted;
 }
 
 function appendBoundedOutput(options: {

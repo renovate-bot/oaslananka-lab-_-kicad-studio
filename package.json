@@ -828,7 +828,7 @@
           "group": "navigation"
         },
         {
-          "when": "view == kicadstudio.drcRules",
+          "when": "view == kicadstudio.drcRules && kicadstudio.workspaceTrusted && kicadstudio.mcpConnected",
           "command": "kicadstudio.drcRule.addWithMcp",
           "group": "navigation"
         }
@@ -968,6 +968,10 @@
         {
           "command": "kicadstudio.openDesignIntent",
           "when": "kicadstudio.mcpConnected"
+        },
+        {
+          "command": "kicadstudio.drcRule.addWithMcp",
+          "when": "kicadstudio.workspaceTrusted && kicadstudio.mcpConnected"
         },
         {
           "command": "kicadstudio.variant.create",
@@ -1275,6 +1279,13 @@
           "type": "boolean",
           "default": false,
           "description": "Allow a best-effort fallback to the legacy /sse MCP transport when Streamable HTTP is unavailable."
+        },
+        "kicadstudio.mcp.timeout": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 120,
+          "description": "MCP HTTP request timeout in seconds."
         },
         "kicadstudio.mcp.pushContext": {
           "type": "boolean",
@@ -1807,7 +1818,7 @@
     "package": "node scripts/package-extension.js",
     "package:vsce": "node scripts/package-extension.js",
     "package:ovsx": "node scripts/package-extension.js",
-    "package:ls": "vsce ls --tree",
+    "package:ls": "vsce ls --tree --no-dependencies",
     "package:validate": "node scripts/validate-package.js",
     "release:assets": "node scripts/create-release-assets.js",
     "docs:check": "node scripts/validate-docs.js",

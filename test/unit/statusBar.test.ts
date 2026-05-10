@@ -10,7 +10,7 @@ describe('KiCadStatusBar', () => {
     const statusBar = new KiCadStatusBar({} as never);
     const [mainItem, mcpItem] = getStatusBarItems();
 
-    expect(mainItem.text).toBe('$(warning) KiCad: Not found');
+    expect(mainItem.text).toBe('$(warning) KiCad: Not found  DRC: —  ERC: —');
     expect(mainItem.tooltip).toContain('kicad-cli not found');
     expect(mcpItem.text).toBe('$(plug) MCP Setup');
 

@@ -89,15 +89,6 @@ export class McpDetector {
       };
     }
 
-    const dockerResult = await this.tryDocker();
-    if (dockerResult.found) {
-      return {
-        found: true,
-        command: 'docker',
-        source: 'docker'
-      };
-    }
-
     const inspectorResult = await this.tryInspector();
     if (inspectorResult.found) {
       return {
@@ -137,19 +128,15 @@ export class McpDetector {
     const command =
       status.command === 'uvx'
         ? 'uvx'
-        : status.command === 'docker'
-          ? 'docker'
-          : status.command === 'npx'
-            ? 'npx'
-            : 'kicad-mcp-pro';
+        : status.command === 'npx'
+          ? 'npx'
+          : 'kicad-mcp-pro';
     const args =
       status.command === 'uvx'
         ? ['kicad-mcp-pro']
-        : status.command === 'docker'
-          ? ['run', '--rm', '-i', 'kicad-mcp-pro:latest']
-          : status.command === 'npx'
-            ? ['@modelcontextprotocol/inspector', 'kicad-mcp-pro']
-            : [];
+        : status.command === 'npx'
+          ? ['@modelcontextprotocol/inspector', 'kicad-mcp-pro']
+          : [];
     const config = {
       servers: {
         kicad: {
@@ -379,15 +366,6 @@ export class McpDetector {
     };
   }
 
-  private async tryDocker(): Promise<{ found: boolean }> {
-    const result = await run('docker', [
-      'image',
-      'inspect',
-      'kicad-mcp-pro:latest'
-    ]);
-    return { found: result.ok };
-  }
-
   private async tryInspector(): Promise<{ found: boolean; version?: string }> {
     const result = await run('npx', [
       '--yes',
@@ -411,36 +389,16 @@ function extractVersion(output: string): string | undefined {
 
 function buildHttpTaskArgs(
   status: McpInstallStatus,
-  profile: string,
+  _profile: string,
   port: number,
-  projectDir: string
+  _projectDir: string
 ): { command: string; args: string[] } {
   const httpFlags = ['--transport', 'http', '--port', String(port)];
-  const envFlags = [
-    '--env',
-    `KICAD_MCP_PROFILE=${profile}`,
-    '--env',
-    `KICAD_MCP_PROJECT_DIR=${projectDir}`
-  ];
 
   if (status.command === 'uvx') {
     return {
       command: 'uvx',
       args: ['kicad-mcp-pro', ...httpFlags]
-    };
-  }
-  if (status.command === 'docker') {
-    return {
-      command: 'docker',
-      args: [
-        'run',
-        '--rm',
-        '-p',
-        `${port}:${port}`,
-        ...envFlags,
-        'kicad-mcp-pro:latest',
-        ...httpFlags
-      ]
     };
   }
   // global binary / pip / pipx
@@ -483,17 +441,13 @@ function buildHttpTask(
       panel: 'dedicated'
     }
   };
-  // For non-Docker sources, inject env vars via task options
-  if (status.command !== 'docker') {
-    return {
-      ...base,
-      options: {
-        env: {
-          KICAD_MCP_PROFILE: profile,
-          KICAD_MCP_PROJECT_DIR: projectDir
-        }
+  return {
+    ...base,
+    options: {
+      env: {
+        KICAD_MCP_PROFILE: profile,
+        KICAD_MCP_PROJECT_DIR: projectDir
       }
-    };
-  }
-  return base;
+    }
+  };
 }

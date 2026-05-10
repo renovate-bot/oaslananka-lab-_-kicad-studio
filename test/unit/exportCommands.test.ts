@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import {
   buildCliExportCommands,
+  discoverGerberLayers,
   KiCadExportService
 } from '../../src/cli/exportCommands';
 import { zipDirectory } from '../../src/utils/zipUtils';
@@ -52,6 +53,82 @@ describe('buildCliExportCommands', () => {
         versionMajor: 6
       })[0]
     ).not.toContain('--precision');
+  });
+
+  it('discovers active Gerber layers from the board stackup', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kicadstudio-layers-'));
+    const board = path.join(root, 'stackup.kicad_pcb');
+    fs.writeFileSync(
+      board,
+      `(kicad_pcb
+        (layers
+          (0 "F.Cu" signal)
+          (1 "In1.Cu" signal)
+          (2 "In2.Cu" signal)
+          (31 "B.Cu" signal)
+          (36 "B.SilkS" user "B.Silkscreen")
+          (44 "Edge.Cuts" user)
+        )
+      )`,
+      'utf8'
+    );
+
+    try {
+      const gerberLayers = await discoverGerberLayers(board);
+      expect(gerberLayers).toEqual([
+        'F.Cu',
+        'In1.Cu',
+        'In2.Cu',
+        'B.Cu',
+        'B.SilkS',
+        'Edge.Cuts'
+      ]);
+      expect(
+        buildCliExportCommands('export-gerbers', board, root, {
+          versionMajor: 10,
+          gerberLayers
+        })[0]
+      ).toEqual(
+        expect.arrayContaining([
+          '--layers',
+          'F.Cu,In1.Cu,In2.Cu,B.Cu,B.SilkS,Edge.Cuts'
+        ])
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('uses a safe default Gerber layer set when discovery is unavailable', () => {
+    const command = buildCliExportCommands(
+      'export-gerbers',
+      '/missing/board.kicad_pcb',
+      '/project/fab',
+      { versionMajor: 10, gerberLayers: [] }
+    )[0];
+
+    expect(command).toEqual(
+      expect.arrayContaining([
+        '--layers',
+        'F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts,F.Fab,B.Fab'
+      ])
+    );
+  });
+
+  it('uses explicit Gerber layers when provided by capability probing', () => {
+    const command = buildCliExportCommands(
+      'export-gerbers',
+      '/project/board.kicad_pcb',
+      '/project/fab',
+      {
+        versionMajor: 10,
+        gerberLayers: ['F.Cu', 'B.Cu', 'User.1']
+      }
+    )[0];
+
+    expect(command).toEqual(
+      expect.arrayContaining(['--layers', 'F.Cu,B.Cu,User.1'])
+    );
   });
 
   it('returns empty commands for BREP and PLY on KiCad 7 and older', () => {
@@ -336,5 +413,168 @@ describe('KiCadExportService.renderViewerSvg', () => {
     expect(svg).toContain('<svg');
 
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  it('stops failed exports without showing a false success action', async () => {
+    jest.clearAllMocks();
+    __setConfiguration({
+      'kicadstudio.defaultOutputDir': path.join(
+        process.cwd(),
+        '.tmp-export-failure'
+      ),
+      'kicadstudio.viewer.theme': 'kicad'
+    });
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(process.cwd(), '.tmp-kicadstudio-export-failure-')
+    );
+    const schematicFile = path.join(workspaceRoot, 'failed.kicad_sch');
+    fs.writeFileSync(schematicFile, '(kicad_sch (symbol "U1"))', 'utf8');
+    const runner = {
+      runWithProgress: jest.fn().mockRejectedValue(new Error('cli failed'))
+    };
+    const detector = {
+      detect: jest.fn()
+    };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    };
+    const service = new KiCadExportService(
+      runner as never,
+      detector as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      logger as never
+    );
+
+    try {
+      await expect(
+        service.exportSVG(vscode.Uri.file(schematicFile))
+      ).resolves.toBeUndefined();
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'cli failed\nWhat happened: the export command failed.\nHow to fix: confirm kicad-cli is installed and the target file opens in KiCad.'
+      );
+      expect(vscode.window.showInformationMessage).not.toHaveBeenCalledWith(
+        'Export completed successfully.',
+        'Open Output Folder'
+      );
+      expect(vscode.env.openExternal).not.toHaveBeenCalled();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+      fs.rmSync(path.join(process.cwd(), '.tmp-export-failure'), {
+        recursive: true,
+        force: true
+      });
+    }
+  });
+
+  it('reports unsafe output directories without running exports', async () => {
+    jest.clearAllMocks();
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(process.cwd(), '.tmp-kicadstudio-output-root-')
+    );
+    const outsideRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kicadstudio-outside-output-')
+    );
+    const schematicFile = path.join(workspaceRoot, 'unsafe.kicad_sch');
+    fs.writeFileSync(schematicFile, '(kicad_sch (symbol "U1"))', 'utf8');
+    __setConfiguration({
+      'kicadstudio.defaultOutputDir': path.join(outsideRoot, 'fab'),
+      'kicadstudio.viewer.theme': 'kicad'
+    });
+
+    const runner = {
+      runWithProgress: jest.fn()
+    };
+    const detector = {
+      detect: jest.fn()
+    };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    };
+    const service = new KiCadExportService(
+      runner as never,
+      detector as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      logger as never
+    );
+
+    try {
+      await expect(
+        service.exportSVG(vscode.Uri.file(schematicFile))
+      ).resolves.toBeUndefined();
+      expect(runner.runWithProgress).not.toHaveBeenCalled();
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'What happened: output directory validation failed.'
+        )
+      );
+      expect(vscode.window.showInformationMessage).not.toHaveBeenCalledWith(
+        'Export completed successfully.',
+        'Open Output Folder'
+      );
+      expect(vscode.env.openExternal).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        'Resolving output directory failed',
+        expect.any(Error)
+      );
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+      fs.rmSync(outsideRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('does not attach unrelated workspace schematics to a PCB package', async () => {
+    jest.clearAllMocks();
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kicadstudio-schematic-match-')
+    );
+    const pcbFile = path.join(workspaceRoot, 'controller.kicad_pcb');
+    const unrelatedSchematic = path.join(workspaceRoot, 'power.kicad_sch');
+    const matchingSchematic = path.join(workspaceRoot, 'controller.kicad_sch');
+    const service = new KiCadExportService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never
+    ) as unknown as {
+      findSiblingSchematic(pcbFile: string): Promise<string | undefined>;
+    };
+
+    try {
+      (vscode.workspace.findFiles as jest.Mock).mockResolvedValue([
+        vscode.Uri.file(unrelatedSchematic)
+      ]);
+      await expect(service.findSiblingSchematic(pcbFile)).resolves.toBe(
+        undefined
+      );
+      expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+        'Could not determine the matching schematic for this PCB. Place the schematic next to the PCB with the same base name, or run BOM export explicitly.'
+      );
+
+      (vscode.window.showWarningMessage as jest.Mock).mockClear();
+      (vscode.workspace.findFiles as jest.Mock).mockResolvedValue([
+        vscode.Uri.file(unrelatedSchematic),
+        vscode.Uri.file(matchingSchematic)
+      ]);
+      await expect(service.findSiblingSchematic(pcbFile)).resolves.toBe(
+        matchingSchematic
+      );
+      expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    } finally {
+      (vscode.workspace.findFiles as jest.Mock).mockReset();
+      (vscode.workspace.findFiles as jest.Mock).mockResolvedValue([]);
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   });
 });

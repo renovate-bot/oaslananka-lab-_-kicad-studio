@@ -290,24 +290,9 @@ export interface KiCadVariant {
 
 export interface McpInstallStatus {
   found: boolean;
-  command?:
-    | 'uvx'
-    | 'kicad-mcp-pro'
-    | 'docker'
-    | 'npx'
-    | 'pipx'
-    | 'pip'
-    | undefined;
+  command?: 'uvx' | 'kicad-mcp-pro' | 'npx' | 'pipx' | 'pip' | undefined;
   version?: string | undefined;
-  source?:
-    | 'uvx'
-    | 'global'
-    | 'pip'
-    | 'pipx'
-    | 'docker'
-    | 'inspector'
-    | 'none'
-    | undefined;
+  source?: 'uvx' | 'global' | 'pip' | 'pipx' | 'inspector' | 'none' | undefined;
 }
 
 export type McpCompatStatus = 'ok' | 'warn' | 'incompatible';

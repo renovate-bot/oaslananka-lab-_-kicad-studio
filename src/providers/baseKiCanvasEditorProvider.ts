@@ -25,6 +25,9 @@ import {
 } from './viewerHtml';
 
 const PROGRESS_INLINE_WARNING_BYTES = 1 * 1024 * 1024;
+const LARGE_FILE_METADATA_BYTES = 512 * 1024;
+const MAX_PNG_EXPORT_BYTES = 20 * 1024 * 1024;
+const PNG_SIGNATURE = '89504e470d0a1a0a';
 
 interface ViewerPayload {
   fileName: string;
@@ -355,9 +358,10 @@ export abstract class BaseKiCanvasEditorProvider
   private async buildViewerPayload(uri: vscode.Uri): Promise<ViewerPayload> {
     const cacheKey = uri.toString();
     const fileName = path.basename(uri.fsPath);
-    const stat = await fs.promises.stat(uri.fsPath);
+    const stat = await vscode.workspace.fs.stat(uri);
+    const mtimeMs = stat.mtime;
     const cached = this.fileCache.get(cacheKey);
-    if (cached && cached.mtimeMs === stat.mtimeMs) {
+    if (cached && cached.mtimeMs === mtimeMs) {
       const restoreState = this.stateByUri.get(cacheKey);
       return {
         fileName,
@@ -373,17 +377,6 @@ export abstract class BaseKiCanvasEditorProvider
       };
     }
 
-    const bytes =
-      stat.size > PROGRESS_INLINE_WARNING_BYTES
-        ? await vscode.window.withProgress(
-            {
-              location: vscode.ProgressLocation.Notification,
-              title: `Loading ${fileName}`
-            },
-            async () => vscode.workspace.fs.readFile(uri)
-          )
-        : await vscode.workspace.fs.readFile(uri);
-    const text = Buffer.from(bytes).toString('utf8');
     const largeFileThresholdBytes = Math.max(
       1,
       vscode.workspace
@@ -393,14 +386,28 @@ export abstract class BaseKiCanvasEditorProvider
           VIEWER_DEFAULT_LARGE_FILE_THRESHOLD_BYTES
         )
     );
-    const canInline = bytes.byteLength <= largeFileThresholdBytes;
+    const canInline = stat.size <= largeFileThresholdBytes;
+    const bytes = canInline
+      ? stat.size > PROGRESS_INLINE_WARNING_BYTES
+        ? await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: `Loading ${fileName}`
+            },
+            async () => vscode.workspace.fs.readFile(uri)
+          )
+        : await vscode.workspace.fs.readFile(uri)
+      : undefined;
+    const text = bytes
+      ? Buffer.from(bytes).toString('utf8')
+      : await readTextPrefix(uri, LARGE_FILE_METADATA_BYTES);
     const nextPayload: CachedFilePayload = {
-      base64: canInline ? bufferToBase64(bytes) : '',
+      base64: bytes ? bufferToBase64(bytes) : '',
       disabledReason: canInline
         ? ''
         : `Interactive render is disabled for files larger than ${(largeFileThresholdBytes / 1024 / 1024).toFixed(0)} MB. Metadata is still available in the side panel.`,
-      mtimeMs: stat.mtimeMs,
-      metadata: this.buildViewerMetadata(uri, text)
+      mtimeMs,
+      metadata: text ? this.buildViewerMetadata(uri, text) : undefined
     };
     this.fileCache.set(cacheKey, nextPayload);
 
@@ -472,11 +479,16 @@ export abstract class BaseKiCanvasEditorProvider
       return;
     }
 
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-    await vscode.workspace.fs.writeFile(saveUri, Buffer.from(base64, 'base64'));
-    void vscode.window.showInformationMessage(
-      `Saved viewer snapshot to ${path.basename(saveUri.fsPath)}.`
-    );
+    try {
+      await vscode.workspace.fs.writeFile(saveUri, parsePngDataUrl(dataUrl));
+      void vscode.window.showInformationMessage(
+        `Saved viewer snapshot to ${path.basename(saveUri.fsPath)}.`
+      );
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        error instanceof Error ? error.message : 'Invalid PNG snapshot payload.'
+      );
+    }
   }
 }
 
@@ -607,6 +619,61 @@ function readJsonRecord(filePath: string): Record<string, unknown> | undefined {
   } catch {
     return undefined;
   }
+}
+
+async function readTextPrefix(
+  uri: vscode.Uri,
+  maxBytes: number
+): Promise<string | undefined> {
+  if (!uri.scheme || uri.scheme === 'file') {
+    return readFilePrefix(uri.fsPath, maxBytes);
+  }
+  const stat = await vscode.workspace.fs.stat(uri);
+  if (stat.size > maxBytes) {
+    return undefined;
+  }
+  const bytes = await vscode.workspace.fs.readFile(uri);
+  return Buffer.from(bytes).toString('utf8');
+}
+
+async function readFilePrefix(
+  filePath: string,
+  maxBytes: number
+): Promise<string> {
+  const handle = await fs.promises.open(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(maxBytes);
+    const result = await handle.read(buffer, 0, maxBytes, 0);
+    return buffer.subarray(0, result.bytesRead).toString('utf8');
+  } finally {
+    await handle.close();
+  }
+}
+
+function parsePngDataUrl(value: unknown): Buffer {
+  if (typeof value !== 'string') {
+    throw new Error('Invalid PNG snapshot payload.');
+  }
+
+  const prefix = 'data:image/png;base64,';
+  if (!value.startsWith(prefix)) {
+    throw new Error('Only PNG data URLs can be saved from the viewer.');
+  }
+
+  const encoded = value.slice(prefix.length);
+  if (Buffer.byteLength(encoded, 'base64') > MAX_PNG_EXPORT_BYTES) {
+    throw new Error('PNG snapshot exceeds the 20 MB safety limit.');
+  }
+
+  const decoded = Buffer.from(encoded, 'base64');
+  if (decoded.length > MAX_PNG_EXPORT_BYTES) {
+    throw new Error('PNG snapshot exceeds the 20 MB safety limit.');
+  }
+  if (decoded.subarray(0, 8).toString('hex') !== PNG_SIGNATURE) {
+    throw new Error('Invalid PNG snapshot payload.');
+  }
+
+  return decoded;
 }
 
 const VIEWER_OUTBOUND_MESSAGE_TYPES = [

@@ -49,10 +49,68 @@ export function pathExistsOnAnyPlatform(targetPath: string): boolean {
 }
 
 export function normalizeUserPath(targetPath: string): string {
-  if (targetPath.startsWith('~')) {
-    return path.join(os.homedir(), targetPath.slice(1));
+  const trimmed = targetPath.trim();
+  const unquoted =
+    trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'")))
+      ? trimmed.slice(1, -1)
+      : trimmed;
+  if (!unquoted) {
+    return '';
   }
-  return path.normalize(targetPath);
+  if (unquoted === '~') {
+    return os.homedir();
+  }
+  if (unquoted.startsWith('~/') || unquoted.startsWith('~\\')) {
+    return path.join(os.homedir(), unquoted.slice(2));
+  }
+  return path.normalize(unquoted);
+}
+
+export function isPathInside(parentPath: string, childPath: string): boolean {
+  const parent = path.resolve(parentPath);
+  const child = path.resolve(childPath);
+  const relative = path.relative(parent, child);
+  return (
+    relative === '' ||
+    (relative.length > 0 &&
+      !relative.startsWith('..') &&
+      !path.isAbsolute(relative))
+  );
+}
+
+export function assertPathInside(
+  parentPath: string,
+  childPath: string,
+  message: string
+): void {
+  if (!isPathInside(parentPath, childPath)) {
+    throw new Error(message);
+  }
+}
+
+export function resolveWorkspaceOutputDir(
+  filePath: string,
+  configuredOutputDir: string
+): string {
+  const workspaceRoot =
+    getWorkspaceRoot(vscode.Uri.file(filePath)) ?? path.dirname(filePath);
+  const configured = normalizeUserPath(configuredOutputDir) || 'fab';
+  const candidate = path.isAbsolute(configured)
+    ? path.normalize(configured)
+    : path.resolve(workspaceRoot, configured);
+
+  const workspaceRealPath = resolveExistingPath(workspaceRoot);
+  const candidateRealPath = resolveThroughExistingAncestor(candidate);
+
+  assertPathInside(
+    workspaceRealPath,
+    candidateRealPath,
+    `Output directory must stay inside the workspace: ${configuredOutputDir}`
+  );
+
+  return candidate;
 }
 
 export function findSiblingProjectFile(filePath: string): string | undefined {
@@ -81,4 +139,28 @@ export async function findFirstWorkspaceFile(
 ): Promise<string | undefined> {
   const files = await vscode.workspace.findFiles(pattern, exclude, 1);
   return files[0]?.fsPath;
+}
+
+function resolveExistingPath(targetPath: string): string {
+  try {
+    return fs.realpathSync.native(targetPath);
+  } catch {
+    return path.resolve(targetPath);
+  }
+}
+
+function resolveThroughExistingAncestor(targetPath: string): string {
+  const missingSegments: string[] = [];
+  let current = path.resolve(targetPath);
+
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return path.resolve(targetPath);
+    }
+    missingSegments.unshift(path.basename(current));
+    current = parent;
+  }
+
+  return path.join(resolveExistingPath(current), ...missingSegments);
 }

@@ -272,6 +272,10 @@ export function buildSettingsHtml(options: SettingsHtmlOptions): string {
             <option value="agent_full">agent_full</option>
           </select>
         </div>
+        <div class="field">
+          <label for="kicadstudio.mcp.timeout">Timeout (seconds)</label>
+          <input id="kicadstudio.mcp.timeout" data-setting="kicadstudio.mcp.timeout" type="number" min="1" max="120">
+        </div>
         <label class="checkbox">
           <input id="kicadstudio.mcp.autoDetect" data-setting="kicadstudio.mcp.autoDetect" type="checkbox">
           Auto-detect kicad-mcp-pro

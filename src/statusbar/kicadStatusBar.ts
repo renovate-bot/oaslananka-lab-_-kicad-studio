@@ -111,7 +111,7 @@ export class KiCadStatusBar implements vscode.Disposable {
 
   private render(): void {
     if (!this.cli) {
-      this.item.text = '$(warning) KiCad: Not found';
+      this.item.text = '$(warning) KiCad: Not found  DRC: —  ERC: —';
       this.item.tooltip = 'kicad-cli not found. Click to configure.';
       this.renderMcp();
       return;

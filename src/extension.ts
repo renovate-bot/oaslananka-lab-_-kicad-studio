@@ -394,6 +394,7 @@ export async function activate(
           statusBar.update({ cli });
         });
         void refreshContexts();
+        void refreshMcpState();
       })
     );
   }
@@ -571,6 +572,20 @@ export async function activate(
   }
 
   async function refreshMcpState(): Promise<void> {
+    if (!isWorkspaceTrusted()) {
+      await setRestrictedMcpContexts();
+      statusBar.update({
+        mcpState: {
+          kind: 'Disconnected',
+          available: false,
+          connected: false,
+          message: 'MCP integration is disabled in Restricted Mode.'
+        },
+        mcpProfile: readConfiguredMcpProfile()
+      });
+      return;
+    }
+
     const state = await mcpClient.testConnection();
     await vscode.commands.executeCommand(
       'setContext',
@@ -617,6 +632,39 @@ export async function activate(
     ) {
       await maybeOfferMcpBootstrap(state.install);
     }
+  }
+
+  async function setRestrictedMcpContexts(): Promise<void> {
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpAvailable,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpConnected,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpCompatible,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpIncompatible,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpDisconnected,
+      true
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      CONTEXT_KEYS.mcpVsCodeStdio,
+      false
+    );
   }
 
   async function maybeOfferMcpBootstrap(
@@ -687,7 +735,7 @@ export async function activate(
         : fileType === 'schematic' && activeUri
           ? schematicEditorProvider.getViewerState(activeUri)
           : undefined;
-    const mcpState = await mcpClient.testConnection();
+    const mcpState = isWorkspaceTrusted() ? mcpClient.getState() : undefined;
     const cli = isWorkspaceTrusted() ? await cliDetector.detect() : undefined;
     return {
       activeFile: activeUri?.fsPath,
@@ -713,7 +761,7 @@ export async function activate(
           : undefined,
       visibleLayers: viewerState?.activeLayers,
       activeVariant: await variantProvider.getActiveVariantName(),
-      mcpConnected: mcpState.connected,
+      mcpConnected: mcpState?.connected ?? false,
       kicadVersion: cli?.version,
       designBlocks: activeUri ? readDesignBlockNames(activeUri.fsPath) : []
     };
@@ -722,6 +770,9 @@ export async function activate(
   async function pushStudioContext(
     reason: 'save' | 'focus' | 'cursor' | 'drc' | 'default' = 'default'
   ): Promise<void> {
+    if (!isWorkspaceTrusted()) {
+      return;
+    }
     await contextBridge.pushContext(await buildStudioContext(), reason);
   }
 }

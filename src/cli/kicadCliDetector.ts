@@ -5,6 +5,10 @@ import { spawnSync } from 'node:child_process';
 import * as vscode from 'vscode';
 import { CLI_CAPABILITY_COMMANDS, SETTINGS } from '../constants';
 import type { DetectedKiCadCli } from '../types';
+import { normalizeUserPath } from '../utils/pathUtils';
+
+const SYNC_PROBE_TIMEOUT_MS = 5_000;
+const SYNC_PROBE_MAX_BUFFER = 1024 * 1024;
 
 export function getCliCandidates(
   platform = process.platform,
@@ -184,7 +188,7 @@ export class KiCadCliDetector {
       ...CLI_CAPABILITY_COMMANDS[command],
       '--help'
     ];
-    const result = spawnSync(detected.path, args, { encoding: 'utf8' });
+    const result = spawnSync(detected.path, args, syncProbeOptions());
     const supported =
       result.status === 0 ||
       /Usage:/i.test(`${result.stdout}\n${result.stderr}`);
@@ -216,9 +220,7 @@ export class KiCadCliDetector {
     const result = spawnSync(
       detected.path,
       [...(detected.args ?? []), ...command, '--help'],
-      {
-        encoding: 'utf8'
-      }
+      syncProbeOptions()
     );
     const help = `${result.stdout}\n${result.stderr}`;
     const supported = result.status === 0 || /Usage:/i.test(help);
@@ -258,9 +260,7 @@ export class KiCadCliDetector {
     const result = spawnSync(
       resolvedPath,
       [...(extraArgs ?? []), '--version'],
-      {
-        encoding: 'utf8'
-      }
+      syncProbeOptions()
     );
     if (result.status !== 0) {
       return undefined;
@@ -284,7 +284,7 @@ export class KiCadCliDetector {
 
   private findOnPath(): string | undefined {
     const finder = process.platform === 'win32' ? 'where' : 'which';
-    const result = spawnSync(finder, ['kicad-cli'], { encoding: 'utf8' });
+    const result = spawnSync(finder, ['kicad-cli'], syncProbeOptions());
     if (result.status !== 0) {
       return undefined;
     }
@@ -295,7 +295,7 @@ export class KiCadCliDetector {
   }
 
   private normalizeCandidate(candidate: string): string {
-    const normalized = path.resolve(candidate.trim());
+    const normalized = path.resolve(normalizeUserPath(candidate.trim()));
     try {
       return fs.realpathSync.native(normalized);
     } catch {
@@ -360,4 +360,16 @@ export class KiCadCliDetector {
       'KiCad Studio is using a workspace-level kicad-cli path override. Only use workspace overrides for repositories you trust.'
     );
   }
+}
+
+function syncProbeOptions(): {
+  encoding: BufferEncoding;
+  timeout: number;
+  maxBuffer: number;
+} {
+  return {
+    encoding: 'utf8',
+    timeout: SYNC_PROBE_TIMEOUT_MS,
+    maxBuffer: SYNC_PROBE_MAX_BUFFER
+  };
 }

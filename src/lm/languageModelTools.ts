@@ -1,13 +1,16 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { buildCliExportCommands } from '../cli/exportCommands';
+import {
+  buildCliExportCommands,
+  discoverGerberLayers
+} from '../cli/exportCommands';
 import { ComponentSearchService } from '../components/componentSearch';
 import { SETTINGS } from '../constants';
 import { KiCadLibraryIndexer } from '../library/libraryIndexer';
 import { VariantProvider } from '../variants/variantProvider';
 import type { DiagnosticSummary, StudioContext } from '../types';
 import { ensureDirectory } from '../utils/fileUtils';
-import { getWorkspaceRoot } from '../utils/pathUtils';
+import { resolveWorkspaceOutputDir } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 import { isWorkspaceTrusted } from '../utils/workspaceTrust';
 import { KiCadCheckService } from '../cli/checkCommands';
@@ -269,7 +272,7 @@ function createExportGerbersTool(
         'export-gerbers',
         file,
         outputDir,
-        { versionMajor }
+        { versionMajor, gerberLayers: await discoverGerberLayers(file) }
       );
       const commands = await Promise.all(
         exportCommands.map(async (command) =>
@@ -554,14 +557,10 @@ async function resolveTargetFile(
 }
 
 function resolveOutputDir(file: string): string {
-  const workspaceRoot =
-    getWorkspaceRoot(vscode.Uri.file(file)) ?? path.dirname(file);
   const configured = vscode.workspace
     .getConfiguration()
     .get<string>(SETTINGS.outputDir, 'fab');
-  const outputDir = path.isAbsolute(configured)
-    ? configured
-    : path.join(workspaceRoot, configured);
+  const outputDir = resolveWorkspaceOutputDir(file, configured);
   ensureDirectory(outputDir);
   return outputDir;
 }

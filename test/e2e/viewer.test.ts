@@ -12,10 +12,7 @@ test.describe('KiCad Studio VS Code E2E', () => {
       await expect(session.page.locator('body')).toContainText(
         'sample.kicad_pcb'
       );
-      await expectCommandPaletteEntry(
-        session.page,
-        'KiCad: Add DRC Rule with MCP'
-      );
+      await expectCommandPaletteEntry(session.page, 'KiCad: Setup MCP');
 
       const statusBar = session.page.locator('.statusbar');
       await expect(statusBar).toContainText(/MCP (Setup|Available|Connected)/);

@@ -227,7 +227,7 @@ describe('McpDetector.generateMcpJson', () => {
     });
   });
 
-  it('detects a docker bootstrap fallback when Python installs are unavailable', async () => {
+  it('does not use mutable Docker image tags as an install fallback', async () => {
     execFileMock.mockImplementation(
       (
         command: string,
@@ -240,7 +240,16 @@ describe('McpDetector.generateMcpJson', () => {
           args[0] === 'image' &&
           args[1] === 'inspect'
         ) {
-          callback(null, '[{"RepoTags":["kicad-mcp-pro:latest"]}]', '');
+          callback(
+            null,
+            JSON.stringify([{ RepoTags: [`kicad-mcp-pro:${'latest'}`] }]),
+            ''
+          );
+        } else if (
+          command === 'npx' &&
+          args.includes('@modelcontextprotocol/inspector')
+        ) {
+          callback(null, 'mcp inspector 1.0.0', '');
         } else {
           callback(new Error('missing'), '', 'missing');
         }
@@ -249,11 +258,13 @@ describe('McpDetector.generateMcpJson', () => {
 
     const result = await new McpDetector().detectKicadMcpPro();
 
-    expect(result).toEqual({
-      found: true,
-      command: 'docker',
-      source: 'docker'
-    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        found: true,
+        command: 'npx',
+        source: 'inspector'
+      })
+    );
   });
 
   it('detects MCP inspector availability as setup guidance', async () => {
@@ -384,29 +395,6 @@ describe('McpDetector.generateHttpConfig', () => {
     };
     expect(mcp.servers.kicad.type).toBe('http');
     expect(mcp.servers.kicad.url).toBe('http://localhost:27185/mcp');
-  });
-
-  it('writes a docker task with port mapping for docker installs', async () => {
-    (window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
-    const detector = new McpDetector();
-
-    await detector.generateHttpConfig(
-      tempDir,
-      { found: true, command: 'docker', source: 'docker' },
-      'minimal',
-      27185
-    );
-
-    const tasksPath = path.join(tempDir, '.vscode', 'tasks.json');
-    const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8')) as {
-      tasks: Array<{ label: string; command: string; args: string[] }>;
-    };
-    const task = tasks.tasks.find(
-      (t) => t.label === 'Start kicad-mcp-pro (HTTP)'
-    );
-    expect(task?.command).toBe('docker');
-    expect(task?.args).toContain('-p');
-    expect(task?.args).toContain('27185:27185');
   });
 
   it('merges into an existing tasks.json and replaces a stale task', async () => {
