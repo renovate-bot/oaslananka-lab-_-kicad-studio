@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.8.2](https://github.com/oaslananka-lab/kicad-studio/compare/kicadstudio-v2.8.1...kicadstudio-v2.8.2) (2026-05-10)
+
+### Bug Fixes
+
+- **release-readiness:** harden MCP trust and release gates ([693f4be](https://github.com/oaslananka-lab/kicad-studio/commit/693f4be68330593fe3c05903c5d8edcf37491745))
+
 ## [2.8.1](https://github.com/oaslananka-lab/kicad-studio/compare/kicadstudio-v2.8.0...kicadstudio-v2.8.1) (2026-05-08)
 
 ### Bug Fixes
