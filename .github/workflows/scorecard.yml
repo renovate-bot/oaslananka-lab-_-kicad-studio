@@ -35,6 +35,7 @@ jobs:
       - name: Run OSSF Scorecard
         uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a
         with:
+          repo_token: ${{ secrets.SCORECARD_TOKEN || github.token }}
           results_format: json
           results_file: scorecard.json
           publish_results: true
@@ -66,4 +67,5 @@ jobs:
         shell: bash
         run: |
           score="$(jq -r '.score' scorecard.json)"
+          echo "Scorecard score: ${score}"
           awk -v score="${score}" 'BEGIN { if (score < 7.0) exit 1 }'
