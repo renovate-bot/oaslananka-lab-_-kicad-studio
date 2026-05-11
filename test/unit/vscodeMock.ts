@@ -107,6 +107,7 @@ export const window = {
   showInformationMessage: jest.fn(),
   showErrorMessage: jest.fn(),
   showQuickPick: jest.fn(),
+  showOpenDialog: jest.fn(),
   showInputBox: jest.fn(),
   showSaveDialog: jest.fn(),
   showTextDocument: jest.fn(),
