@@ -1,0 +1,140 @@
+name: Publish Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Lowercase 40-character commit SHA to publish
+        required: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: publish-production-${{ inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vscode-marketplace:
+    if: github.repository == 'oaslananka-lab/kicad-studio'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: Resolve publish ref
+        id: ref
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${INPUT_REF}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "INVALID_PUBLISH_REF" >&2
+            echo "Publish ref must be a lowercase 40-character commit SHA." >&2
+            exit 1
+          fi
+          echo "value=${INPUT_REF}" >> "${GITHUB_OUTPUT}"
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ steps.ref.outputs.value }}
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24.15.0
+          package-manager-cache: false
+      - name: Install and package extension
+        id: package
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.0.8 --activate
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm run package
+          node -e "const p=require('./package.json'); for (const key of ['publisher','name','version']) { if (!p[key]) throw new Error('package.json ' + key + ' is required'); } if (!p.engines || !p.engines.vscode) throw new Error('package.json engines.vscode is required'); console.log(p.publisher + '.' + p.name + '@' + p.version);"
+          mapfile -t vsix_files < <(find . -maxdepth 1 -name '*.vsix' -type f | sort)
+          if [[ "${#vsix_files[@]}" -ne 1 ]]; then
+            echo "VSIX_ARTIFACT_COUNT_MISMATCH" >&2
+            echo "Expected exactly one VSIX artifact; found ${#vsix_files[@]}." >&2
+            exit 1
+          fi
+          vsix_path="${vsix_files[0]}"
+          echo "vsix=${vsix_path}" >> "${GITHUB_OUTPUT}"
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          VS_MARKETPLACE_TOKEN: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          VSIX_PATH: ${{ steps.package.outputs.vsix }}
+        run: |
+          set -euo pipefail
+          token="${VSCE_PAT:-${VS_MARKETPLACE_TOKEN:-}}"
+          if [[ -z "${token}" ]]; then
+            echo "MARKETPLACE_SECRET_MISSING" >&2
+            echo "Required secret: VSCE_PAT or VS_MARKETPLACE_TOKEN" >&2
+            exit 78
+          fi
+          corepack pnpm exec vsce publish --packagePath "${VSIX_PATH}" --pat "${token}"
+
+  open-vsx:
+    if: github.repository == 'oaslananka-lab/kicad-studio'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: Resolve publish ref
+        id: ref
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${INPUT_REF}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "INVALID_PUBLISH_REF" >&2
+            echo "Publish ref must be a lowercase 40-character commit SHA." >&2
+            exit 1
+          fi
+          echo "value=${INPUT_REF}" >> "${GITHUB_OUTPUT}"
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ steps.ref.outputs.value }}
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24.15.0
+          package-manager-cache: false
+      - name: Install and package extension
+        id: package
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.0.8 --activate
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm run package
+          node -e "const p=require('./package.json'); for (const key of ['publisher','name','version']) { if (!p[key]) throw new Error('package.json ' + key + ' is required'); } if (!p.engines || !p.engines.vscode) throw new Error('package.json engines.vscode is required'); console.log(p.publisher + '.' + p.name + '@' + p.version);"
+          mapfile -t vsix_files < <(find . -maxdepth 1 -name '*.vsix' -type f | sort)
+          if [[ "${#vsix_files[@]}" -ne 1 ]]; then
+            echo "VSIX_ARTIFACT_COUNT_MISMATCH" >&2
+            echo "Expected exactly one VSIX artifact; found ${#vsix_files[@]}." >&2
+            exit 1
+          fi
+          vsix_path="${vsix_files[0]}"
+          echo "vsix=${vsix_path}" >> "${GITHUB_OUTPUT}"
+      - name: Publish to Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+          VSIX_PATH: ${{ steps.package.outputs.vsix }}
+        run: |
+          set -euo pipefail
+          token="${OVSX_PAT:-${OPEN_VSX_TOKEN:-}}"
+          if [[ -z "${token}" ]]; then
+            echo "OPEN_VSX_SECRET_MISSING" >&2
+            echo "Required secret: OVSX_PAT or OPEN_VSX_TOKEN" >&2
+            exit 78
+          fi
+          corepack pnpm exec ovsx publish "${VSIX_PATH}" --pat "${token}"
