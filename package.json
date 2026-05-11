@@ -1881,7 +1881,7 @@
   },
   "dependencies": {
     "exceljs": "4.4.0",
-    "semver": "7.7.4"
+    "semver": "7.8.0"
   },
   "lint-staged": {
     "*.{js,cjs,mjs,ts}": [

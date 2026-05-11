@@ -16,8 +16,8 @@ importers:
         specifier: 4.4.0
         version: 4.4.0
       semver:
-        specifier: 7.7.4
-        version: 7.7.4
+        specifier: 7.8.0
+        version: 7.8.0
     devDependencies:
       '@commitlint/cli':
         specifier: 20.5.3
@@ -6341,6 +6341,14 @@ packages:
     engines: { node: '>=10' }
     hasBin: true
 
+  semver@7.8.0:
+    resolution:
+      {
+        integrity: sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==
+      }
+    engines: { node: '>=10' }
+    hasBin: true
+
   serialize-javascript@7.0.5:
     resolution:
       {
@@ -7896,7 +7904,7 @@ snapshots:
   '@commitlint/is-ignored@20.5.0':
     dependencies:
       '@commitlint/types': 20.5.0
-      semver: 7.7.4
+      semver: 7.8.0
 
   '@commitlint/lint@20.5.3':
     dependencies:
@@ -7970,7 +7978,7 @@ snapshots:
     dependencies:
       '@simple-libs/child-process-utils': 1.0.2
       '@simple-libs/stream-utils': 1.2.0
-      semver: 7.7.4
+      semver: 7.8.0
     optionalDependencies:
       conventional-commits-parser: 6.4.0
 
@@ -8708,7 +8716,7 @@ snapshots:
       npm-run-path: 6.0.0
       progress: 2.0.3
       rxjs: 7.8.2
-      semver: 7.7.4
+      semver: 7.8.0
       source-map: 0.7.6
       tree-kill: 1.2.2
       tslib: 2.8.1
@@ -8933,7 +8941,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.59.2
       debug: 4.4.3(supports-color@8.1.1)
       minimatch: 10.2.5
-      semver: 7.7.4
+      semver: 7.8.0
       tinyglobby: 0.2.16
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
@@ -8970,7 +8978,7 @@ snapshots:
       https-proxy-agent: 7.0.6
       jszip: 3.10.1
       ora: 8.2.0
-      semver: 7.7.4
+      semver: 7.8.0
     transitivePeerDependencies:
       - supports-color
 
@@ -9037,7 +9045,7 @@ snapshots:
       parse-semver: 1.1.1
       read: 1.0.7
       secretlint: 10.2.2
-      semver: 7.7.4
+      semver: 7.8.0
       tmp: 0.2.5
       typed-rest-client: 1.8.11
       url-join: 4.0.1
@@ -9604,7 +9612,7 @@ snapshots:
       handlebars: 4.7.9
       json-stringify-safe: 5.0.1
       meow: 8.1.2
-      semver: 7.7.4
+      semver: 7.8.0
       split: 1.0.1
 
   conventional-commits-filter@3.0.0:
@@ -10477,7 +10485,7 @@ snapshots:
       '@babel/parser': 7.29.3
       '@istanbuljs/schema': 0.1.6
       istanbul-lib-coverage: 3.2.2
-      semver: 7.7.4
+      semver: 7.8.0
     transitivePeerDependencies:
       - supports-color
 
@@ -10772,7 +10780,7 @@ snapshots:
       jest-util: 29.7.0
       natural-compare: 1.4.0
       pretty-format: 29.7.0
-      semver: 7.7.4
+      semver: 7.8.0
     transitivePeerDependencies:
       - supports-color
 
@@ -10890,7 +10898,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.7.4
+      semver: 7.8.0
 
   jszip@3.10.1:
     dependencies:
@@ -11054,7 +11062,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.0
 
   make-error@1.3.6: {}
 
@@ -11217,7 +11225,7 @@ snapshots:
 
   node-abi@3.92.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.0
     optional: true
 
   node-addon-api@4.3.0:
@@ -11248,13 +11256,13 @@ snapshots:
     dependencies:
       hosted-git-info: 4.1.0
       is-core-module: 2.16.2
-      semver: 7.7.4
+      semver: 7.8.0
       validate-npm-package-license: 3.0.4
 
   normalize-package-data@6.0.2:
     dependencies:
       hosted-git-info: 7.0.2
-      semver: 7.7.4
+      semver: 7.8.0
       validate-npm-package-license: 3.0.4
 
   normalize-path@3.0.0: {}
@@ -11323,7 +11331,7 @@ snapshots:
       follow-redirects: 1.16.0
       is-ci: 2.0.0
       leven: 3.1.0
-      semver: 7.7.4
+      semver: 7.8.0
       tmp: 0.2.5
       yauzl-promise: 4.0.0
     transitivePeerDependencies:
@@ -11641,7 +11649,7 @@ snapshots:
       jsonpath-plus: 10.4.0
       node-html-parser: 6.1.13
       parse-github-repo-url: 1.4.1
-      semver: 7.7.4
+      semver: 7.8.0
       type-fest: 3.13.1
       typescript: 4.9.5
       unist-util-visit: 2.0.3
@@ -11734,6 +11742,8 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.4: {}
+
+  semver@7.8.0: {}
 
   serialize-javascript@7.0.5: {}
 
@@ -12058,7 +12068,7 @@ snapshots:
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
-      semver: 7.7.4
+      semver: 7.8.0
       type-fest: 4.41.0
       typescript: 5.9.3
       yargs-parser: 21.1.1
@@ -12074,7 +12084,7 @@ snapshots:
       chalk: 4.1.2
       enhanced-resolve: 5.21.0
       micromatch: 4.0.8
-      semver: 7.7.4
+      semver: 7.8.0
       source-map: 0.7.6
       typescript: 5.9.3
       webpack: 5.106.2(webpack-cli@7.0.2)
