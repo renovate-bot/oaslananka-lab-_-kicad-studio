@@ -77,7 +77,21 @@ jobs:
             echo "Required secret: VSCE_PAT or VS_MARKETPLACE_TOKEN" >&2
             exit 78
           fi
-          corepack pnpm exec vsce publish --packagePath "${VSIX_PATH}" --pat "${token}"
+          publish_log="$(mktemp)"
+          set +e
+          corepack pnpm exec vsce publish --packagePath "${VSIX_PATH}" --pat "${token}" >"${publish_log}" 2>&1
+          status="$?"
+          set -e
+          if [[ "${status}" -ne 0 ]]; then
+            if grep -Eiq "(already exists|already published)" "${publish_log}"; then
+              echo "MARKETPLACE_VERSION_ALREADY_PUBLISHED"
+              cat "${publish_log}"
+              exit 0
+            fi
+            cat "${publish_log}" >&2
+            exit "${status}"
+          fi
+          cat "${publish_log}"
 
   open-vsx:
     if: github.repository == 'oaslananka-lab/kicad-studio'
@@ -137,4 +151,18 @@ jobs:
             echo "Required secret: OVSX_PAT or OPEN_VSX_TOKEN" >&2
             exit 78
           fi
-          corepack pnpm exec ovsx publish "${VSIX_PATH}" --pat "${token}"
+          publish_log="$(mktemp)"
+          set +e
+          corepack pnpm exec ovsx publish "${VSIX_PATH}" --pat "${token}" >"${publish_log}" 2>&1
+          status="$?"
+          set -e
+          if [[ "${status}" -ne 0 ]]; then
+            if grep -Eiq "(already exists|already published|version .+ is already)" "${publish_log}"; then
+              echo "OPEN_VSX_VERSION_ALREADY_PUBLISHED"
+              cat "${publish_log}"
+              exit 0
+            fi
+            cat "${publish_log}" >&2
+            exit "${status}"
+          fi
+          cat "${publish_log}"
