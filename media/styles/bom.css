@@ -1,20 +1,32 @@
 :root {
   --bg: var(--vscode-editor-background);
-  --panel: var(--vscode-editorWidget-background, var(--vscode-editor-background));
-  --panel-alt: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --panel: var(
+    --vscode-editorWidget-background,
+    var(--vscode-editor-background)
+  );
+  --panel-alt: var(
+    --vscode-sideBar-background,
+    var(--vscode-editor-background)
+  );
   --text: var(--vscode-foreground);
   --muted: var(--vscode-descriptionForeground);
   --accent: var(--vscode-focusBorder);
   --success: var(--vscode-testing-iconPassed, #22c55e);
   --warning: var(--vscode-editorWarning-foreground, #f59e0b);
-  --border: var(--vscode-panel-border, var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35)));
+  --border: var(
+    --vscode-panel-border,
+    var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35))
+  );
 }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.5 "Segoe UI", system-ui, sans-serif;
+  font:
+    13px/1.5 'Segoe UI',
+    system-ui,
+    sans-serif;
 }
 
 #bom-app {
@@ -50,7 +62,10 @@ button {
 }
 
 button:hover {
-  background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+  background: var(
+    --vscode-button-hoverBackground,
+    var(--vscode-button-background)
+  );
 }
 
 #table-wrapper {

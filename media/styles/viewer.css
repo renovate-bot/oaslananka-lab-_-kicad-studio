@@ -1,10 +1,19 @@
 :root {
   --bg: var(--vscode-editor-background);
-  --panel: var(--vscode-editorWidget-background, var(--vscode-editor-background));
-  --panel-alt: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --panel: var(
+    --vscode-editorWidget-background,
+    var(--vscode-editor-background)
+  );
+  --panel-alt: var(
+    --vscode-sideBar-background,
+    var(--vscode-editor-background)
+  );
   --text: var(--vscode-foreground);
   --muted: var(--vscode-descriptionForeground);
-  --border: var(--vscode-panel-border, var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35)));
+  --border: var(
+    --vscode-panel-border,
+    var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35))
+  );
   --accent: var(--vscode-focusBorder);
 }
 
@@ -12,7 +21,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.5 "Segoe UI", system-ui, sans-serif;
+  font:
+    13px/1.5 'Segoe UI',
+    system-ui,
+    sans-serif;
 }
 
 #viewer-shell {
@@ -262,7 +274,10 @@ kicanvas-embed {
   gap: 6px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: var(--vscode-badge-background, color-mix(in srgb, var(--accent) 15%, transparent));
+  background: var(
+    --vscode-badge-background,
+    color-mix(in srgb, var(--accent) 15%, transparent)
+  );
   color: var(--vscode-badge-foreground, var(--text));
 }
 
