@@ -78,49 +78,25 @@
     <div id="viewer-shell">
       <div id="diagnostic-banner">Interactive KiCanvas mode is active.</div>
       <div id="toolbar">
-        <button
-          type="button"
+        <button type="button"
           id="btn-zoom-fit"
           aria-label="Fit to screen"
           title="Fit to Screen"
         >
           ⊡
         </button>
-        <button
-          type="button"
-          id="btn-zoom-in"
-          aria-label="Zoom in"
-          title="Zoom In"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          id="btn-zoom-out"
-          aria-label="Zoom out"
-          title="Zoom Out"
-        >
+        <button type="button" id="btn-zoom-in" aria-label="Zoom in" title="Zoom In">+</button>
+        <button type="button" id="btn-zoom-out" aria-label="Zoom out" title="Zoom Out">
           −
         </button>
-        <button
-          type="button"
-          id="btn-grid"
-          aria-label="Toggle grid"
-          title="Toggle Grid"
-        >
+        <button type="button" id="btn-grid" aria-label="Toggle grid" title="Toggle Grid">
           #
         </button>
         <span class="separator"></span>
-        <button
-          type="button"
-          id="btn-theme"
-          aria-label="Toggle theme"
-          title="Toggle Theme"
-        >
+        <button type="button" id="btn-theme" aria-label="Toggle theme" title="Toggle Theme">
           ◑
         </button>
-        <button
-          type="button"
+        <button type="button"
           id="btn-open-kicad"
           aria-label="Open in KiCad"
           title="Open in KiCad"
@@ -155,40 +131,20 @@
         </aside>
       </div>
       <div id="footer-toolbar">
-        <button
-          type="button"
-          data-preset="All Cu"
-          aria-label="Show all copper layers"
-        >
+        <button type="button" data-preset="All Cu" aria-label="Show all copper layers">
           All Cu
         </button>
-        <button
-          type="button"
-          data-preset="Front"
-          aria-label="Show front layers"
-        >
+        <button type="button" data-preset="Front" aria-label="Show front layers">
           Front
         </button>
-        <button type="button" data-preset="Back" aria-label="Show back layers">
-          Back
-        </button>
-        <button
-          type="button"
-          data-preset="Fab"
-          aria-label="Show fabrication layers"
-        >
+        <button type="button" data-preset="Back" aria-label="Show back layers">Back</button>
+        <button type="button" data-preset="Fab" aria-label="Show fabrication layers">
           Fab
         </button>
-        <button
-          type="button"
-          data-preset="Assembly"
-          aria-label="Show assembly layers"
-        >
+        <button type="button" data-preset="Assembly" aria-label="Show assembly layers">
           Assembly
         </button>
-        <button type="button" data-preset="User" aria-label="Show user layers">
-          User
-        </button>
+        <button type="button" data-preset="User" aria-label="Show user layers">User</button>
         <span class="status" id="layer-status"
           >Layer toggles are read-only unless supported by the bundled KiCanvas
           build.</span
